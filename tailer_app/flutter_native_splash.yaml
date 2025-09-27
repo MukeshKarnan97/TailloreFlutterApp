@@ -1,0 +1,8 @@
+flutter_native_splash:
+  color: "#ffffff"  # Background color
+  image: assets/images/splash_logo.jpg  # Your logo path
+  branding: assets/images/splash_logo.jpg  # (optional small text/logo at bottom)
+  android_12:
+    image: assets/images/splash_logo.jpg
+    icon_background_color: "#ffffff"
+  web: false  # disable web splash if not needed
