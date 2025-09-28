@@ -38,11 +38,11 @@ class WelcomeScreen extends StatelessWidget {
         ],
         onFinish: () {
           // Navigate to login screen
-          GoRouter.of(context).go('/sign-in');
+          GoRouter.of(context).go('/auth/sign-in');
         },
         onSkip: () {
           // Navigate to login screen
-          GoRouter.of(context).go('/sign-in');
+          GoRouter.of(context).go('/auth/sign-in');
         },
       ),
     );

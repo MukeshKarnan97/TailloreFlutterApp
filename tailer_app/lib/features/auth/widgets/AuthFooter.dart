@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -31,7 +32,18 @@ class AuthFooter extends StatelessWidget {
               ),
               recognizer: TapGestureRecognizer()
                 ..onTap = () {
-                  GoRouter.of(context).push(route);
+                  try {
+                    debugPrint('AuthFooter: Navigating to $route');
+                    context.push(route);
+                  } catch (e) {
+                    debugPrint('AuthFooter navigation failed: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Navigation failed. Please try again.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 },
             ),
           ],

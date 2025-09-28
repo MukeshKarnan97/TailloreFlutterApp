@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment configuration files (IMPORTANT: Keep these secure!)
+.env
+.env.local
+.env.*.local
+
+# Note: You may want to keep .env.example for team reference
+# but never commit actual .env files with real credentials

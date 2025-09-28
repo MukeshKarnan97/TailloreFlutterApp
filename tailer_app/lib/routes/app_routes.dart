@@ -2,13 +2,17 @@ import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/utils/transition_helper.dart';
 import 'package:tailer_app/features/auth/screens/otp_screen.dart';
 import 'package:tailer_app/features/auth/screens/password_reset.dart';
+import 'package:tailer_app/features/splash/splash_screen_manager.dart';
 import '../features/auth/screens/welcome_screen.dart';
 import '../features/auth/screens/signin_screen.dart';
 import '../features/auth/screens/signup_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
+import '../features/privacy/privacy_policy_screen.dart';
+import '../features/onboarding/get_started_screen.dart';
+import '../features/home/home_screen.dart';
+import '../features/dashboard/screens/dashboard_screen.dart';
 import 'package:flutter/foundation.dart';
 // import '../features/auth/screens/profile_setup_screen.dart';
-// import '../features/dashboard/screens/dashboard_screen.dart';
 // import '../features/customers/screens/customer_list_screen.dart';
 // import '../features/orders/screens/order_list_screen.dart';
 // import '../features/orders/screens/add_order_screen.dart';
@@ -18,16 +22,21 @@ import 'package:flutter/foundation.dart';
 
 class AppRoutes {
   static final router = GoRouter(
-    initialLocation:
-        '/auth/password_reset', // Set initial route here - FIRST SCREEN
+    initialLocation: '/splash', // Set splash as initial route
     routes: [
-      // GoRoute(path: '/splash', builder: (context, state) => WelcomeScreen()),
-      // GoRoute(path: '/login', builder: (context, state) => LogIn()),
+      // Splash Screen Route
       GoRoute(
-        path: '/',
-        pageBuilder: (context, state) =>
-            buildPage(const WelcomeScreen(), state),
+        path: '/splash',
+        pageBuilder: (context, state) => buildPage(
+          const SplashScreenManager(
+            mainAppBuilder: HomeScreen.new,
+            authScreenBuilder: SignIn.new,
+          ), 
+          state
+        ),
       ),
+      
+      // Auth routes
       GoRoute(
         path: '/auth/on-boarding',
         pageBuilder: (context, state) =>
@@ -59,6 +68,7 @@ class AppRoutes {
               firstTitle: extra?['firstTitle'] as String? ?? 'Verification',
               secondTitle: extra?['secondTitle'] as String? ?? 'OTP',
               emailText: extra?['emailText'] as String? ?? '',
+              email: extra?['email'] as String?,
               onVerified: extra?['onVerified'] as VoidCallback? ?? () {},
             ),
             state,
@@ -67,12 +77,39 @@ class AppRoutes {
       ),
 
       GoRoute(
-        path: '/auth/password_reset',
-        pageBuilder: (context, state) => buildPage(PasswordReset(), state),
+        path: '/auth/password-reset',
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final email = extra?['email'] as String?;
+          return buildPage(PasswordReset(email: email), state);
+        },
+      ),
+
+      // Get Started Screen
+      GoRoute(
+        path: '/get-started',
+        pageBuilder: (context, state) => buildPage(const GetStartedScreen(), state),
+      ),
+
+      // Privacy Policy
+      GoRoute(
+        path: '/privacy-policy',
+        pageBuilder: (context, state) => buildPage(const PrivacyPolicyScreen(), state),
+      ),
+
+      // Home Screen
+      GoRoute(
+        path: '/home',
+        pageBuilder: (context, state) => buildPage(const HomeScreen(), state),
+      ),
+
+      // Dashboard Screen
+      GoRoute(
+        path: '/dashboard',
+        pageBuilder: (context, state) => buildPage(const DashboardScreen(), state),
       ),
 
       // GoRoute(path: '/profile-setup', builder: (context, state) => ProfileSetupScreen()),
-      // GoRoute(path: '/dashboard', builder: (context, state) => DashboardScreen()),
 
       // // Customers
       // GoRoute(path: '/customers', builder: (context, state) => CustomerListScreen()),

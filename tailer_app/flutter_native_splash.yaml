@@ -1,8 +1,28 @@
 flutter_native_splash:
-  color: "#ffffff"  # Background color
-  image: assets/images/splash_logo.jpg  # Your logo path
-  branding: assets/images/splash_logo.jpg  # (optional small text/logo at bottom)
+  # Use a solid color background that matches our animated splash
+  color: "#667eea"  # Gradient start color
+  
+  # Minimal native splash - our custom splash will take over quickly
+  image: assets/images/splash_logo.jpg
+  
+  # Android 12+ specific configuration
   android_12:
     image: assets/images/splash_logo.jpg
-    icon_background_color: "#ffffff"
-  web: false  # disable web splash if not needed
+    icon_background_color: "#667eea"
+    color: "#667eea"
+  
+  # iOS configuration
+  ios: true
+  
+  # Web configuration
+  web: false
+  
+  # Remove native splash quickly to show our custom animation
+  android: true
+  
+  # Fullscreen mode
+  fullscreen: true
+  
+  # Info.plist modifications for iOS
+  info_plist_files:
+    - 'ios/Runner/Info.plist'

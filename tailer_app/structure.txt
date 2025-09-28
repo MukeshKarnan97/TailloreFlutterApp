@@ -1,0 +1,70 @@
+App Structure
+
+lib/
+ ├── main.dart                  # Entry point
+ ├── app.dart                   # App root with MaterialApp + router
+ ├── routes/
+ │    └── app_routes.dart       # Centralized navigation using go_router
+ ├── core/
+ │    ├── constants/
+ │    │     ├── app_colors.dart
+ │    │     ├── app_strings.dart
+ │    │     └── app_assets.dart
+ │    ├── theme/
+ │    │     ├── app_theme.dart
+ │    │     └── text_styles.dart
+ │    └── utils/
+ │          ├── validators.dart
+ │          ├── formatters.dart
+ │          └── helpers.dart
+ ├── data/
+ │    ├── models/
+ │    │     ├── customer_model.dart
+ │    │     ├── order_model.dart
+ │    │     └── measurement_model.dart
+ │    ├── services/
+ │    │     ├── local_db_service.dart
+ │    │     ├── api_service.dart
+ │    │     └── notification_service.dart
+ │    └── repositories/
+ │          ├── customer_repository.dart
+ │          ├── order_repository.dart
+ │          └── report_repository.dart
+ ├── features/
+ │    ├── auth/
+ │    │     ├── screens/
+ │    │     │     ├── splash_screen.dart
+ │    │     │     ├── login_screen.dart
+ │    │     │     └── profile_setup_screen.dart
+ │    │     └── widgets/
+ │    ├── dashboard/
+ │    │     ├── screens/dashboard_screen.dart
+ │    │     └── widgets/dashboard_card.dart
+ │    ├── customers/
+ │    │     ├── screens/
+ │    │     │     ├── customer_list_screen.dart
+ │    │     │     └── customer_profile_screen.dart
+ │    │     └── widgets/customer_tile.dart
+ │    ├── measurements/
+ │    │     ├── screens/
+ │    │     │     ├── measurement_list_screen.dart
+ │    │     │     └── add_measurement_screen.dart
+ │    │     └── widgets/measurement_form.dart
+ │    ├── orders/
+ │    │     ├── screens/
+ │    │     │     ├── order_list_screen.dart
+ │    │     │     ├── add_order_screen.dart
+ │    │     │     └── order_details_screen.dart
+ │    │     └── widgets/order_card.dart
+ │    ├── payments/
+ │    │     └── screens/payments_screen.dart
+ │    ├── reports/
+ │    │     └── screens/reports_screen.dart
+ │    ├── notifications/
+ │    │     └── screens/notifications_screen.dart
+ │    └── settings/
+ │          └── screens/settings_screen.dart
+ ├── widgets/
+ │    ├── custom_button.dart
+ │    ├── custom_textfield.dart
+ │    └── empty_state.dart

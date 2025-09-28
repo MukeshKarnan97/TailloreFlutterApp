@@ -1,0 +1,9 @@
+UI
+---
+-> Splash Screen
+-> Onboard Screen
+-> Login Screen
+-> Register Screen
+-> OTP Screen
+-> Password Reset Screen
+-> 

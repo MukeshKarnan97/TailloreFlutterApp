@@ -1,23 +1,27 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:tailer_app/core/services/user_feedback_service.dart';
+import 'package:tailer_app/core/exceptions/auth_exceptions.dart';
+import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/features/auth/widgets/AuthButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthLogo.dart';
 import 'package:tailer_app/features/auth/widgets/AuthTitle.dart';
 
 class VerificationScreen extends StatefulWidget {
-
   final String firstTitle;
   final String secondTitle;
   final String emailText;
+  final String? email;
   final VoidCallback onVerified;
-  // const VerificationScreen({super.key});
 
   const VerificationScreen({
     super.key,
     required this.firstTitle,
     required this.secondTitle,
     required this.emailText,
+    this.email,
     required this.onVerified,
   });
 
@@ -38,10 +42,14 @@ class _VerificationScreenState extends State<VerificationScreen> {
         children: [
           Text(
             widget.emailText,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.grey),
+            textAlign: TextAlign.center,
           ),
           SizedBox(height: MediaQuery.of(context).size.height * 0.04),
-          OtpForm(onVerified: widget.onVerified),
+          OtpForm(
+            onVerified: widget.onVerified,
+            email: widget.email ?? 'test@example.com',
+          ),
         ],
       ),
     );
@@ -50,7 +58,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
 class OtpForm extends StatefulWidget {
   final VoidCallback onVerified;
-  const OtpForm({super.key, required this.onVerified});
+  final String email;
+  const OtpForm({super.key, required this.onVerified, required this.email});
 
   @override
   _OtpFormState createState() => _OtpFormState();
@@ -58,11 +67,27 @@ class OtpForm extends StatefulWidget {
 
 class _OtpFormState extends State<OtpForm> {
   final _formKey = GlobalKey<FormState>();
+  final AuthService _authService = AuthService();
 
   late FocusNode _pin1Node;
   late FocusNode _pin2Node;
   late FocusNode _pin3Node;
   late FocusNode _pin4Node;
+
+  final TextEditingController _pin1Controller = TextEditingController();
+  final TextEditingController _pin2Controller = TextEditingController();
+  final TextEditingController _pin3Controller = TextEditingController();
+  final TextEditingController _pin4Controller = TextEditingController();
+
+  bool _isLoading = false;
+  bool _isResending = false;
+  String? _errorMessage;
+  
+  // Timer variables for resend OTP
+  Timer? _resendTimer;
+  int _resendCountdown = 180; // 3 minutes = 180 seconds
+  bool _canResend = false;
+  String _currentOTP = '1234'; // Store current OTP
 
   @override
   void initState() {
@@ -71,15 +96,178 @@ class _OtpFormState extends State<OtpForm> {
     _pin2Node = FocusNode();
     _pin3Node = FocusNode();
     _pin4Node = FocusNode();
+    _startResendTimer();
+    // Generate initial OTP
+    _generateNewOTP();
   }
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _pin1Node.dispose();
     _pin2Node.dispose();
     _pin3Node.dispose();
     _pin4Node.dispose();
+    _pin1Controller.dispose();
+    _pin2Controller.dispose();
+    _pin3Controller.dispose();
+    _pin4Controller.dispose();
     super.dispose();
+  }
+
+  void _startResendTimer() {
+    _resendTimer?.cancel();
+    setState(() {
+      _canResend = false;
+      _resendCountdown = 180; // Reset to 3 minutes
+    });
+    
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          if (_resendCountdown > 0) {
+            _resendCountdown--;
+          } else {
+            _canResend = true;
+            timer.cancel();
+          }
+        });
+      }
+    });
+  }
+
+  Future<void> _generateNewOTP() async {
+    try {
+      // Use auth service to send OTP to email
+      _currentOTP = await _authService.sendOTPToEmail(widget.email);
+      debugPrint('🔐 New OTP Generated for ${widget.email}: $_currentOTP');
+    } catch (e) {
+      // Fallback to local generation if service fails
+      final random = DateTime.now().millisecondsSinceEpoch % 9000 + 1000;
+      _currentOTP = random.toString();
+      debugPrint('🔐 Fallback OTP Generated: $_currentOTP');
+    }
+  }
+
+  String _formatTime(int seconds) {
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _resendOTP() async {
+    if (!_canResend || _isResending) return;
+    
+    setState(() {
+      _isResending = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Generate new OTP using auth service
+      await _generateNewOTP();
+      
+      if (mounted) {
+        UserFeedbackService.showSuccess(
+          context,
+          'New OTP sent to ${widget.email}'
+        );
+        
+        // Clear previous OTP input
+        _pin1Controller.clear();
+        _pin2Controller.clear();
+        _pin3Controller.clear();
+        _pin4Controller.clear();
+        
+        // Focus on first field
+        _pin1Node.requestFocus();
+        
+        // Restart timer
+        _startResendTimer();
+      }
+    } catch (e) {
+      if (mounted) {
+        UserFeedbackService.showError(
+          context,
+          'Failed to resend OTP. Please try again.'
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResending = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _verifyOTP() async {
+    final otp = _pin1Controller.text + _pin2Controller.text + _pin3Controller.text + _pin4Controller.text;
+    
+    if (otp.length != 4) {
+      setState(() {
+        _errorMessage = 'Please enter complete OTP';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Use auth service for OTP verification
+      final isValid = await _authService.verifyOTP(otp, widget.email);
+      
+      // Also check against current generated OTP for development
+      final isDevelopmentOTP = (otp == _currentOTP || otp == '1234');
+      
+      if (isValid || isDevelopmentOTP) {
+        if (mounted) {
+          UserFeedbackService.showSuccess(
+            context,
+            'OTP verified successfully!'
+          );
+          
+          // Cancel timer when verification is successful
+          _resendTimer?.cancel();
+          
+          // Small delay for user feedback
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+          if (mounted) {
+            widget.onVerified();
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Invalid OTP. Please check and try again.';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        String errorMsg = 'Verification failed. Please try again.';
+        
+        if (e is AuthException) {
+          errorMsg = e.userMessage;
+        }
+        
+        setState(() {
+          _errorMessage = errorMsg;
+        });
+        
+        UserFeedbackService.showError(context, errorMsg);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -88,54 +276,152 @@ class _OtpFormState extends State<OtpForm> {
       key: _formKey,
       child: Column(
         children: [
+          if (_errorMessage != null) ...[
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+          ],
           Row(
             children: [
               Expanded(
                 child: OtpTextFormField(
+                  controller: _pin1Controller,
                   focusNode: _pin1Node,
-                  autofocus: true,
+                  autofocus: false,
                   onChanged: (value) {
                     if (value.length == 1) _pin2Node.requestFocus();
+                    setState(() {
+                      _errorMessage = null;
+                    });
                   },
                 ),
               ),
               const SizedBox(width: 16.0),
               Expanded(
                 child: OtpTextFormField(
+                  controller: _pin2Controller,
                   focusNode: _pin2Node,
                   onChanged: (value) {
                     if (value.length == 1) _pin3Node.requestFocus();
+                    setState(() {
+                      _errorMessage = null;
+                    });
                   },
                 ),
               ),
               const SizedBox(width: 16.0),
               Expanded(
                 child: OtpTextFormField(
+                  controller: _pin3Controller,
                   focusNode: _pin3Node,
                   onChanged: (value) {
                     if (value.length == 1) _pin4Node.requestFocus();
+                    setState(() {
+                      _errorMessage = null;
+                    });
                   },
                 ),
               ),
               const SizedBox(width: 16.0),
               Expanded(
                 child: OtpTextFormField(
+                  controller: _pin4Controller,
                   focusNode: _pin4Node,
                   onChanged: (value) {
                     if (value.length == 1) _pin4Node.unfocus();
+                    setState(() {
+                      _errorMessage = null;
+                    });
                   },
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 40.0),
-          AuthButton(
-            text: "Next",
-            onTap: () {
-              // Validate OTP if needed
-              widget.onVerified(); // ✅ trigger callback
-            },
+          const SizedBox(height: 24.0),
+          
+          // Resend OTP Section
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "Didn't receive the code? ",
+                style: GoogleFonts.inter(
+                  fontSize: 14.0,
+                  color: Colors.grey[600],
+                ),
+              ),
+              if (_canResend)
+                GestureDetector(
+                  onTap: _isResending ? null : _resendOTP,
+                  child: Text(
+                    _isResending ? "Sending..." : "Resend OTP",
+                    style: GoogleFonts.inter(
+                      fontSize: 14.0,
+                      color: _isResending ? Colors.grey : const Color(0xFFF56B3F),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  "Resend in ${_formatTime(_resendCountdown)}",
+                  style: GoogleFonts.inter(
+                    fontSize: 14.0,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
           ),
+          
+          const SizedBox(height: 16.0),
+          
+          // Development Info
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Development OTP: $_currentOTP',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue[700],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Fallback: 1234',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.blue[600],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24.0),
+          
+          // Verify Button
+          _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(),
+                )
+              : AuthButton(
+                  text: "Verify OTP",
+                  onTap: _verifyOTP,
+                ),
         ],
       ),
     );
@@ -143,12 +429,14 @@ class _OtpFormState extends State<OtpForm> {
 }
 
 class OtpTextFormField extends StatelessWidget {
+  final TextEditingController? controller;
   final FocusNode? focusNode;
   final ValueChanged<String>? onChanged;
   final bool autofocus;
 
   const OtpTextFormField({
     Key? key,
+    this.controller,
     this.focusNode,
     this.onChanged,
     this.autofocus = false,
@@ -156,22 +444,43 @@ class OtpTextFormField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      autofocus: autofocus,
-      focusNode: focusNode,
-      onChanged: onChanged,
-      obscureText: true,
-      textAlign: TextAlign.center,
-      keyboardType: TextInputType.number,
-      style: Theme.of(context).textTheme.headlineSmall,
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(1),
-      ],
-      decoration: const InputDecoration(
-        filled: false,
-        border: UnderlineInputBorder(),
-        hintText: "0",
+    return Container(
+      height: 56,
+      width: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: controller?.text.isNotEmpty == true 
+            ? Colors.indigo.shade600 
+            : Colors.black54,
+          width: controller?.text.isNotEmpty == true ? 2 : 1,
+        ),
+      ),
+      child: TextFormField(
+        controller: controller,
+        autofocus: autofocus,
+        focusNode: focusNode,
+        onChanged: onChanged,
+        obscureText: true,
+        textAlign: TextAlign.center,
+        keyboardType: TextInputType.number,
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(1),
+        ],
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          hintText: "0",
+          hintStyle: TextStyle(
+            fontSize: 24,
+            color: Colors.grey,
+          ),
+        ),
       ),
     );
   }

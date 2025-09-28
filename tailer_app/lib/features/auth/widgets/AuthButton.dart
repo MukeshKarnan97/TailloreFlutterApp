@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AuthButton extends StatelessWidget {
   final String text;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const AuthButton({super.key, required this.text, required this.onTap});
 
