@@ -1,4 +1,4 @@
-import 'package:uuid/uuid.dart';
+import 'dart:math';
 
 class Order {
   final String id;
@@ -33,6 +33,17 @@ class Order {
     required this.updatedAt,
   });
 
+  /// Generate stylish 10-character unique ID: MAT + 7 random characters
+  static String _generateStylishId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    String suffix = '';
+    for (int i = 0; i < 7; i++) {
+      suffix += chars[random.nextInt(chars.length)];
+    }
+    return 'MAT$suffix';
+  }
+
   factory Order.create({
     required String customerId,
     required String tailorId,
@@ -45,10 +56,10 @@ class Order {
     required double advancePaid,
     required double balanceAmount,
   }) {
-    final uuid = Uuid();
+    final stylishId = _generateStylishId();
     return Order(
-      id: uuid.v4(),
-      uniqueId: uuid.v4(),
+      id: stylishId,
+      uniqueId: stylishId,
       customerId: customerId,
       tailorId: tailorId,
       serviceType: serviceType,

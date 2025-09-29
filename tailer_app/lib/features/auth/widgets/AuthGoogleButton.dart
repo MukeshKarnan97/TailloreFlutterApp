@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tailer_app/data/services/social_auth_service.dart';
+import 'package:tailer_app/core/services/user_feedback_service.dart';
 
 class SignUpGoogleFacebookButton extends StatelessWidget {
   final Size size;
+  final Function(SocialAuthResult)? onSocialAuthSuccess;
+  final Function(String)? onSocialAuthError;
 
-  const SignUpGoogleFacebookButton({Key? key, required this.size}) : super(key: key);
+  const SignUpGoogleFacebookButton({
+    Key? key, 
+    required this.size,
+    this.onSocialAuthSuccess,
+    this.onSocialAuthError,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +28,7 @@ class SignUpGoogleFacebookButton extends StatelessWidget {
           'Google',
           borderColor: const Color(0xFFDB4437), // Google red
           textColor: const Color(0xFF374151),
+          onTap: () => _handleGoogleSignIn(context),
         ),
         const SizedBox(width: 16),
         socialButton(
@@ -26,9 +37,62 @@ class SignUpGoogleFacebookButton extends StatelessWidget {
           'Facebook',
           borderColor: const Color(0xFF4267B2), // Facebook blue
           textColor: const Color(0xFF374151),
+          onTap: () => _handleFacebookSignIn(context),
         ),
       ],
     );
+  }
+
+  /// Handle Google Sign In
+  Future<void> _handleGoogleSignIn(BuildContext context) async {
+    try {
+      final socialAuth = SocialAuthService();
+      final result = await socialAuth.signInWithGoogle();
+      
+      if (result.isSuccess) {
+        onSocialAuthSuccess?.call(result) ?? _defaultSuccessHandler(context, result);
+      } else {
+        onSocialAuthError?.call(result.error ?? 'Google sign in failed') ?? 
+            _defaultErrorHandler(context, result.error ?? 'Google sign in failed');
+      }
+    } catch (e) {
+      onSocialAuthError?.call(e.toString()) ?? _defaultErrorHandler(context, e.toString());
+    }
+  }
+
+  /// Handle Facebook Sign In
+  Future<void> _handleFacebookSignIn(BuildContext context) async {
+    try {
+      final socialAuth = SocialAuthService();
+      final result = await socialAuth.signInWithFacebook();
+      
+      if (result.isSuccess) {
+        onSocialAuthSuccess?.call(result) ?? _defaultSuccessHandler(context, result);
+      } else {
+        onSocialAuthError?.call(result.error ?? 'Facebook sign in failed') ?? 
+            _defaultErrorHandler(context, result.error ?? 'Facebook sign in failed');
+      }
+    } catch (e) {
+      onSocialAuthError?.call(e.toString()) ?? _defaultErrorHandler(context, e.toString());
+    }
+  }
+
+  /// Default success handler
+  void _defaultSuccessHandler(BuildContext context, SocialAuthResult result) {
+    UserFeedbackService.showSuccess(
+      context, 
+      'Welcome ${result.name}! Signed in successfully.'
+    );
+    
+    // Navigate to dashboard
+    Future.delayed(const Duration(milliseconds: 500), () {
+      context.go('/dashboard');
+    });
+  }
+
+  /// Default error handler
+  void _defaultErrorHandler(BuildContext context, String error) {
+    UserFeedbackService.showError(context, error);
   }
 
   /// Reusable Social Button
@@ -38,12 +102,12 @@ class SignUpGoogleFacebookButton extends StatelessWidget {
     String text, {
     Color borderColor = const Color(0xFFD1D5DB),
     Color textColor = const Color(0xFF374151),
+    VoidCallback? onTap,
   }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          // Add social login functionality here
+        onTap: onTap ?? () {
           debugPrint('$text button tapped');
         },
         borderRadius: BorderRadius.circular(12.0),

@@ -109,9 +109,12 @@ class LocalDatabaseService {
         unique_id TEXT UNIQUE NOT NULL,
         tailor_id TEXT NOT NULL,
         name TEXT NOT NULL,
+        gender TEXT,
         phone TEXT NOT NULL,
         email TEXT,
         address TEXT NOT NULL,
+        notes TEXT,
+        is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (tailor_id) REFERENCES tailor (unique_id) ON DELETE CASCADE
@@ -439,12 +442,56 @@ class LocalDatabaseService {
       'unique_id': customer.uniqueId,
       'tailor_id': customer.tailorId,
       'name': customer.name,
+      'gender': customer.gender,
       'phone': customer.phone,
       'email': customer.email,
       'address': customer.address,
+      'notes': customer.notes,
+      'is_deleted': customer.isDeleted ? 1 : 0,
       'created_at': customer.createdAt.toIso8601String(),
       'updated_at': customer.updatedAt.toIso8601String(),
     });
+  }
+
+  /// Insert a customer without foreign key constraint check
+  /// Used for temporary insertion when tailor authentication is not yet implemented
+  Future<int> insertCustomerWithoutForeignKeyCheck(Customer customer) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'insertCustomerWithoutForeignKeyCheck', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Inserting customer without foreign key check: ${customer.name}');
+        final db = await database;
+        
+        // Temporarily disable foreign key constraints
+        await db.execute('PRAGMA foreign_keys = OFF');
+        
+        final result = await db.insert('customer', {
+          'id': customer.id,
+          'unique_id': customer.uniqueId,
+          'tailor_id': customer.tailorId,
+          'name': customer.name,
+          'gender': customer.gender,
+          'phone': customer.phone,
+          'email': customer.email,
+          'address': customer.address,
+          'notes': customer.notes,
+          'is_deleted': customer.isDeleted ? 1 : 0,
+          'created_at': customer.createdAt.toIso8601String(),
+          'updated_at': customer.updatedAt.toIso8601String(),
+        });
+        
+        // Re-enable foreign key constraints
+        await db.execute('PRAGMA foreign_keys = ON');
+        
+        Logger.info('LocalDatabaseService', 'Successfully inserted customer without FK check with ID: $result');
+        return result;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to insert customer without FK check', error: e, stackTrace: stackTrace);
+        // Re-enable foreign key constraints in case of error
+        final db = await database;
+        await db.execute('PRAGMA foreign_keys = ON');
+        throw Exception('Failed to insert customer without FK check: $e');
+      }
+    }, parameters: {'customerName': customer.name});
   }
 
   /// Get all customers for a specific tailor

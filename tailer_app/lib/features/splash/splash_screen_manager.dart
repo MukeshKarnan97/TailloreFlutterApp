@@ -9,6 +9,7 @@ import '../../core/config/app_config.dart';
 import '../../core/utils/logger.dart';
 import '../../core/utils/onboarding_helper.dart';
 import '../../data/services/local_db_service.dart';
+import '../../data/services/auth_service.dart';
 
 /// SplashScreenManager - Manages splash screen flow and app initialization
 /// 
@@ -40,6 +41,7 @@ class _SplashScreenManagerState extends State<SplashScreenManager> {
   
   bool _isInitialized = false;
   bool _hasError = false;
+  bool _isUserAuthenticated = false;
   
   @override
   void initState() {
@@ -257,12 +259,43 @@ class _SplashScreenManagerState extends State<SplashScreenManager> {
     return Logger.traceAsyncMethod(_className, '_checkAuthenticationState', () async {
       Logger.info(_className, 'Checking authentication state');
       
-      // TODO: Implement authentication state checking
-      // This would typically involve:
-      // - Checking for stored JWT tokens
-      // - Validating token expiration
-      // - Refreshing tokens if needed
-      // - Setting up user session
+      try {
+        // Initialize the auth service
+        final AuthService authService = AuthService();
+        Logger.debug(_className, 'Initializing AuthService...');
+        await authService.initialize();
+        Logger.debug(_className, 'AuthService initialization completed');
+        
+        // Check if user is authenticated and wants to stay logged in
+        final isAuthenticated = authService.isAuthenticated;
+        final keepLoggedIn = authService.keepSignedIn;
+        final currentUser = authService.currentUser;
+        final currentUserEmail = authService.currentUserEmail;
+        
+        Logger.debug(_className, 'Authentication status: $isAuthenticated');
+        Logger.debug(_className, 'Keep logged in: $keepLoggedIn');
+        Logger.debug(_className, 'Current user: $currentUserEmail');
+        Logger.debug(_className, 'User object exists: ${currentUser != null}');
+        
+        // Store auth state for navigation decisions
+        _isUserAuthenticated = isAuthenticated && keepLoggedIn;
+        
+        if (_isUserAuthenticated) {
+          Logger.info(_className, 'User is authenticated and wants to stay logged in - will redirect to dashboard');
+        } else if (isAuthenticated && !keepLoggedIn) {
+          Logger.info(_className, 'User is authenticated but "keep logged in" is disabled, signing out');
+          await authService.signOut(clearRememberMe: false);
+          _isUserAuthenticated = false;
+        } else {
+          Logger.info(_className, 'User is not authenticated - will show onboarding flow');
+          _isUserAuthenticated = false;
+        }
+        
+        Logger.debug(_className, 'Final _isUserAuthenticated state: $_isUserAuthenticated');
+      } catch (e) {
+        Logger.error(_className, 'Error checking authentication state: $e');
+        _isUserAuthenticated = false;
+      }
       
       Logger.debug(_className, 'Authentication state check completed');
     });
@@ -324,10 +357,19 @@ class _SplashScreenManagerState extends State<SplashScreenManager> {
 
   /// Navigate to main app
   void _navigateToMainApp() async {
-    Logger.info(_className, 'Checking onboarding completion before navigation');
+    Logger.info(_className, 'Checking authentication and onboarding completion before navigation');
     
     try {
-      // Check if complete onboarding flow is finished
+      // First check if user is authenticated and wants to stay logged in
+      if (_isUserAuthenticated) {
+        Logger.info(_className, 'User is authenticated and wants to stay logged in, navigating to dashboard');
+        if (mounted) {
+          context.go('/dashboard');
+          return;
+        }
+      }
+      
+      // If not authenticated or doesn't want to stay logged in, continue with normal onboarding flow
       final onboardingComplete = await OnboardingHelper.isOnboardingComplete();
       
       if (mounted) {

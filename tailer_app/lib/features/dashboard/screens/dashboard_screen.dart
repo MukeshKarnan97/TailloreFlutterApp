@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/data/services/dashboard_service.dart';
 import 'package:tailer_app/features/dashboard/widgets/dashboard_card.dart';
+import 'package:tailer_app/widgets/custom_header.dart';
+import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -16,6 +19,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic> _dashboardData = {};
   bool _isLoading = true;
   bool _isRefreshing = false;
+  int _currentNavIndex = 0;
 
   @override
   void initState() {
@@ -77,6 +81,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      appBar: DashboardHeader(
+        title: 'Dashboard',
+        backgroundColor: const Color(AppConstants.primaryTeal),
+        notificationCount: 3, // You can make this dynamic
+        onBackPressed: () {
+          // Handle back button press - maybe go to previous screen or drawer
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Back button pressed')),
+          );
+        },
+        onNotificationTap: () {
+          // Handle notification tap
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notifications: You have 3 new notifications')),
+          );
+        },
+      ),
       body: SafeArea(
         child: _isLoading
             ? const Center(
@@ -112,6 +133,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
               ),
+              ),
+      bottomNavigationBar: AnimatedBottomNavigation(
+        currentIndex: _currentNavIndex,
+        onTap: _onNavTap,
+        items: TailorAppBottomNavItems.defaultItems,
+        selectedItemColor: const Color(AppConstants.primaryTeal),
+        backgroundColor: Colors.white,
       ),
       floatingActionButton: _isRefreshing
           ? const SizedBox(
@@ -125,9 +153,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: const Icon(Icons.refresh, color: Colors.white),
             ),
     );
-  }
-
-  Widget _buildHeader() {
+  }  Widget _buildHeader() {
     final hour = DateTime.now().hour;
     String greeting;
     if (hour < 12) {
@@ -401,11 +427,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // Bottom navigation handler
+  void _onNavTap(int index) {
+    if (index == _currentNavIndex) {
+      // If already on the current tab, do nothing
+      return;
+    }
+    
+    setState(() {
+      _currentNavIndex = index;
+    });
+    
+    switch (index) {
+      case 0:
+        // Already on Dashboard
+        break;
+      case 1:
+        _navigateToCustomers();
+        break;
+      case 2:
+        _navigateToOrders();
+        break;
+      case 3:
+        _navigateToSettings();
+        break;
+    }
+  }
+
   // Navigation methods - implement these based on your routing
   void _navigateToCustomers() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Customers')),
-    );
+    context.go('/customers');
   }
 
   void _navigateToOrders() {
@@ -441,6 +492,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _navigateToCreateOrder() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Navigate to Create Order')),
+    );
+  }
+
+  void _navigateToSettings() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Navigate to Settings')),
     );
   }
 }

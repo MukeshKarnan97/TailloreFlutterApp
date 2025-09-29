@@ -11,6 +11,12 @@ import '../features/privacy/privacy_policy_screen.dart';
 import '../features/onboarding/get_started_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
+import '../features/customers/screens/customers_main_screen.dart';
+import '../features/customers/screens/customer_profile_screen.dart';
+import '../features/customers/screens/add_customer_screen.dart';
+import '../features/customers/screens/view_customers_screen.dart';
+import '../features/customers/screens/customer_details_screen.dart';
+import '../features/customers/screens/edit_customer_screen.dart';
 import 'package:flutter/foundation.dart';
 // import '../features/auth/screens/profile_setup_screen.dart';
 // import '../features/customers/screens/customer_list_screen.dart';
@@ -107,6 +113,48 @@ class AppRoutes {
       GoRoute(
         path: '/dashboard',
         pageBuilder: (context, state) => buildPage(const DashboardScreen(), state),
+      ),
+
+      // Customers Screen
+      GoRoute(
+        path: '/customers',
+        pageBuilder: (context, state) => buildPage(const CustomersMainScreen(), state),
+      ),
+
+      // Customer Profile Screen
+      GoRoute(
+        path: '/customers/profile',
+        pageBuilder: (context, state) => buildPage(const CustomerProfileScreen(), state),
+      ),
+
+      // Add Customer Screen
+      GoRoute(
+        path: '/customers/add',
+        pageBuilder: (context, state) => buildPage(const AddCustomerScreen(), state),
+      ),
+
+      // View Customers Screen
+      GoRoute(
+        path: '/customers/view',
+        pageBuilder: (context, state) => buildPage(const ViewCustomersScreen(), state),
+      ),
+
+      // Customer Details Screen
+      GoRoute(
+        path: '/customers/details/:customerId',
+        pageBuilder: (context, state) {
+          final customerId = state.pathParameters['customerId']!;
+          return buildPage(CustomerDetailsScreen(customerId: customerId), state);
+        },
+      ),
+
+      // Edit Customer Screen
+      GoRoute(
+        path: '/customers/edit/:customerId',
+        pageBuilder: (context, state) {
+          final customerId = state.pathParameters['customerId']!;
+          return buildPage(EditCustomerScreen(customerId: customerId), state);
+        },
       ),
 
       // GoRoute(path: '/profile-setup', builder: (context, state) => ProfileSetupScreen()),

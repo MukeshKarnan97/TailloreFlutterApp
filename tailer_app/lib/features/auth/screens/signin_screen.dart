@@ -11,6 +11,7 @@ import 'package:tailer_app/features/auth/widgets/AuthGoogleButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthTitle.dart';
 import 'package:tailer_app/features/auth/widgets/AuthLogo.dart';
 import 'package:tailer_app/features/auth/widgets/ImprovedTextField.dart';
+import 'package:tailer_app/data/services/social_auth_service.dart';
 
 
 class SignIn extends StatefulWidget {
@@ -147,6 +148,44 @@ class _SignInState extends State<SignIn> {
     // Screen loads without auto-focus to prevent automatic keyboard opening
   }
 
+  /// Handle successful social authentication
+  void _handleSocialAuthSuccess(SocialAuthResult result) async {
+    try {
+      // Set "keep me logged in" based on user's current preference in the checkbox
+      await _authService.setKeepLoggedIn(_keepSignedIn);
+      
+      UserFeedbackService.showSuccess(
+        context, 
+        'Welcome ${result.name}! Signed in with ${result.provider} successfully.'
+      );
+      
+      // Navigate to dashboard after successful social auth
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          context.go('/dashboard');
+        }
+      });
+    } catch (e) {
+      print('Error setting keep logged in preference: $e');
+      // Still show success and navigate, but log the error
+      UserFeedbackService.showSuccess(
+        context, 
+        'Welcome ${result.name}! Signed in with ${result.provider} successfully.'
+      );
+      
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          context.go('/dashboard');
+        }
+      });
+    }
+  }
+
+  /// Handle social authentication error
+  void _handleSocialAuthError(String error) {
+    UserFeedbackService.showError(context, error);
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -214,7 +253,11 @@ class _SignInState extends State<SignIn> {
 
                 // Google + Facebook
                 // signInGoogleFacebookButton(size),
-                SignUpGoogleFacebookButton(size: size),
+                SignUpGoogleFacebookButton(
+                  size: size,
+                  onSocialAuthSuccess: _handleSocialAuthSuccess,
+                  onSocialAuthError: _handleSocialAuthError,
+                ),
                 const SizedBox(height: 24),
 
                 // Email

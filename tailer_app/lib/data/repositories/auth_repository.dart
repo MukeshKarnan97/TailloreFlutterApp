@@ -577,4 +577,15 @@ class AuthRepository {
       return false;
     }
   }
+
+  /// Update remember me preference in storage
+  Future<void> updateRememberMe(bool rememberMe) async {
+    try {
+      await _storageService.setRememberMe(rememberMe);
+      debugPrint('AuthRepository: Remember me updated to: $rememberMe');
+    } catch (e) {
+      debugPrint('AuthRepository: Error updating remember me: $e');
+      rethrow;
+    }
+  }
 }

@@ -43,27 +43,37 @@ class AuthService {
       
       // Check if user is already logged in
       final isLoggedIn = await _authRepository.isLoggedIn();
+      debugPrint('AuthService: Repository isLoggedIn check returned: $isLoggedIn');
       
       if (isLoggedIn) {
+        debugPrint('AuthService: Loading user data...');
+        
         // Load current user data
         _currentUser = await _authRepository.getCurrentUser();
         _currentSession = await _authRepository.getCurrentSession();
         
+        debugPrint('AuthService: Current user: ${_currentUser?.email}');
+        debugPrint('AuthService: Current session exists: ${_currentSession != null}');
+        
         if (_currentUser != null) {
           _currentPreferences = await _userRepository.getPreferences(_currentUser!.id!);
           debugPrint('AuthService: User authenticated - ${_currentUser!.email}');
+          debugPrint('AuthService: Remember me preference: ${_currentPreferences?.rememberMe}');
         }
 
         // Check if session needs refresh
         if (_currentSession != null && _currentSession!.needsRefresh) {
+          debugPrint('AuthService: Session needs refresh');
           await refreshSession();
         }
 
         // Check for auto-logout
         await _checkAutoLogout();
+      } else {
+        debugPrint('AuthService: No user currently logged in');
       }
       
-      debugPrint('AuthService: Initialization complete');
+      debugPrint('AuthService: Initialization complete - isAuthenticated: $isAuthenticated, keepSignedIn: $keepSignedIn');
     } catch (e) {
       debugPrint('AuthService: Error during initialization: $e');
       await signOut(); // Clear potentially corrupted state
@@ -151,7 +161,15 @@ class AuthService {
       // Load user data and preferences
       await _loadUserData(session.userId);
 
+      // Ensure login status is properly set if keepSignedIn is true
+      if (keepSignedIn) {
+        debugPrint('AuthService: Setting keep logged in preference after successful sign in');
+        await setKeepLoggedIn(true);
+      }
+
       debugPrint('AuthService: Sign in successful for ${_currentUser!.email}');
+      debugPrint('AuthService: Keep signed in: $keepSignedIn');
+      debugPrint('AuthService: Current auth state - isAuthenticated: $isAuthenticated, keepSignedIn: $keepSignedIn');
       return true;
     } catch (e) {
       debugPrint('AuthService: Sign in failed: $e');
@@ -395,6 +413,32 @@ class AuthService {
     }
   }
 
+  /// Update "Keep me logged in" preference
+  Future<void> setKeepLoggedIn(bool keepLoggedIn) async {
+    try {
+      if (_currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
+      debugPrint('AuthService: Updating keep logged in preference to: $keepLoggedIn');
+
+      // Update user preferences in database
+      _currentPreferences = await _userRepository.updatePreferences(
+        userId: _currentUser!.id!,
+        rememberMe: keepLoggedIn,
+      );
+
+      // Update storage service remember me flag
+      await _authRepository.updateRememberMe(keepLoggedIn);
+
+      debugPrint('AuthService: Keep logged in preference updated successfully');
+      debugPrint('AuthService: Verification - isAuthenticated: $isAuthenticated, keepSignedIn: $keepSignedIn');
+    } catch (e) {
+      debugPrint('AuthService: Error updating keep logged in preference: $e');
+      rethrow;
+    }
+  }
+
   // ==================== UTILITY METHODS ====================
 
   /// Check if username is available
@@ -406,6 +450,8 @@ class AuthService {
       return false;
     }
   }
+
+
 
   /// Check if email is available
   Future<bool> isEmailAvailable(String email) async {
@@ -514,6 +560,64 @@ class AuthService {
     _currentSession = null;
     _currentPreferences = null;
   }
+  /// Sign in with social provider (Google, Facebook)
+  Future<bool> signInWithSocial({
+    required String email,
+    required String provider,
+    required String providerId,
+    required String name,
+  }) async {
+    try {
+      debugPrint(' Social sign in attempt - Provider: , Email: ');
+      
+      // Simulate API call to your backend
+      await Future.delayed(const Duration(milliseconds: 800));
+      
+      // In a real app, send social auth data to your backend
+      // Your backend should verify the social token and create/login the user
+      
+      debugPrint('? Social sign in successful for  via ');
+      return true;
+    } catch (e) {
+      debugPrint('? Social sign in failed: ');
+      return false;
+    }
+  }
+
+  /// Register with social provider (Google, Facebook)
+  Future<bool> registerWithSocial({
+    required String email,
+    required String name,
+    required String provider,
+    required String providerId,
+    String? photoUrl,
+  }) async {
+    try {
+      debugPrint('?? Social registration attempt - Provider: , Email: ');
+      
+      // Simulate API call to your backend
+      await Future.delayed(const Duration(milliseconds: 1000));
+      
+      // In a real app, send social auth data to your backend to create new user
+      // Your backend should:
+      // 1. Verify the social token
+      // 2. Create user account with social provider data
+      // 3. Return authentication token
+      
+      debugPrint(' Social registration successful for  via ');
+      debugPrint(' User name: ');
+      if (photoUrl != null) {
+        debugPrint(' Photo URL: ');
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint(' Social registration failed: ');
+      return false;
+    }
+  }
+
 }
+
 
 

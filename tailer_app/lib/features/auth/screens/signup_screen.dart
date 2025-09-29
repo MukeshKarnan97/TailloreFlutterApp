@@ -9,6 +9,8 @@ import 'package:tailer_app/features/auth/widgets/AuthGoogleButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthTitle.dart';
 import 'package:tailer_app/features/auth/widgets/AuthLogo.dart';
 import 'package:tailer_app/features/auth/widgets/ImprovedTextField.dart';
+import 'package:tailer_app/data/services/social_auth_service.dart';
+import 'package:tailer_app/core/services/user_feedback_service.dart';
 
 
 class SignUp extends StatefulWidget {
@@ -29,7 +31,6 @@ class _SignUpState extends State<SignUp> {
   final AuthService _authService = AuthService();
   
   bool _isLoading = false;
-  bool _isCheckingEmail = false;
   String? _emailExistsError;
 
   bool _isEmailValid(String email) {
@@ -63,7 +64,6 @@ class _SignUpState extends State<SignUp> {
     if (email.trim().isEmpty || !_isEmailValid(email)) return;
     
     setState(() {
-      _isCheckingEmail = true;
       _emailExistsError = null;
     });
 
@@ -72,15 +72,11 @@ class _SignUpState extends State<SignUp> {
       if (mounted) {
         setState(() {
           _emailExistsError = exists ? 'Email already exists. Please use a different email or sign in.' : null;
-          _isCheckingEmail = false;
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isCheckingEmail = false;
-        });
-      }
+      // Error checking email - we'll just let validation continue
+      print('Error checking email existence: $e');
     }
   }String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
@@ -197,6 +193,44 @@ class _SignUpState extends State<SignUp> {
     }
   }
 
+  /// Handle successful social authentication
+  void _handleSocialAuthSuccess(SocialAuthResult result) async {
+    try {
+      // Set "keep me logged in" to true for social auth (default behavior)
+      await _authService.setKeepLoggedIn(true);
+      
+      UserFeedbackService.showSuccess(
+        context, 
+        'Welcome ${result.name}! Signed in with ${result.provider} successfully.'
+      );
+      
+      // Navigate to dashboard after successful social auth
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          context.go('/dashboard');
+        }
+      });
+    } catch (e) {
+      print('Error setting keep logged in preference: $e');
+      // Still show success and navigate, but log the error
+      UserFeedbackService.showSuccess(
+        context, 
+        'Welcome ${result.name}! Signed in with ${result.provider} successfully.'
+      );
+      
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          context.go('/dashboard');
+        }
+      });
+    }
+  }
+
+  /// Handle social authentication error
+  void _handleSocialAuthError(String error) {
+    UserFeedbackService.showError(context, error);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -268,7 +302,11 @@ class _SignUpState extends State<SignUp> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                SignUpGoogleFacebookButton(size: size),
+                SignUpGoogleFacebookButton(
+                  size: size,
+                  onSocialAuthSuccess: _handleSocialAuthSuccess,
+                  onSocialAuthError: _handleSocialAuthError,
+                ),
                 const SizedBox(height: 20),
                 
                 // Username
