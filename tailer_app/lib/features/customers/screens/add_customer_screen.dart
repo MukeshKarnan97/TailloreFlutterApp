@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/data/models/customer_model.dart';
@@ -35,7 +36,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
         backgroundColor: const Color(AppConstants.primaryTeal),
         notificationCount: 3,
         onBackPressed: () {
-          context.go('/customers/profile');
+          context.goNamed(RouteNames.customerProfile);
         },
         onNotificationTap: () {
           showNavigationMessage(context, 'Notifications');
@@ -426,7 +427,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
             icon: Icons.cancel_outlined,
             backgroundColor: Colors.grey[100]!,
             textColor: Colors.grey[700]!,
-            onPressed: () => context.go('/customers/profile'),
+            onPressed: () => context.goNamed(RouteNames.customerProfile),
           ),
         ),
         const SizedBox(width: AppConstants.spacingM),
@@ -558,7 +559,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
         // Navigate back to customer view
         if (mounted) {
           Future.delayed(const Duration(seconds: 1), () {
-            if (mounted) context.go('/customers/view');
+            if (mounted) context.goNamed(RouteNames.viewCustomers);
           });
         }
 

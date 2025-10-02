@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 import '../../core/config/app_config.dart';
 import '../../core/utils/logger.dart';
 import '../../core/utils/onboarding_helper.dart';
@@ -95,7 +96,7 @@ class _GetStartedScreenState extends State<GetStartedScreen> with TickerProvider
       
       // Navigate to Privacy Policy screen
       if (mounted) {
-        context.go('/privacy-policy');
+        context.goNamed(RouteNames.privacyPolicy);
       }
     } catch (e) {
       Logger.error(_className, 'Failed to handle Get Started: $e');

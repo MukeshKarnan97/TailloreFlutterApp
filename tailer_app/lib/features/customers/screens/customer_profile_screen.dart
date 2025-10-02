@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
@@ -25,7 +26,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> with Navi
         backgroundColor: const Color(AppConstants.primaryTeal),
         notificationCount: 3,
         onBackPressed: () {
-          context.go('/customers');
+          context.goNamed(RouteNames.customers);
         },
         onNotificationTap: () {
           showNavigationMessage(context, 'Notifications');
@@ -167,7 +168,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> with Navi
                   const Color(AppConstants.primaryTeal),
                   const Color(AppConstants.primaryTeal).withOpacity(0.8),
                 ],
-                onTap: () => context.go('/customers/add'),
+                onTap: () => context.goNamed(RouteNames.addCustomer),
               ),
             ),
             const SizedBox(width: AppConstants.spacingL),
@@ -179,7 +180,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> with Navi
                   const Color(AppConstants.primaryOrange),
                   const Color(AppConstants.primaryOrange).withOpacity(0.8),
                 ],
-                onTap: () => context.go('/customers/view'),
+                onTap: () => context.goNamed(RouteNames.viewCustomers),
               ),
             ),
           ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/data/services/social_auth_service.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
 
@@ -86,7 +87,7 @@ class SignUpGoogleFacebookButton extends StatelessWidget {
     
     // Navigate to dashboard
     Future.delayed(const Duration(milliseconds: 500), () {
-      context.go('/dashboard');
+      context.goNamed(RouteNames.dashboard);
     });
   }
 

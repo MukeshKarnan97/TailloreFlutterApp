@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 import '../../core/utils/logger.dart';
 import '../../core/utils/privacy_policy_helper.dart';
 
@@ -38,7 +39,7 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
         
         if (mounted) {
           // Navigate to the sign-in screen using GoRouter
-          context.go('/auth/sign-in');
+          context.goNamed(RouteNames.signIn);
         }
       } else {
         throw Exception('Failed to store acceptance');
@@ -275,7 +276,7 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
               child: TextButton(
                 onPressed: () {
                   Logger.info(_className, 'User chose to skip to sign-in');
-                  context.go('/auth/sign-in');
+                  context.goNamed(RouteNames.signIn);
                 },
                 child: Text(
                   'Skip to Sign In',

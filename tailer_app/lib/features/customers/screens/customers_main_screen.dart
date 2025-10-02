@@ -6,6 +6,7 @@ import 'package:tailer_app/core/services/navigation_service.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 
 class CustomersMainScreen extends StatefulWidget {
   const CustomersMainScreen({Key? key}) : super(key: key);
@@ -26,7 +27,7 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
         backgroundColor: const Color(AppConstants.primaryTeal),
         notificationCount: 3,
         onBackPressed: () {
-          context.go('/dashboard');
+          context.goNamed(RouteNames.dashboard);
         },
         onNotificationTap: () {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -179,7 +180,7 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
                   const Color(AppConstants.primaryTeal),
                   const Color(AppConstants.primaryTeal).withOpacity(0.8),
                 ],
-                onTap: () => context.go('/customers/profile'),
+                onTap: () => context.goNamed(RouteNames.customerProfile),
               ),
             ),
             const SizedBox(width: AppConstants.spacingL),
@@ -191,7 +192,7 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
                   const Color(AppConstants.primaryOrange),
                   const Color(AppConstants.primaryOrange).withOpacity(0.8),
                 ],
-                onTap: () => navigateToMeasurements(context),
+                onTap: () => _navigateToMeasurements(),
               ),
             ),
           ],
@@ -340,6 +341,18 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
   }
 
   // Navigation methods
+  void _navigateToMeasurements() {
+    // Navigate to view customers screen first to select a customer for measurements
+    showNavigationMessage(
+      context, 
+      'Select Customer', 
+      customMessage: 'Please go to View Customers to select a customer for measurements.',
+      backgroundColor: const Color(AppConstants.primaryOrange),
+    );
+    // Navigate to view customers screen
+    context.goNamed(RouteNames.viewCustomers);
+  }
+
   void _onNavTap(int index) {
     handleBottomNavigation(
       context,
@@ -350,7 +363,7 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
         NavigationRoutes.dashboard,
         null, // Current customers page
         null, // Orders - not implemented yet
-        null, // Settings - not implemented yet
+        NavigationRoutes.settings,
       ],
       customDestinations: [
         NavigationDestinations.dashboard,

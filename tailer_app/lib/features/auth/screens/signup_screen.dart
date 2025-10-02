@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/data/services/auth_service.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/features/auth/widgets/AuthButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthFooter.dart';
 import 'package:tailer_app/features/auth/widgets/AuthGoogleButton.dart';
@@ -144,7 +145,7 @@ class _SignUpState extends State<SignUp> {
     
     try {
       debugPrint('Attempting GoRouter navigation to OTP...');
-      context.push('/auth/otp', extra: {
+      context.pushNamed(RouteNames.otp, extra: {
         'firstTitle': 'EMAIL',
         'secondTitle': 'VERIFICATION',
         'emailText': 'Verification code sent to ${_emailController.text.trim()}',
@@ -175,7 +176,7 @@ class _SignUpState extends State<SignUp> {
     
     try {
       debugPrint('Attempting GoRouter navigation to sign-in...');
-      context.go('/auth/sign-in');
+      context.goNamed(RouteNames.signIn);
       debugPrint('GoRouter navigation to sign-in successful');
     } catch (error) {
       debugPrint('Navigation to sign-in failed: $error');
@@ -207,7 +208,7 @@ class _SignUpState extends State<SignUp> {
       // Navigate to dashboard after successful social auth
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          context.go('/dashboard');
+          context.goNamed(RouteNames.dashboard);
         }
       });
     } catch (e) {
@@ -220,7 +221,7 @@ class _SignUpState extends State<SignUp> {
       
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          context.go('/dashboard');
+          context.goNamed(RouteNames.dashboard);
         }
       });
     }

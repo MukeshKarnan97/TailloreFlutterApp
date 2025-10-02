@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 
 class AuthFooter extends StatelessWidget {
   final String text;
@@ -34,7 +35,18 @@ class AuthFooter extends StatelessWidget {
                 ..onTap = () {
                   try {
                     debugPrint('AuthFooter: Navigating to $route');
-                    context.push(route);
+                    // Convert route path to named route
+                    String routeName;
+                    if (route == '/auth/sign-in') {
+                      routeName = RouteNames.signIn;
+                    } else if (route == '/auth/sign-up') {
+                      routeName = RouteNames.signUp;
+                    } else {
+                      // Fallback to push for unknown routes
+                      context.push(route);
+                      return;
+                    }
+                    context.pushNamed(routeName);
                   } catch (e) {
                     debugPrint('AuthFooter navigation failed: $e');
                     ScaffoldMessenger.of(context).showSnackBar(

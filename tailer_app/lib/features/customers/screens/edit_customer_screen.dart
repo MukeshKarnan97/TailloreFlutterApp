@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/data/models/customer_model.dart';
@@ -64,7 +65,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
             customMessage: 'Could not find customer data.',
             backgroundColor: Colors.red,
           );
-          context.go('/customers/view');
+          context.goNamed(RouteNames.viewCustomers);
           return;
         }
       }
@@ -95,7 +96,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
         backgroundColor: const Color(AppConstants.primaryTeal),
         notificationCount: 3,
         onBackPressed: () {
-          context.go('/customers/details/${widget.customerId}');
+          context.goNamed(RouteNames.customerDetails, pathParameters: {'customerId': widget.customerId});
         },
         onNotificationTap: () {
           showNavigationMessage(context, 'Notifications');
@@ -486,13 +487,13 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
                 icon: Icons.cancel_outlined,
                 backgroundColor: Colors.grey[100]!,
                 textColor: Colors.grey[700]!,
-                onPressed: () => context.go('/customers/details/${widget.customerId}'),
+                onPressed: () => context.goNamed(RouteNames.customerDetails, pathParameters: {'customerId': widget.customerId}),
               ),
             ),
             const SizedBox(width: AppConstants.spacingM),
             Expanded(
               child: _buildActionButton(
-                label: 'Save Changes',
+                label: 'Save',
                 icon: Icons.save_rounded,
                 backgroundColor: Colors.orange,
                 textColor: Colors.white,
@@ -611,7 +612,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
         // Navigate back to customer details
         if (mounted) {
           Future.delayed(const Duration(seconds: 1), () {
-            if (mounted) context.go('/customers/details/${widget.customerId}');
+            if (mounted) context.goNamed(RouteNames.customerDetails, pathParameters: {'customerId': widget.customerId});
           });
         }
         
@@ -679,7 +680,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
                       backgroundColor: Colors.orange,
                     );
                     Future.delayed(const Duration(seconds: 1), () {
-                      if (mounted) context.go('/customers/view');
+                      if (mounted) context.goNamed(RouteNames.viewCustomers);
                     });
                   }
                 } catch (e, stackTrace) {

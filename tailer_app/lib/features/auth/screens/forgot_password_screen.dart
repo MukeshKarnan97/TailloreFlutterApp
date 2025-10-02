@@ -5,6 +5,7 @@ import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
 import 'package:tailer_app/core/exceptions/auth_exceptions.dart';
 import 'package:tailer_app/data/services/auth_service.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/features/auth/widgets/AuthButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthFooter.dart';
 import 'package:tailer_app/features/auth/widgets/AuthTitle.dart';
@@ -68,7 +69,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
         await Future.delayed(const Duration(milliseconds: 500));
         
         if (mounted) {
-          context.push("/auth/otp",
+          context.pushNamed(RouteNames.otp,
             extra: {
               'firstTitle': 'VERIFICATION',
               'secondTitle': 'OTP',
@@ -119,7 +120,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
         await Future.delayed(const Duration(milliseconds: 500));
         
         if (mounted) {
-          context.push('/auth/password-reset', extra: {
+          context.pushNamed(RouteNames.passwordReset, extra: {
             'email': _emailController.text.trim(),
           });
         }

@@ -5,6 +5,7 @@ import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
 import 'package:tailer_app/core/exceptions/auth_exceptions.dart';
 import 'package:tailer_app/data/services/auth_service.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/features/auth/widgets/AuthButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthTitle.dart';
 import 'package:tailer_app/features/auth/widgets/AuthLogo.dart';
@@ -72,7 +73,7 @@ class _PasswordResetState extends State<PasswordReset> {
           await Future.delayed(const Duration(milliseconds: 1000));
           
           if (mounted) {
-            context.go('/auth/sign-in');
+            context.goNamed(RouteNames.signIn);
           }
         }
       } catch (e) {
@@ -221,7 +222,7 @@ class _PasswordResetState extends State<PasswordReset> {
                   Center(
                     child: TextButton(
                       onPressed: () {
-                        context.go('/auth/sign-in');
+                        context.goNamed(RouteNames.signIn);
                       },
                       child: Text(
                         'Back to Sign In',

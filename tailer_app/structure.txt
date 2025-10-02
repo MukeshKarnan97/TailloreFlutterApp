@@ -48,8 +48,12 @@ lib/
  │    ├── measurements/
  │    │     ├── screens/
  │    │     │     ├── measurement_list_screen.dart
- │    │     │     └── add_measurement_screen.dart
- │    │     └── widgets/measurement_form.dart
+ │    │     │     ├── measurement_category_screen.dart
+ │    │     │     ├── add_measurement_screen.dart
+ │    │     │     └── edit_measurement_screen.dart
+ │    │     └── widgets/
+ │    │           ├── measurement_card.dart
+ │    │           └── measurement_form.dart
  │    ├── orders/
  │    │     ├── screens/
  │    │     │     ├── order_list_screen.dart
@@ -63,7 +67,8 @@ lib/
  │    ├── notifications/
  │    │     └── screens/notifications_screen.dart
  │    └── settings/
- │          └── screens/settings_screen.dart
+ │          └── screens/
+ │                └── settings_screen.dart ✅
  ├── widgets/
  │    ├── custom_button.dart
  │    ├── custom_textfield.dart

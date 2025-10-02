@@ -6,6 +6,7 @@ import 'package:tailer_app/data/services/dashboard_service.dart';
 import 'package:tailer_app/features/dashboard/widgets/dashboard_card.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -354,6 +355,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Colors.purple,
                 onTap: () => _navigateToMeasurements(),
               ),
+              const Divider(height: AppConstants.spacingL),
+              _buildActionButton(
+                title: '🌍 Language Demo',
+                subtitle: 'Test English ⇄ Tamil switching',
+                icon: Icons.translate,
+                color: Colors.blue,
+                onTap: () => context.goNamed(RouteNames.languageDemo),
+              ),
             ],
           ),
         ),
@@ -456,7 +465,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Navigation methods - implement these based on your routing
   void _navigateToCustomers() {
-    context.go('/customers');
+    context.goNamed(RouteNames.customers);
   }
 
   void _navigateToOrders() {
@@ -496,8 +505,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _navigateToSettings() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Settings')),
-    );
+    context.goNamed(RouteNames.settings);
   }
 }

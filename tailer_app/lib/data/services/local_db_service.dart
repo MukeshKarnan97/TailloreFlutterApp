@@ -540,15 +540,7 @@ class LocalDatabaseService {
 
   /// Insert a new measurement
   Future<int> insertMeasurement(Measurement measurement) async {
-    return await insert('measurement', {
-      'id': measurement.id,
-      'unique_id': measurement.uniqueId,
-      'customer_id': measurement.customerId,
-      'type': measurement.type,
-      'data': jsonEncode(measurement.data), // Convert Map to JSON string
-      'created_at': measurement.createdAt.toIso8601String(),
-      'updated_at': measurement.updatedAt.toIso8601String(),
-    });
+    return await insert('measurement', measurement.toMap());
   }
 
   /// Get all measurements for a customer
@@ -562,11 +554,11 @@ class LocalDatabaseService {
   }
 
   /// Get measurements by type for a customer
-  Future<List<Map<String, dynamic>>> getMeasurementsByType(String customerId, String type) async {
+  Future<List<Map<String, dynamic>>> getMeasurementsByType(String customerId, String dressType) async {
     return await select(
       'measurement',
-      where: 'customer_id = ? AND type = ?',
-      whereArgs: [customerId, type],
+      where: 'customer_id = ? AND dress_type = ?',
+      whereArgs: [customerId, dressType],
       orderBy: 'created_at DESC',
     );
   }
@@ -574,8 +566,8 @@ class LocalDatabaseService {
   /// Update measurement
   Future<int> updateMeasurement(String uniqueId, Map<String, dynamic> data) async {
     data['updated_at'] = DateTime.now().toIso8601String();
-    if (data.containsKey('data')) {
-      data['data'] = jsonEncode(data['data']); // Ensure JSON string format
+    if (data.containsKey('measurements')) {
+      data['measurements'] = jsonEncode(data['measurements']); // Ensure JSON string format
     }
     return await update('measurement', data, where: 'unique_id = ?', whereArgs: [uniqueId]);
   }

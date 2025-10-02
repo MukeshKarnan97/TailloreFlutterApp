@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:tailer_app/widgets/profile_dropdown.dart';
+import 'package:tailer_app/data/services/user_service.dart';
 
 class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -117,7 +119,7 @@ class CustomHeaderWithProfile extends StatelessWidget implements PreferredSizeWi
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
-class DashboardHeader extends StatelessWidget implements PreferredSizeWidget {
+class DashboardHeader extends StatefulWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onBackPressed;
   final VoidCallback? onNotificationTap;
@@ -138,9 +140,25 @@ class DashboardHeader extends StatelessWidget implements PreferredSizeWidget {
   }) : super(key: key);
 
   @override
+  State<DashboardHeader> createState() => _DashboardHeaderState();
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
+class _DashboardHeaderState extends State<DashboardHeader> {
+  final UserService _userService = UserService();
+
+  @override
+  void initState() {
+    super.initState();
+    _userService.initialize(); // Initialize user service
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: backgroundColor ?? Theme.of(context).primaryColor,
+      backgroundColor: widget.backgroundColor ?? Theme.of(context).primaryColor,
       elevation: 3.0,
       shadowColor: Colors.black26,
       leading: Padding(
@@ -150,7 +168,7 @@ class DashboardHeader extends StatelessWidget implements PreferredSizeWidget {
             // Back Button
             IconButton(
               icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
-              onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
+              onPressed: widget.onBackPressed ?? () => Navigator.of(context).pop(),
               splashRadius: 24,
               tooltip: 'Back',
             ),
@@ -176,9 +194,9 @@ class DashboardHeader extends StatelessWidget implements PreferredSizeWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: appIconPath != null
+                child: widget.appIconPath != null
                     ? Image.asset(
-                        appIconPath!,
+                        widget.appIconPath!,
                         width: 32,
                         height: 32,
                         fit: BoxFit.cover,
@@ -226,9 +244,9 @@ class DashboardHeader extends StatelessWidget implements PreferredSizeWidget {
       ),
       leadingWidth: 110, // Increased width for better spacing
       title: Text(
-        title,
+        widget.title,
         style: TextStyle(
-          color: titleColor ?? Colors.white,
+          color: widget.titleColor ?? Colors.white,
           fontSize: 22,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.3,
@@ -236,78 +254,18 @@ class DashboardHeader extends StatelessWidget implements PreferredSizeWidget {
       ),
       centerTitle: false, // Align title to the left for better visual flow
       actions: [
-        // Notification Icon with Enhanced Badge
+        // Profile Dropdown with Enhanced Features
         Padding(
-          padding: const EdgeInsets.only(right: 8.0),
-          child: Stack(
-            children: [
-              Container(
-                margin: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.white,
-                    size: 26,
-                  ),
-                  onPressed: onNotificationTap ?? () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Notifications clicked'),
-                        backgroundColor: Color(0xFF00695C),
-                      ),
-                    );
-                  },
-                  splashRadius: 24,
-                  tooltip: 'Notifications',
-                ),
-              ),
-              if (notificationCount > 0)
-                Positioned(
-                  right: 6,
-                  top: 6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.red, Colors.red.shade700],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.red.withOpacity(0.4),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 20,
-                      minHeight: 20,
-                    ),
-                    child: Text(
-                      notificationCount > 99 ? '99+' : notificationCount.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
+          padding: const EdgeInsets.only(right: 12.0),
+          child: ProfileDropdown(
+            notificationCount: widget.notificationCount,
+            userName: _userService.getUserDisplayName(),
+            userEmail: _userService.getUserEmail(),
+            userAvatarUrl: _userService.getUserProfilePicture(),
+            onNotificationsTap: widget.onNotificationTap,
           ),
         ),
       ],
     );
   }
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }

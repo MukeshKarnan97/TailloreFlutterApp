@@ -2,64 +2,64 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
-import 'package:tailer_app/routes/app_routes.dart';
+import 'package:tailer_app/core/constants/measurement_constants.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
-import 'package:tailer_app/data/models/customer_model.dart';
+import 'package:tailer_app/data/models/measurement_model.dart';
 import 'package:tailer_app/data/services/local_db_service.dart';
-import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/core/utils/logger.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 
-class ViewCustomersScreen extends StatefulWidget {
-  const ViewCustomersScreen({Key? key}) : super(key: key);
+class MeasurementListScreen extends StatefulWidget {
+  final String customerId;
+  
+  const MeasurementListScreen({Key? key, required this.customerId}) : super(key: key);
 
   @override
-  State<ViewCustomersScreen> createState() => _ViewCustomersScreenState();
+  State<MeasurementListScreen> createState() => _MeasurementListScreenState();
 }
 
-class _ViewCustomersScreenState extends State<ViewCustomersScreen> with NavigationMixin {
+class _MeasurementListScreenState extends State<MeasurementListScreen> with NavigationMixin {
   final _searchController = TextEditingController();
-  List<Customer> _allCustomers = [];
-  List<Customer> _filteredCustomers = [];
+  List<Measurement> _allMeasurements = [];
+  List<Measurement> _filteredMeasurements = [];
   bool _isLoading = true;
+  String? _customerName;
   final LocalDatabaseService _dbService = LocalDatabaseService();
 
   @override
   void initState() {
     super.initState();
-    _loadCustomers();
+    _loadMeasurements();
   }
 
-  /// Load customers from database
-  Future<void> _loadCustomers() async {
+  /// Load measurements for the customer
+  Future<void> _loadMeasurements() async {
     try {
       setState(() => _isLoading = true);
       
-      // Get authenticated user's email as tailor ID (consistent with add customer)
-      final authService = AuthService();
-      await authService.initialize();
-      
-      String tailorId;
-      if (authService.isAuthenticated && authService.currentUser != null) {
-        tailorId = authService.currentUser!.email;
-        Logger.info('ViewCustomersScreen', 'Loading customers for tailor: $tailorId');
-      } else {
-        tailorId = 'default_tailor';
-        Logger.warning('ViewCustomersScreen', 'No authenticated user, using default tailor');
+      // Load customer name first
+      final customerData = await _dbService.getCustomerByUniqueId(widget.customerId);
+      if (customerData != null) {
+        _customerName = customerData['name'];
       }
       
-      final customersData = await _dbService.getCustomersByTailorId(tailorId);
-      final customers = customersData.map((data) => Customer.fromMap(data)).toList();
+      // Load measurements for this customer
+      final measurementsData = await _dbService.getMeasurementsByCustomerId(widget.customerId);
+      final measurements = measurementsData.map((data) => Measurement.fromMap(data)).toList();
+      
+      // Sort measurements by creation date (newest first)
+      measurements.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       
       setState(() {
-        _allCustomers = customers;
-        _filteredCustomers = customers;
+        _allMeasurements = measurements;
+        _filteredMeasurements = measurements;
         _isLoading = false;
       });
       
-      Logger.info('ViewCustomersScreen', 'Loaded ${customers.length} customers');
+      Logger.info('MeasurementListScreen', 'Loaded ${measurements.length} measurements for customer ${widget.customerId}');
     } catch (e, stackTrace) {
-      Logger.error('ViewCustomersScreen', 'Failed to load customers', 
+      Logger.error('MeasurementListScreen', 'Failed to load measurements', 
                   error: e, stackTrace: stackTrace);
       setState(() => _isLoading = false);
       
@@ -67,7 +67,7 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
         showNavigationMessage(
           context,
           'Load Failed',
-          customMessage: 'Failed to load customers. Please try again.',
+          customMessage: 'Failed to load measurements. Please try again.',
           backgroundColor: Colors.red,
         );
       }
@@ -79,11 +79,14 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: DashboardHeader(
-        title: 'View Customers',
+        title: 'Measurements',
         backgroundColor: const Color(AppConstants.primaryTeal),
         notificationCount: 3,
         onBackPressed: () {
-          context.goNamed(RouteNames.customerProfile);
+          context.goNamed(
+            RouteNames.customerDetails,
+            pathParameters: {'customerId': widget.customerId},
+          );
         },
         onNotificationTap: () {
           showNavigationMessage(context, 'Notifications');
@@ -96,20 +99,24 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
                   color: Color(AppConstants.primaryTeal),
                 ),
               )
-            : Column(
-                children: [
-                  _buildHeaderSection(),
-                  _buildFilterSection(),
-                  Expanded(child: _buildCustomerList()),
-                ],
+            : RefreshIndicator(
+                onRefresh: _loadMeasurements,
+                color: const Color(AppConstants.primaryTeal),
+                child: Column(
+                  children: [
+                    _buildHeaderSection(),
+                    _buildFilterSection(),
+                    Expanded(child: _buildMeasurementsList()),
+                  ],
+                ),
               ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.goNamed(RouteNames.addCustomer),
+        onPressed: () => _showDressTypeSelection(),
         backgroundColor: const Color(AppConstants.primaryTeal),
-        icon: const Icon(Icons.person_add_rounded, color: Colors.white),
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: Text(
-          'Add Customer',
+          'Add Measurement',
           style: GoogleFonts.inter(
             fontWeight: FontWeight.w600,
             color: Colors.white,
@@ -126,8 +133,8 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(AppConstants.primaryOrange).withOpacity(0.1),
-            const Color(AppConstants.primaryOrange).withOpacity(0.05),
+            Colors.purple.withOpacity(0.1),
+            Colors.purple.withOpacity(0.05),
             Colors.white.withOpacity(0.8),
           ],
           begin: Alignment.topLeft,
@@ -136,12 +143,12 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(AppConstants.primaryOrange).withOpacity(0.15),
+          color: Colors.purple.withOpacity(0.15),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(AppConstants.primaryOrange).withOpacity(0.1),
+            color: Colors.purple.withOpacity(0.1),
             blurRadius: 20,
             offset: const Offset(0, 8),
             spreadRadius: 0,
@@ -155,8 +162,8 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  const Color(AppConstants.primaryOrange),
-                  const Color(AppConstants.primaryOrange).withOpacity(0.8),
+                  Colors.purple,
+                  Colors.purple.withOpacity(0.8),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -164,14 +171,14 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(AppConstants.primaryOrange).withOpacity(0.3),
+                  color: Colors.purple.withOpacity(0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: const Icon(
-              Icons.people_rounded,
+              Icons.straighten_rounded,
               size: 28,
               color: Colors.white,
             ),
@@ -182,7 +189,7 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Customer List',
+                  _customerName ?? 'Customer Measurements',
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -194,19 +201,19 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(AppConstants.primaryOrange).withOpacity(0.1),
+                    color: Colors.purple.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: const Color(AppConstants.primaryOrange).withOpacity(0.2),
+                      color: Colors.purple.withOpacity(0.2),
                       width: 1,
                     ),
                   ),
                   child: Text(
-                    '${_getVisibleCustomers().length} Customers',
+                    '${_getVisibleMeasurements().length} Measurements',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: const Color(AppConstants.primaryOrange),
+                      color: Colors.purple,
                       letterSpacing: 0.2,
                     ),
                   ),
@@ -236,10 +243,10 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
       ),
       child: TextField(
         controller: _searchController,
-        onChanged: _filterCustomers,
+        onChanged: _filterMeasurements,
         style: GoogleFonts.inter(fontSize: 16),
         decoration: InputDecoration(
-          hintText: 'Search customers...',
+          hintText: 'Search measurements by dress type...',
           hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
           prefixIcon: const Icon(Icons.search_rounded, color: Color(AppConstants.primaryTeal)),
           border: OutlineInputBorder(
@@ -260,22 +267,22 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
     );
   }
 
-  Widget _buildCustomerList() {
-    final customers = _getVisibleCustomers();
+  Widget _buildMeasurementsList() {
+    final measurements = _getVisibleMeasurements();
     
-    if (customers.isEmpty) {
+    if (measurements.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.people_outline_rounded,
+              Icons.straighten_rounded,
               size: 64,
               color: Colors.grey[400],
             ),
             const SizedBox(height: 16),
             Text(
-              'No customers found',
+              'No measurements found',
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -284,7 +291,7 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
             ),
             const SizedBox(height: 8),
             Text(
-              'Add your first customer to get started',
+              'Add your first measurement to get started',
               style: GoogleFonts.inter(
                 fontSize: 14,
                 color: Colors.grey[500],
@@ -297,21 +304,25 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
 
     return ListView.builder(
       padding: const EdgeInsets.all(AppConstants.spacingM),
-      itemCount: customers.length,
+      itemCount: measurements.length,
       itemBuilder: (context, index) {
-        final customer = customers[index];
-        return _buildCustomerCard(customer);
+        final measurement = measurements[index];
+        return _buildMeasurementCard(measurement);
       },
     );
   }
 
-  Widget _buildCustomerCard(Customer customer) {
+  Widget _buildMeasurementCard(Measurement measurement) {
+    final dressTypeDetails = MeasurementConstants.getDressTypeDetails(measurement.dressType);
+    final requiredMeasurements = MeasurementConstants.getMeasurementsForDressType(measurement.dressType);
+    final completionPercentage = measurement.getCompletionPercentage(requiredMeasurements);
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: customer.isDeleted 
+        border: measurement.isDeleted 
             ? Border.all(color: Colors.red.withOpacity(0.3), width: 1)
             : Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
         boxShadow: [
@@ -327,33 +338,28 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
           ListTile(
             contentPadding: const EdgeInsets.all(16),
             leading: CircleAvatar(
-              backgroundColor: customer.isDeleted 
+              backgroundColor: measurement.isDeleted 
                   ? Colors.red.withOpacity(0.1)
-                  : const Color(AppConstants.primaryTeal).withOpacity(0.1),
-              child: Text(
-                customer.name.substring(0, 1).toUpperCase(),
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w700,
-                  color: customer.isDeleted 
-                      ? Colors.red
-                      : const Color(AppConstants.primaryTeal),
-                ),
+                  : Colors.purple.withOpacity(0.1),
+              child: Icon(
+                Icons.checkroom_rounded,
+                color: measurement.isDeleted ? Colors.red : Colors.purple,
               ),
             ),
             title: Row(
               children: [
                 Expanded(
                   child: Text(
-                    customer.name,
+                    dressTypeDetails?['name'] ?? measurement.dressType,
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: customer.isDeleted ? Colors.grey[500] : Colors.black87,
-                      decoration: customer.isDeleted ? TextDecoration.lineThrough : null,
+                      color: measurement.isDeleted ? Colors.grey[500] : Colors.black87,
+                      decoration: measurement.isDeleted ? TextDecoration.lineThrough : null,
                     ),
                   ),
                 ),
-                if (customer.isDeleted)
+                if (measurement.isDeleted)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
@@ -378,27 +384,62 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
                 Row(
                   children: [
                     Text(
-                      'ID: ${customer.id}',
+                      'ID: ${measurement.uniqueId}',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: const Color(AppConstants.primaryTeal),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      customer.phone,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                        color: Colors.purple,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                // Completion percentage bar
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Completion',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        Text(
+                          '${completionPercentage.toStringAsFixed(0)}%',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _getCompletionColor(completionPercentage),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(
+                      value: completionPercentage / 100,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        _getCompletionColor(completionPercentage),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Created: ${_formatDate(measurement.createdAt)}',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
               ],
             ),
           ),
-          if (!customer.isDeleted)
+          if (!measurement.isDeleted)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -415,24 +456,24 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
                     icon: Icons.visibility_rounded,
                     label: 'View',
                     color: Colors.blue,
-                    onPressed: () => _viewCustomer(customer),
+                    onPressed: () => _viewMeasurement(measurement),
                   ),
                   _buildActionButton(
                     icon: Icons.edit_rounded,
                     label: 'Edit',
                     color: const Color(AppConstants.primaryTeal),
-                    onPressed: () => _editCustomer(customer),
+                    onPressed: () => _editMeasurement(measurement),
                   ),
                   _buildActionButton(
                     icon: Icons.delete_rounded,
                     label: 'Delete',
                     color: Colors.red,
-                    onPressed: () => _deleteCustomer(customer),
+                    onPressed: () => _deleteMeasurement(measurement),
                   ),
                 ],
               ),
             ),
-          if (customer.isDeleted)
+          if (measurement.isDeleted)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -449,7 +490,7 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
                     icon: Icons.restore_rounded,
                     label: 'Restore',
                     color: Colors.green,
-                    onPressed: () => _restoreCustomer(customer),
+                    onPressed: () => _restoreMeasurement(measurement),
                   ),
                 ],
               ),
@@ -489,40 +530,62 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
     );
   }
 
-  List<Customer> _getVisibleCustomers() {
-    return _filteredCustomers.where((customer) => !customer.isDeleted).toList();
+  List<Measurement> _getVisibleMeasurements() {
+    return _filteredMeasurements.where((measurement) => !measurement.isDeleted).toList();
   }
 
-  void _filterCustomers(String query) {
+  void _filterMeasurements(String query) {
     setState(() {
       if (query.isEmpty) {
-        _filteredCustomers = _allCustomers;
+        _filteredMeasurements = _allMeasurements;
       } else {
-        _filteredCustomers = _allCustomers.where((customer) {
-          return customer.name.toLowerCase().contains(query.toLowerCase()) ||
-                 customer.id.toLowerCase().contains(query.toLowerCase()) ||
-                 customer.phone.contains(query);
+        _filteredMeasurements = _allMeasurements.where((measurement) {
+          final dressTypeDetails = MeasurementConstants.getDressTypeDetails(measurement.dressType);
+          final dressTypeName = dressTypeDetails?['name'] ?? measurement.dressType;
+          
+          return dressTypeName.toLowerCase().contains(query.toLowerCase()) ||
+                 measurement.dressType.toLowerCase().contains(query.toLowerCase()) ||
+                 measurement.uniqueId.toLowerCase().contains(query.toLowerCase());
         }).toList();
       }
     });
   }
 
-  void _viewCustomer(Customer customer) {
-    context.goNamed(RouteNames.customerDetails, pathParameters: {'customerId': customer.id});
+  Color _getCompletionColor(double percentage) {
+    if (percentage >= 80) return Colors.green;
+    if (percentage >= 50) return Colors.orange;
+    return Colors.red;
   }
 
-  void _editCustomer(Customer customer) {
-    context.goNamed(RouteNames.editCustomer, pathParameters: {'customerId': customer.id});
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _deleteCustomer(Customer customer) {
+  void _showDressTypeSelection() {
+    context.goNamed(RouteNames.measurementCategory, pathParameters: {'customerId': widget.customerId});
+  }
+
+  void _viewMeasurement(Measurement measurement) {
+    // TODO: Navigate to measurement details view
+    showNavigationMessage(context, 'View Measurement', 
+        customMessage: 'Measurement details view coming soon!');
+  }
+
+  void _editMeasurement(Measurement measurement) {
+    context.goNamed(
+      RouteNames.editMeasurement,
+      pathParameters: {'measurementId': measurement.uniqueId},
+    );
+  }
+
+  void _deleteMeasurement(Measurement measurement) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Delete Customer', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          title: Text('Delete Measurement', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
           content: Text(
-            'Are you sure you want to delete ${customer.name}? This action can be undone later.',
+            'Are you sure you want to delete this ${MeasurementConstants.getDressTypeDetails(measurement.dressType)?['name']} measurement? This action can be undone later.',
             style: GoogleFonts.inter(),
           ),
           actions: [
@@ -533,39 +596,52 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
             ElevatedButton(
               onPressed: () async {
                 try {
+                  Navigator.of(context).pop();
+                  
+                  // Show loading indicator
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(child: CircularProgressIndicator()),
+                  );
+                  
                   // Update database
-                  await _dbService.updateCustomer(customer.uniqueId, {
+                  await _dbService.updateMeasurement(measurement.uniqueId, {
                     'is_deleted': 1,
                     'updated_at': DateTime.now().toIso8601String(),
                   });
                   
-                  // Update local state
-                  setState(() {
-                    final index = _allCustomers.indexWhere((c) => c.id == customer.id);
-                    if (index != -1) {
-                      _allCustomers[index] = customer.copyWith(
-                        isDeleted: true,
-                        updatedAt: DateTime.now(),
-                      );
-                    }
-                    _filterCustomers(_searchController.text);
-                  });
+                  // Hide loading indicator
+                  if (mounted) Navigator.of(context).pop();
                   
-                  Navigator.of(context).pop();
-                  showNavigationMessage(
-                    context,
-                    'Customer Deleted',
-                    customMessage: '${customer.name} has been moved to deleted customers.',
-                    backgroundColor: Colors.orange,
-                  );
-                } catch (e) {
-                  Navigator.of(context).pop();
-                  showNavigationMessage(
-                    context,
-                    'Delete Failed',
-                    customMessage: 'Failed to delete customer. Please try again.',
-                    backgroundColor: Colors.red,
-                  );
+                  // Reload measurements
+                  await _loadMeasurements();
+                  
+                  Logger.info('MeasurementListScreen', 'Measurement ${measurement.uniqueId} deleted successfully');
+                  
+                  if (mounted) {
+                    showNavigationMessage(
+                      context,
+                      'Measurement Deleted',
+                      customMessage: 'Measurement has been moved to deleted items.',
+                      backgroundColor: Colors.orange,
+                    );
+                  }
+                } catch (e, stackTrace) {
+                  Logger.error('MeasurementListScreen', 'Failed to delete measurement', 
+                              error: e, stackTrace: stackTrace);
+                  
+                  // Hide loading indicator
+                  if (mounted) Navigator.of(context).pop();
+                  
+                  if (mounted) {
+                    showNavigationMessage(
+                      context,
+                      'Delete Failed',
+                      customMessage: 'Failed to delete measurement. Please try again.',
+                      backgroundColor: Colors.red,
+                    );
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -577,39 +653,52 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
     );
   }
 
-  void _restoreCustomer(Customer customer) async {
+  void _restoreMeasurement(Measurement measurement) async {
     try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+      
       // Update database
-      await _dbService.updateCustomer(customer.uniqueId, {
+      await _dbService.updateMeasurement(measurement.uniqueId, {
         'is_deleted': 0,
         'updated_at': DateTime.now().toIso8601String(),
       });
       
-      // Update local state
-      setState(() {
-        final index = _allCustomers.indexWhere((c) => c.id == customer.id);
-        if (index != -1) {
-          _allCustomers[index] = customer.copyWith(
-            isDeleted: false,
-            updatedAt: DateTime.now(),
-          );
-        }
-        _filterCustomers(_searchController.text);
-      });
+      // Hide loading indicator
+      if (mounted) Navigator.of(context).pop();
       
-      showNavigationMessage(
-        context,
-        'Customer Restored',
-        customMessage: '${customer.name} has been restored successfully.',
-        backgroundColor: Colors.green,
-      );
-    } catch (e) {
-      showNavigationMessage(
-        context,
-        'Restore Failed',
-        customMessage: 'Failed to restore customer. Please try again.',
-        backgroundColor: Colors.red,
-      );
+      // Reload measurements
+      await _loadMeasurements();
+      
+      Logger.info('MeasurementListScreen', 'Measurement ${measurement.uniqueId} restored successfully');
+      
+      if (mounted) {
+        showNavigationMessage(
+          context,
+          'Measurement Restored',
+          customMessage: 'Measurement has been restored successfully.',
+          backgroundColor: Colors.green,
+        );
+      }
+    } catch (e, stackTrace) {
+      Logger.error('MeasurementListScreen', 'Failed to restore measurement', 
+                  error: e, stackTrace: stackTrace);
+      
+      // Hide loading indicator
+      if (mounted) Navigator.of(context).pop();
+      
+      if (mounted) {
+        showNavigationMessage(
+          context,
+          'Restore Failed',
+          customMessage: 'Failed to restore measurement. Please try again.',
+          backgroundColor: Colors.red,
+        );
+      }
     }
   }
 

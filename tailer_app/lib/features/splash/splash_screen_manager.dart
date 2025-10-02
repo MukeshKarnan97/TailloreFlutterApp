@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 import 'animated_splash_screen.dart';
 
 
@@ -364,7 +365,7 @@ class _SplashScreenManagerState extends State<SplashScreenManager> {
       if (_isUserAuthenticated) {
         Logger.info(_className, 'User is authenticated and wants to stay logged in, navigating to dashboard');
         if (mounted) {
-          context.go('/dashboard');
+          context.goNamed(RouteNames.dashboard);
           return;
         }
       }
@@ -376,7 +377,7 @@ class _SplashScreenManagerState extends State<SplashScreenManager> {
         if (onboardingComplete) {
           Logger.info(_className, 'Onboarding complete, navigating to sign-in screen');
           if (mounted) {
-            context.go('/auth/sign-in');
+            context.goNamed(RouteNames.signIn);
           }
         } else {
           // Check which step of onboarding to show
@@ -385,12 +386,12 @@ class _SplashScreenManagerState extends State<SplashScreenManager> {
           if (!getStartedCompleted) {
             Logger.info(_className, 'Get Started not completed, showing Home screen');
             if (mounted) {
-              context.go('/home');
+              context.goNamed(RouteNames.home);
             }
           } else {
             Logger.info(_className, 'Get Started completed but privacy policy not accepted, showing privacy policy screen');
             if (mounted) {
-              context.go('/privacy-policy');
+              context.goNamed(RouteNames.privacyPolicy);
             }
           }
         }
@@ -401,7 +402,7 @@ class _SplashScreenManagerState extends State<SplashScreenManager> {
       // Fallback to privacy policy screen on error
       if (mounted) {
         Logger.info(_className, 'Falling back to privacy policy screen due to error');
-        context.go('/privacy-policy');
+        context.goNamed(RouteNames.privacyPolicy);
       }
     }
   }
@@ -413,7 +414,7 @@ class _SplashScreenManagerState extends State<SplashScreenManager> {
     if (mounted) {
       // For now, fallback to privacy policy screen on error
       // In a real app, you might want to create an error route
-      context.go('/privacy-policy');
+      context.goNamed(RouteNames.privacyPolicy);
     }
   }
 

@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tailer_app/routes/app_routes.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
@@ -108,7 +107,7 @@ class _SignInState extends State<SignIn> {
     
     try {
       debugPrint('Attempting GoRouter navigation...');
-      context.goNamed(RouteNames.dashboard);
+      context.go('/dashboard');
       debugPrint('GoRouter navigation successful');
     } catch (error) {
       debugPrint('Navigation failed: $error');
@@ -130,7 +129,7 @@ class _SignInState extends State<SignIn> {
     debugPrint('Forgot password clicked - navigating to forgot password screen');
     
     try {
-      context.pushNamed(RouteNames.forgotPassword);
+      context.push('/auth/forgot_password');
     } catch (e) {
       debugPrint('Navigation to forgot password failed: $e');
       
@@ -163,7 +162,7 @@ class _SignInState extends State<SignIn> {
       // Navigate to dashboard after successful social auth
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          context.goNamed(RouteNames.dashboard);
+          context.go('/dashboard');
         }
       });
     } catch (e) {
@@ -176,7 +175,7 @@ class _SignInState extends State<SignIn> {
       
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          context.goNamed(RouteNames.dashboard);
+          context.go('/dashboard');
         }
       });
     }
