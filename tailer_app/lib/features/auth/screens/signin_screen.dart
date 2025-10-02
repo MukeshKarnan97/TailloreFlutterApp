@@ -1,25 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
 import 'package:tailer_app/core/exceptions/auth_exceptions.dart';
-import 'package:tailer_a                // buildFooter(context),
-                const AuthFooter(
-                  text: "Don't have an account? ",
-                  actionText: "Sign Up here",
-                  route: "/auth/sign-up",
-                ),
-                const SizedBox(height: 40),
-              ],
-            );
-          },
-        ),
-          ),
-        ),
-      ),
-    );es/auth_service.dart';
+import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/features/auth/widgets/AuthButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthFooter.dart';
 import 'package:tailer_app/features/auth/widgets/AuthGoogleButton.dart';
@@ -350,7 +336,7 @@ class _SignInState extends State<SignIn> {
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    'Let’s login to continue exploring',
+                    AppLocalizations.of(_localeProvider.languageCode).translate('signInSubtitle'),
                     style: GoogleFonts.inter(
                       fontSize: 14.0,
                       color: const Color(0xFF969AA8),
@@ -373,7 +359,7 @@ class _SignInState extends State<SignIn> {
                   label: 'Email address input field',
                   child: ImprovedTextField(
                     controller: _emailController,
-                    labelText: AppLocalizations.translate(_localeProvider.languageCode, 'emailAddress'),
+                    labelText: AppLocalizations.of(_localeProvider.languageCode).translate('emailAddress'),
                     prefixIcon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
                     focusNode: _emailFocusNode,
@@ -427,15 +413,17 @@ class _SignInState extends State<SignIn> {
 
                 // Footer
                 // buildFooter(context),
-                const AuthFooter(
-                  text: "Don’t have an account? ",
-                  actionText: "Sign Up here",
+                AuthFooter(
+                  text: AppLocalizations.of(_localeProvider.languageCode).translate('dontHaveAccount'),
+                  actionText: AppLocalizations.of(_localeProvider.languageCode).translate('signUpHere'),
                   route: "/auth/sign-up",
                 ),
                 const SizedBox(height: 40),
               ],
+                );
+                },
+              ),
             ),
-          ),
           ),
         ),
       ),
