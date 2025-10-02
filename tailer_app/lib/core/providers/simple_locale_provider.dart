@@ -2,10 +2,17 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Simple language provider without external dependencies
-/// Manages language selection and persistence
+/// Manages language selection and persistence using singleton pattern
 class SimpleLocaleProvider extends ChangeNotifier {
   String _languageCode = 'en'; // Default language
   static const String _languageKey = 'selected_language';
+  
+  // Singleton pattern
+  static final SimpleLocaleProvider _instance = SimpleLocaleProvider._internal();
+  factory SimpleLocaleProvider() => _instance;
+  SimpleLocaleProvider._internal() {
+    _loadLanguage();
+  }
 
   String get languageCode => _languageCode;
   
@@ -13,14 +20,12 @@ class SimpleLocaleProvider extends ChangeNotifier {
     switch (_languageCode) {
       case 'ta':
         return 'தமிழ்';
+      case 'hi':
+        return 'हिन्दी';
       case 'en':
       default:
         return 'English';
     }
-  }
-
-  SimpleLocaleProvider() {
-    _loadLanguage();
   }
 
   // Load saved language from SharedPreferences
@@ -28,7 +33,7 @@ class SimpleLocaleProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedLanguage = prefs.getString(_languageKey);
-      if (savedLanguage != null && (savedLanguage == 'en' || savedLanguage == 'ta')) {
+      if (savedLanguage != null && ['en', 'ta', 'hi'].contains(savedLanguage)) {
         _languageCode = savedLanguage;
         notifyListeners();
       }

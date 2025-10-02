@@ -12,6 +12,10 @@ import 'package:tailer_app/features/auth/widgets/AuthLogo.dart';
 import 'package:tailer_app/features/auth/widgets/ImprovedTextField.dart';
 import 'package:tailer_app/data/services/social_auth_service.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 
 class SignUp extends StatefulWidget {
@@ -30,6 +34,7 @@ class _SignUpState extends State<SignUp> {
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passwordFocusNode = FocusNode();
   final AuthService _authService = AuthService();
+  late SimpleLocaleProvider _localeProvider;
   
   bool _isLoading = false;
   String? _emailExistsError;
@@ -235,6 +240,7 @@ class _SignUpState extends State<SignUp> {
   @override
   void initState() {
     super.initState();
+    _localeProvider = SimpleLocaleProvider(); // Gets singleton instance
     // Screen loads without auto-focus to prevent automatic keyboard opening
   }
 
@@ -246,6 +252,7 @@ class _SignUpState extends State<SignUp> {
     _usernameFocusNode.dispose();
     _emailFocusNode.dispose();
     _passwordFocusNode.dispose();
+    // Don't dispose singleton _localeProvider
     super.dispose();
   }
 
@@ -255,6 +262,91 @@ class _SignUpState extends State<SignUp> {
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
+      floatingActionButton: AnimatedBuilder(
+        animation: _localeProvider,
+        builder: (context, _) {
+          // Get current language details
+          final currentLanguage = AppLocalizations.availableLanguages
+              .firstWhere(
+                (lang) => lang.code == _localeProvider.languageCode,
+                orElse: () => AppLocalizations.availableLanguages.first,
+              );
+          
+          return Container(
+            width: 80,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF21899C),
+                  Color(0xFF1A7A8A),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF21899C).withOpacity(0.3),
+                  spreadRadius: 1,
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  context.pushNamed(RouteNames.languageSelection);
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        currentLanguage.flag,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          shadows: [
+                            Shadow(
+                              offset: Offset(0.5, 0.5),
+                              blurRadius: 1.0,
+                              color: Colors.black26,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        currentLanguage.isoCode,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          shadows: [
+                            const Shadow(
+                              offset: Offset(0.5, 0.5),
+                              blurRadius: 1.0,
+                              color: Colors.black26,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
       body: SafeArea(
         child: Container(
           width: size.width,

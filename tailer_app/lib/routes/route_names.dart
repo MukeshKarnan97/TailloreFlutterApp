@@ -37,6 +37,7 @@ class RouteNames {
   
   // Demo
   static const String languageDemo = 'languageDemo';
+  static const String languageSelection = 'languageSelection';
 }
 
 /// Extension to provide easy navigation methods

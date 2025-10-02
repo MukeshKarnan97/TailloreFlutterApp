@@ -5,7 +5,21 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
 import 'package:tailer_app/core/exceptions/auth_exceptions.dart';
-import 'package:tailer_app/data/services/auth_service.dart';
+import 'package:tailer_a                // buildFooter(context),
+                const AuthFooter(
+                  text: "Don't have an account? ",
+                  actionText: "Sign Up here",
+                  route: "/auth/sign-up",
+                ),
+                const SizedBox(height: 40),
+              ],
+            );
+          },
+        ),
+          ),
+        ),
+      ),
+    );es/auth_service.dart';
 import 'package:tailer_app/features/auth/widgets/AuthButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthFooter.dart';
 import 'package:tailer_app/features/auth/widgets/AuthGoogleButton.dart';
@@ -13,6 +27,8 @@ import 'package:tailer_app/features/auth/widgets/AuthTitle.dart';
 import 'package:tailer_app/features/auth/widgets/AuthLogo.dart';
 import 'package:tailer_app/features/auth/widgets/ImprovedTextField.dart';
 import 'package:tailer_app/data/services/social_auth_service.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 
 class SignIn extends StatefulWidget {
@@ -32,6 +48,7 @@ class _SignInState extends State<SignIn> {
   bool _isLoading = false;
   bool _keepSignedIn = false;
   final AuthService _authService = AuthService();
+  late SimpleLocaleProvider _localeProvider;
 
   bool _isEmailValid(String email) {
     final emailRegex = RegExp(AppConstants.emailPattern);
@@ -146,6 +163,7 @@ class _SignInState extends State<SignIn> {
   @override
   void initState() {
     super.initState();
+    _localeProvider = SimpleLocaleProvider(); // Gets singleton instance
     // Screen loads without auto-focus to prevent automatic keyboard opening
   }
 
@@ -193,6 +211,7 @@ class _SignInState extends State<SignIn> {
     _passwordController.dispose();
     _emailFocusNode.dispose();
     _passwordFocusNode.dispose();
+    // Don't dispose singleton _localeProvider
     super.dispose();
   }
 
@@ -202,6 +221,91 @@ class _SignInState extends State<SignIn> {
 
     return Scaffold(
       resizeToAvoidBottomInset: true, // 👈 important for keyboard
+      floatingActionButton: AnimatedBuilder(
+        animation: _localeProvider,
+        builder: (context, _) {
+          // Get current language details
+          final currentLanguage = AppLocalizations.availableLanguages
+              .firstWhere(
+                (lang) => lang.code == _localeProvider.languageCode,
+                orElse: () => AppLocalizations.availableLanguages.first,
+              );
+          
+          return Container(
+            width: 80,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF21899C),
+                  Color(0xFF1A7A8A),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF21899C).withOpacity(0.3),
+                  spreadRadius: 1,
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  context.pushNamed(RouteNames.languageSelection);
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        currentLanguage.flag,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          shadows: [
+                            Shadow(
+                              offset: Offset(0.5, 0.5),
+                              blurRadius: 1.0,
+                              color: Colors.black26,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        currentLanguage.isoCode,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          shadows: [
+                            const Shadow(
+                              offset: Offset(0.5, 0.5),
+                              blurRadius: 1.0,
+                              color: Colors.black26,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
       body: SafeArea(
         child: Container(
           width: size.width,
@@ -222,7 +326,10 @@ class _SignInState extends State<SignIn> {
             key: _formKey,
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
-              child: Column(
+              child: AnimatedBuilder(
+                animation: _localeProvider,
+                builder: (context, _) {
+                  return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                 const SizedBox(height: 40),
@@ -266,7 +373,7 @@ class _SignInState extends State<SignIn> {
                   label: 'Email address input field',
                   child: ImprovedTextField(
                     controller: _emailController,
-                    labelText: 'Email Address',
+                    labelText: AppLocalizations.translate(_localeProvider.languageCode, 'emailAddress'),
                     prefixIcon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
                     focusNode: _emailFocusNode,
@@ -291,7 +398,7 @@ class _SignInState extends State<SignIn> {
                   label: 'Password input field',
                   child: ImprovedTextField(
                     controller: _passwordController,
-                    labelText: 'Password',
+                    labelText: AppLocalizations.of(_localeProvider.languageCode).translate('password'),
                     prefixIcon: Icons.lock_outlined,
                     isPassword: true,
                     focusNode: _passwordFocusNode,
@@ -313,7 +420,7 @@ class _SignInState extends State<SignIn> {
                         child: CircularProgressIndicator(),
                       )
                     : AuthButton(
-                        text: "Sign In",
+                        text: AppLocalizations.of(_localeProvider.languageCode).translate('signIn'),
                         onTap: _validateAndSubmit,
                       ),
                 const SizedBox(height: 24),
@@ -364,7 +471,7 @@ class _SignInState extends State<SignIn> {
             });
           },
           child: Text(
-            'Keep me signed in',
+            AppLocalizations.of(_localeProvider.languageCode).translate('keepMeSignedIn'),
             style: GoogleFonts.inter(
               fontSize: 12.0,
               color: Colors.black87,
@@ -376,7 +483,7 @@ class _SignInState extends State<SignIn> {
         GestureDetector(
           onTap: _handleForgotPassword,
           child: Text(
-            'Forgot password?',
+            AppLocalizations.of(_localeProvider.languageCode).translate('forgotPassword'),
             style: GoogleFonts.inter(
               fontSize: 12.0,
               color: const Color(0xFFF56B3F),

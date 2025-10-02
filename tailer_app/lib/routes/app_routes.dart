@@ -23,6 +23,7 @@ import '../features/measurements/screens/add_measurement_screen.dart';
 import '../features/measurements/screens/edit_measurement_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 import '../features/demo/simple_language_demo_screen.dart';
+import '../features/language/screens/language_selection_screen.dart';
 import 'package:flutter/foundation.dart';
 
 // Export route names for easy access
@@ -225,6 +226,13 @@ class AppRoutes {
         name: 'languageDemo',
         path: '/demo/language',
         pageBuilder: (context, state) => buildPage(const SimpleLanguageDemoScreen(), state),
+      ),
+
+      // Language Selection Screen
+      GoRoute(
+        name: 'languageSelection',
+        path: '/language/selection',
+        pageBuilder: (context, state) => buildPage(const LanguageSelectionScreen(), state),
       ),
 
       // GoRoute(path: '/profile-setup', builder: (context, state) => ProfileSetupScreen()),
