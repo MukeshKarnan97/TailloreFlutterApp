@@ -14,9 +14,6 @@ import 'package:tailer_app/data/services/social_auth_service.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
-import 'package:tailer_app/core/translations/app_localizations.dart';
-import 'package:tailer_app/core/providers/simple_locale_provider.dart';
-
 
 class SignUp extends StatefulWidget {
   const SignUp({Key? key}) : super(key: key);
@@ -45,27 +42,28 @@ class _SignUpState extends State<SignUp> {
   }
 
   String? _validateUsername(String? value) {
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
     if (value == null || value.trim().isEmpty) {
-      return 'Username is required';
+      return locale.translate('nameRequired');
     }
     return null;
   }
 
   String? _validateEmail(String? value) {
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
     if (value == null || value.trim().isEmpty) {
-      return 'Email is required';
+      return locale.translate('fieldRequired');
     }
     if (!_isEmailValid(value)) {
-      return 'Enter a valid email';
+      return locale.translate('invalidEmail');
     }
-        // Return cached email exists error if present
+    // Return cached email exists error if present
     if (_emailExistsError != null && value.trim() == _emailController.text.trim()) {
       return _emailExistsError;
     }
     return null;
   }
 
-  
   Future<void> _checkEmailExists(String email) async {
     if (email.trim().isEmpty || !_isEmailValid(email)) return;
     
@@ -84,7 +82,9 @@ class _SignUpState extends State<SignUp> {
       // Error checking email - we'll just let validation continue
       print('Error checking email existence: $e');
     }
-  }String? _validatePassword(String? value) {
+  }
+
+  String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return AppConstants.passwordRequiredError;
     }
@@ -150,41 +150,22 @@ class _SignUpState extends State<SignUp> {
     
     try {
       debugPrint('Attempting GoRouter navigation to OTP...');
-      context.pushNamed(RouteNames.otp, extra: {
-        'firstTitle': 'EMAIL',
-        'secondTitle': 'VERIFICATION',
-        'emailText': 'Verification code sent to ${_emailController.text.trim()}',
-        'email': _emailController.text.trim(),
-        'onVerified': () {
-          _navigateToSignIn();
+      context.pushNamed(
+        RouteNames.otp,
+        extra: {
+          'firstTitle': 'Verification',
+          'secondTitle': 'OTP',
+          'emailText': _emailController.text,
+          'email': _emailController.text,
+          'onVerified': () {
+            // Navigate to dashboard or sign in after successful signup verification
+            context.goNamed(RouteNames.dashboard);
+          },
         },
-      });
-      debugPrint('GoRouter navigation to OTP successful');
+      );
+      debugPrint('GoRouter navigation successful');
     } catch (error) {
-      debugPrint('Navigation to OTP failed: $error');
-      
-      // Show error to user
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Navigation failed. Please try again. Error: ${error.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _navigateToSignIn() async {
-    debugPrint('Starting navigation to sign-in after OTP verification...');
-    
-    try {
-      debugPrint('Attempting GoRouter navigation to sign-in...');
-      context.goNamed(RouteNames.signIn);
-      debugPrint('GoRouter navigation to sign-in successful');
-    } catch (error) {
-      debugPrint('Navigation to sign-in failed: $error');
+      debugPrint('Navigation failed: $error');
       
       // Show error to user
       if (mounted) {
@@ -202,26 +183,23 @@ class _SignUpState extends State<SignUp> {
   /// Handle successful social authentication
   void _handleSocialAuthSuccess(SocialAuthResult result) async {
     try {
-      // Set "keep me logged in" to true for social auth (default behavior)
-      await _authService.setKeepLoggedIn(true);
-      
       UserFeedbackService.showSuccess(
         context, 
-        'Welcome ${result.name}! Signed in with ${result.provider} successfully.'
+        'Welcome ${result.name}! Signed up with ${result.provider} successfully.'
       );
       
-      // Navigate to dashboard after successful social auth
+      // Navigate to dashboard after successful social auth signup
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           context.goNamed(RouteNames.dashboard);
         }
       });
     } catch (e) {
-      print('Error setting keep logged in preference: $e');
+      print('Error after social auth signup: $e');
       // Still show success and navigate, but log the error
       UserFeedbackService.showSuccess(
         context, 
-        'Welcome ${result.name}! Signed in with ${result.provider} successfully.'
+        'Welcome ${result.name}! Signed up with ${result.provider} successfully.'
       );
       
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -348,148 +326,147 @@ class _SignUpState extends State<SignUp> {
         },
       ),
       body: SafeArea(
-        child: Container(
-          width: size.width,
-          height: size.height,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color.fromRGBO(33, 137, 156, 0.15),
-                Colors.white,
-                Colors.white,
-                Colors.white,
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
-            child: Form(
-              key: _formKey,
-              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const SizedBox(height: 30),
-                Center(
-                  child: Semantics(
-                    label: 'Tailor app logo',
-                    child: LogoWidget(
-                      height_: size.height / 8, 
-                      width_: size.height / 8,
-                    ),
-                  ),
+        child: AnimatedBuilder(
+          animation: _localeProvider,
+          builder: (context, _) {
+            final locale = AppLocalizations.of(_localeProvider.languageCode);
+            
+            return Container(
+              width: size.width,
+              height: size.height,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color.fromRGBO(33, 137, 156, 0.15),
+                    Colors.white,
+                    Colors.white,
+                    Colors.white,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                const SizedBox(height: 16),
-                const Center(child: AuthTitle(first: "SIGN", second: "UP", fontSize: 24)),
-                const SizedBox(height: 8),
-                Center(
-                  child: Text(
-                    'Let’s Register to continue exploring',
-                    style: GoogleFonts.inter(
-                      fontSize: 14.0,
-                      color: const Color(0xFF969AA8),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SignUpGoogleFacebookButton(
-                  size: size,
-                  onSocialAuthSuccess: _handleSocialAuthSuccess,
-                  onSocialAuthError: _handleSocialAuthError,
-                ),
-                const SizedBox(height: 20),
-                
-                // Username
-                Semantics(
-                  label: 'Username input field',
-                  child: ImprovedTextField(
-                    controller: _usernameController,
-                    labelText: 'Username',
-                    prefixIcon: Icons.person_outlined,
-                    focusNode: _usernameFocusNode,
-                    onFieldSubmitted: (_) {
-                      _emailFocusNode.requestFocus();
-                    },
-                    validator: _validateUsername,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Email
-                Semantics(
-                  label: 'Email address input field',
-                  child: ImprovedTextField(
-                    controller: _emailController,
-                    labelText: 'Email Address',
-                    prefixIcon: Icons.email_outlined,
-                    keyboardType: TextInputType.emailAddress,
-                    focusNode: _emailFocusNode,
-                    onChanged: (value) {
-                          if (_emailExistsError != null) {
-                            setState(() { _emailExistsError = null; });
-                          }
-                          Future.delayed(const Duration(milliseconds: 800), () {
-                            if (_emailController.text.trim() == value.trim() && value.trim().isNotEmpty && _isEmailValid(value.trim())) {
-                              _checkEmailExists(value.trim());
-                            }
-                          });
-                        },
-                        onFieldSubmitted: (_) {
-                      _passwordFocusNode.requestFocus();
-                    },
-                    validator: _validateEmail,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Password
-                Semantics(
-                  label: 'Password input field',
-                  child: ImprovedTextField(
-                    controller: _passwordController,
-                    labelText: 'Password',
-                    prefixIcon: Icons.lock_outlined,
-                    isPassword: true,
-                    focusNode: _passwordFocusNode,
-                    onFieldSubmitted: (_) {
-                      _validateAndSubmit();
-                    },
-                    validator: _validatePassword,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // AuthButton(
-                //   text: _isLoading ? "Signing Up..." : "Sign Up",
-                //   onTap: _isLoading ? null : () {
-                //     _validateAndSubmit();
-                //   },
-                // ),
-                _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(),
-                      )
-                    : AuthButton(
-                        text: "Sign Up",
-                        onTap: _validateAndSubmit,
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const SizedBox(height: 30),
+                      Center(
+                        child: Semantics(
+                          label: 'Tailor app logo',
+                          child: LogoWidget(
+                            height_: size.height / 8, 
+                            width_: size.height / 8,
+                          ),
+                        ),
                       ),
-                const SizedBox(height: 20),
-                const AuthFooter(
-                  text: "Already have an account? ",
-                  actionText: "Sign In here",
-                  route: "/auth/sign-in",
+                      const SizedBox(height: 16),
+                      Center(child: AuthTitle(first: locale.translate('signUpTitle'), second: "", fontSize: 24)),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          locale.translate('signUpSubtitle'),
+                          style: GoogleFonts.inter(
+                            fontSize: 14.0,
+                            color: const Color(0xFF969AA8),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SignUpGoogleFacebookButton(
+                        size: size,
+                        onSocialAuthSuccess: _handleSocialAuthSuccess,
+                        onSocialAuthError: _handleSocialAuthError,
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      // Username
+                      Semantics(
+                        label: 'Username input field',
+                        child: ImprovedTextField(
+                          controller: _usernameController,
+                          labelText: locale.translate('username'),
+                          prefixIcon: Icons.person_outlined,
+                          focusNode: _usernameFocusNode,
+                          onFieldSubmitted: (_) {
+                            _emailFocusNode.requestFocus();
+                          },
+                          validator: _validateUsername,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Email
+                      Semantics(
+                        label: 'Email address input field',
+                        child: ImprovedTextField(
+                          controller: _emailController,
+                          labelText: locale.translate('emailAddress'),
+                          prefixIcon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          focusNode: _emailFocusNode,
+                          onChanged: (value) {
+                            if (_emailExistsError != null) {
+                              setState(() { _emailExistsError = null; });
+                            }
+                            Future.delayed(const Duration(milliseconds: 800), () {
+                              if (_emailController.text.trim() == value.trim() && value.trim().isNotEmpty && _isEmailValid(value.trim())) {
+                                _checkEmailExists(value.trim());
+                              }
+                            });
+                          },
+                          onFieldSubmitted: (_) {
+                            _passwordFocusNode.requestFocus();
+                          },
+                          validator: _validateEmail,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Password
+                      Semantics(
+                        label: 'Password input field',
+                        child: ImprovedTextField(
+                          controller: _passwordController,
+                          labelText: locale.translate('password'),
+                          prefixIcon: Icons.lock_outlined,
+                          isPassword: true,
+                          focusNode: _passwordFocusNode,
+                          onFieldSubmitted: (_) {
+                            _validateAndSubmit();
+                          },
+                          validator: _validatePassword,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _isLoading
+                          ? const Center(
+                              child: CircularProgressIndicator(),
+                            )
+                          : AuthButton(
+                              text: locale.translate('signUp'),
+                              onTap: _validateAndSubmit,
+                            ),
+                      const SizedBox(height: 20),
+                      AuthFooter(
+                        text: locale.translate('alreadyHaveAccount'),
+                        actionText: locale.translate('signInHere'),
+                        route: "/auth/sign-in",
+                      ),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 30),
-              ],
-            ),
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 }
-
-

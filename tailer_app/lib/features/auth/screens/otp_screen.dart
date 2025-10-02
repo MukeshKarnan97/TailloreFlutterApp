@@ -8,6 +8,8 @@ import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/features/auth/widgets/AuthButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthLogo.dart';
 import 'package:tailer_app/features/auth/widgets/AuthTitle.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
 
 class VerificationScreen extends StatefulWidget {
   final String firstTitle;
@@ -25,33 +27,41 @@ class VerificationScreen extends StatefulWidget {
     required this.onVerified,
   });
 
-
   @override
   _VerificationScreenState createState() => _VerificationScreenState();
 }
 
 class _VerificationScreenState extends State<VerificationScreen> {
+  final SimpleLocaleProvider _localeProvider = SimpleLocaleProvider();
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: LogoWithTitle(
-        firstTitle: widget.firstTitle,
-        secondTitle: widget.secondTitle,
-        subText: "Email Verification code has been sent",
-        children: [
-          Text(
-            widget.emailText,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.grey),
-            textAlign: TextAlign.center,
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, child) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: LogoWithTitle(
+            firstTitle: locale.translate('verificationTitle'),
+            secondTitle: locale.translate('otpTitle'),
+            subText: locale.translate('emailVerificationSent'),
+            children: [
+              Text(
+                widget.emailText,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: MediaQuery.of(context).size.height * 0.04),
+              OtpForm(
+                onVerified: widget.onVerified,
+                email: widget.email ?? 'test@example.com',
+              ),
+            ],
           ),
-          SizedBox(height: MediaQuery.of(context).size.height * 0.04),
-          OtpForm(
-            onVerified: widget.onVerified,
-            email: widget.email ?? 'test@example.com',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -68,6 +78,7 @@ class OtpForm extends StatefulWidget {
 class _OtpFormState extends State<OtpForm> {
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
+  final SimpleLocaleProvider _localeProvider = SimpleLocaleProvider();
 
   late FocusNode _pin1Node;
   late FocusNode _pin2Node;
@@ -168,9 +179,10 @@ class _OtpFormState extends State<OtpForm> {
       await _generateNewOTP();
       
       if (mounted) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
         UserFeedbackService.showSuccess(
           context,
-          'New OTP sent to ${widget.email}'
+          '${locale.translate('newOTPSent')} ${widget.email}'
         );
         
         // Clear previous OTP input
@@ -187,9 +199,10 @@ class _OtpFormState extends State<OtpForm> {
       }
     } catch (e) {
       if (mounted) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
         UserFeedbackService.showError(
           context,
-          'Failed to resend OTP. Please try again.'
+          locale.translate('failedToResendOTP')
         );
       }
     } finally {
@@ -203,10 +216,11 @@ class _OtpFormState extends State<OtpForm> {
 
   Future<void> _verifyOTP() async {
     final otp = _pin1Controller.text + _pin2Controller.text + _pin3Controller.text + _pin4Controller.text;
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     if (otp.length != 4) {
       setState(() {
-        _errorMessage = 'Please enter complete OTP';
+        _errorMessage = locale.translate('pleaseEnterCompleteOTP');
       });
       return;
     }
@@ -227,7 +241,7 @@ class _OtpFormState extends State<OtpForm> {
         if (mounted) {
           UserFeedbackService.showSuccess(
             context,
-            'OTP verified successfully!'
+            locale.translate('otpVerifiedSuccessfully')
           );
           
           // Cancel timer when verification is successful
@@ -243,13 +257,13 @@ class _OtpFormState extends State<OtpForm> {
       } else {
         if (mounted) {
           setState(() {
-            _errorMessage = 'Invalid OTP. Please check and try again.';
+            _errorMessage = locale.translate('invalidOTP');
           });
         }
       }
     } catch (e) {
       if (mounted) {
-        String errorMsg = 'Verification failed. Please try again.';
+        String errorMsg = locale.translate('verificationFailed');
         
         if (e is AuthException) {
           errorMsg = e.userMessage;
@@ -272,158 +286,165 @@ class _OtpFormState extends State<OtpForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        children: [
-          if (_errorMessage != null) ...[
-            Text(
-              _errorMessage!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-          ],
-          Row(
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, child) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        
+        return Form(
+          key: _formKey,
+          child: Column(
             children: [
-              Expanded(
-                child: OtpTextFormField(
-                  controller: _pin1Controller,
-                  focusNode: _pin1Node,
-                  autofocus: false,
-                  onChanged: (value) {
-                    if (value.length == 1) _pin2Node.requestFocus();
-                    setState(() {
-                      _errorMessage = null;
-                    });
-                  },
+              if (_errorMessage != null) ...[
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(width: 16.0),
-              Expanded(
-                child: OtpTextFormField(
-                  controller: _pin2Controller,
-                  focusNode: _pin2Node,
-                  onChanged: (value) {
-                    if (value.length == 1) _pin3Node.requestFocus();
-                    setState(() {
-                      _errorMessage = null;
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 16.0),
-              Expanded(
-                child: OtpTextFormField(
-                  controller: _pin3Controller,
-                  focusNode: _pin3Node,
-                  onChanged: (value) {
-                    if (value.length == 1) _pin4Node.requestFocus();
-                    setState(() {
-                      _errorMessage = null;
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 16.0),
-              Expanded(
-                child: OtpTextFormField(
-                  controller: _pin4Controller,
-                  focusNode: _pin4Node,
-                  onChanged: (value) {
-                    if (value.length == 1) _pin4Node.unfocus();
-                    setState(() {
-                      _errorMessage = null;
-                    });
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24.0),
-          
-          // Resend OTP Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "Didn't receive the code? ",
-                style: GoogleFonts.inter(
-                  fontSize: 14.0,
-                  color: Colors.grey[600],
-                ),
-              ),
-              if (_canResend)
-                GestureDetector(
-                  onTap: _isResending ? null : _resendOTP,
-                  child: Text(
-                    _isResending ? "Sending..." : "Resend OTP",
-                    style: GoogleFonts.inter(
-                      fontSize: 14.0,
-                      color: _isResending ? Colors.grey : const Color(0xFFF56B3F),
-                      fontWeight: FontWeight.w600,
+                const SizedBox(height: 16),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: OtpTextFormField(
+                      controller: _pin1Controller,
+                      focusNode: _pin1Node,
+                      autofocus: false,
+                      onChanged: (value) {
+                        if (value.length == 1) _pin2Node.requestFocus();
+                        setState(() {
+                          _errorMessage = null;
+                        });
+                      },
                     ),
                   ),
-                )
-              else
-                Text(
-                  "Resend in ${_formatTime(_resendCountdown)}",
-                  style: GoogleFonts.inter(
-                    fontSize: 14.0,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
+                  const SizedBox(width: 16.0),
+                  Expanded(
+                    child: OtpTextFormField(
+                      controller: _pin2Controller,
+                      focusNode: _pin2Node,
+                      onChanged: (value) {
+                        if (value.length == 1) _pin3Node.requestFocus();
+                        setState(() {
+                          _errorMessage = null;
+                        });
+                      },
+                    ),
                   ),
+                  const SizedBox(width: 16.0),
+                  Expanded(
+                    child: OtpTextFormField(
+                      controller: _pin3Controller,
+                      focusNode: _pin3Node,
+                      onChanged: (value) {
+                        if (value.length == 1) _pin4Node.requestFocus();
+                        setState(() {
+                          _errorMessage = null;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16.0),
+                  Expanded(
+                    child: OtpTextFormField(
+                      controller: _pin4Controller,
+                      focusNode: _pin4Node,
+                      onChanged: (value) {
+                        if (value.length == 1) _pin4Node.unfocus();
+                        setState(() {
+                          _errorMessage = null;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24.0),
+              
+              // Resend OTP Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    locale.translate('didntReceiveCode'),
+                    style: GoogleFonts.inter(
+                      fontSize: 14.0,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  if (_canResend)
+                    GestureDetector(
+                      onTap: _isResending ? null : _resendOTP,
+                      child: Text(
+                        _isResending ? locale.translate('sending') : locale.translate('resendOTP'),
+                        style: GoogleFonts.inter(
+                          fontSize: 14.0,
+                          color: _isResending ? Colors.grey : const Color(0xFFF56B3F),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  else
+                    Text(
+                      "${locale.translate('resendIn')} ${_formatTime(_resendCountdown)}",
+                      style: GoogleFonts.inter(
+                        fontSize: 14.0,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
+              
+              const SizedBox(height: 16.0),
+              
+              // Development Info
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
                 ),
+                child: Column(
+                  children: [
+                    Text(
+                      '${locale.translate('developmentOTP')}: $_currentOTP',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue[700],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      locale.translate('fallbackOTP'),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.blue[600],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 24.0),
+              
+              // Verify Button
+              _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : AuthButton(
+                      text: locale.translate('verifyOTP'),
+                      onTap: _verifyOTP,
+                    ),
             ],
           ),
-          
-          const SizedBox(height: 16.0),
-          
-          // Development Info
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  'Development OTP: $_currentOTP',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue[700],
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Fallback: 1234',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.blue[600],
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 24.0),
-          
-          // Verify Button
-          _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(),
-                )
-              : AuthButton(
-                  text: "Verify OTP",
-                  onTap: _verifyOTP,
-                ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
