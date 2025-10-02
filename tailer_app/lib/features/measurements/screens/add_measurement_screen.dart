@@ -11,6 +11,8 @@ import 'package:tailer_app/data/models/measurement_model.dart';
 import 'package:tailer_app/data/services/local_db_service.dart';
 import 'package:tailer_app/core/utils/logger.dart';
 import 'package:tailer_app/features/measurements/widgets/measurement_form.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class AddMeasurementScreen extends StatefulWidget {
   final String customerId;
@@ -29,6 +31,7 @@ class AddMeasurementScreen extends StatefulWidget {
 class _AddMeasurementScreenState extends State<AddMeasurementScreen> with NavigationMixin {
   final _formKey = GlobalKey<FormState>();
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  late SimpleLocaleProvider _localeProvider;
   
   String? _selectedDressType;
   final Map<String, double> _measurements = {};
@@ -38,6 +41,7 @@ class _AddMeasurementScreenState extends State<AddMeasurementScreen> with Naviga
   @override
   void initState() {
     super.initState();
+    _localeProvider = SimpleLocaleProvider();
     _selectedDressType = widget.dressType;
     _loadCustomerInfo();
   }
@@ -71,7 +75,8 @@ class _AddMeasurementScreenState extends State<AddMeasurementScreen> with Naviga
           }
         },
         onNotificationTap: () {
-          showNavigationMessage(context, 'Notifications');
+          final locale = AppLocalizations(_localeProvider.languageCode);
+          showNavigationMessage(context, locale.translate('notifications'));
         },
       ),
       body: SafeArea(

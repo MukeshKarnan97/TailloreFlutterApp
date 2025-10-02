@@ -9,6 +9,8 @@ import 'package:tailer_app/data/models/customer_model.dart';
 import 'package:tailer_app/data/services/local_db_service.dart';
 import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/core/utils/logger.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class ViewCustomersScreen extends StatefulWidget {
   const ViewCustomersScreen({Key? key}) : super(key: key);
@@ -23,10 +25,12 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
   List<Customer> _filteredCustomers = [];
   bool _isLoading = true;
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  late SimpleLocaleProvider _localeProvider;
 
   @override
   void initState() {
     super.initState();
+    _localeProvider = SimpleLocaleProvider();
     _loadCustomers();
   }
 
@@ -76,50 +80,57 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: DashboardHeader(
-        title: 'View Customers',
-        backgroundColor: const Color(AppConstants.primaryTeal),
-        notificationCount: 3,
-        onBackPressed: () {
-          context.goNamed(RouteNames.customerProfile);
-        },
-        onNotificationTap: () {
-          showNavigationMessage(context, 'Notifications');
-        },
-      ),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  color: Color(AppConstants.primaryTeal),
-                ),
-              )
-            : Column(
-                children: [
-                  _buildHeaderSection(),
-                  _buildFilterSection(),
-                  Expanded(child: _buildCustomerList()),
-                ],
-              ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.goNamed(RouteNames.addCustomer),
-        backgroundColor: const Color(AppConstants.primaryTeal),
-        icon: const Icon(Icons.person_add_rounded, color: Colors.white),
-        label: Text(
-          'Add Customer',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, child) {
+        final locale = AppLocalizations(_localeProvider.languageCode);
+        
+        return Scaffold(
+          backgroundColor: Colors.grey[50],
+          appBar: DashboardHeader(
+            title: locale.translate('viewCustomers'),
+            backgroundColor: const Color(AppConstants.primaryTeal),
+            notificationCount: 3,
+            onBackPressed: () {
+              context.goNamed(RouteNames.customerProfile);
+            },
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.translate('notifications'));
+            },
           ),
-        ),
-      ),
+          body: SafeArea(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(AppConstants.primaryTeal),
+                    ),
+                  )
+                : Column(
+                    children: [
+                      _buildHeaderSection(locale),
+                      _buildFilterSection(locale),
+                      Expanded(child: _buildCustomerList(locale)),
+                    ],
+                  ),
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () => context.goNamed(RouteNames.addCustomer),
+            backgroundColor: const Color(AppConstants.primaryTeal),
+            icon: const Icon(Icons.person_add_rounded, color: Colors.white),
+            label: Text(
+              locale.translate('addCustomer'),
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection(AppLocalizations locale) {
     return Container(
       margin: const EdgeInsets.all(AppConstants.spacingM),
       padding: const EdgeInsets.all(20),
@@ -182,7 +193,7 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Customer List',
+                  locale.translate('customerManagement'),
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -191,6 +202,15 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
                   ),
                 ),
                 const SizedBox(height: 4),
+                Text(
+                  locale.translate('manageAllYourCustomers'),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
@@ -202,7 +222,7 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
                     ),
                   ),
                   child: Text(
-                    '${_getVisibleCustomers().length} Customers',
+                    '${_getVisibleCustomers().length} ${locale.translate('totalCustomersCount')}',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -219,7 +239,7 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
     );
   }
 
-  Widget _buildFilterSection() {
+  Widget _buildFilterSection(AppLocalizations locale) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppConstants.spacingM),
       padding: const EdgeInsets.all(16),
@@ -239,7 +259,7 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
         onChanged: _filterCustomers,
         style: GoogleFonts.inter(fontSize: 16),
         decoration: InputDecoration(
-          hintText: 'Search customers...',
+          hintText: locale.translate('searchCustomersHint'),
           hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
           prefixIcon: const Icon(Icons.search_rounded, color: Color(AppConstants.primaryTeal)),
           border: OutlineInputBorder(
@@ -260,7 +280,7 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
     );
   }
 
-  Widget _buildCustomerList() {
+  Widget _buildCustomerList(AppLocalizations locale) {
     final customers = _getVisibleCustomers();
     
     if (customers.isEmpty) {
@@ -275,21 +295,27 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
             ),
             const SizedBox(height: 16),
             Text(
-              'No customers found',
+              _searchController.text.isEmpty 
+                  ? locale.translate('addFirstCustomer')
+                  : locale.translate('noCustomersFoundMessage'),
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[600],
               ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Add your first customer to get started',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Colors.grey[500],
+            if (_searchController.text.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                locale.translate('trySearchingDifferentTerm'),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
+            ],
           ],
         ),
       );
@@ -300,12 +326,12 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
       itemCount: customers.length,
       itemBuilder: (context, index) {
         final customer = customers[index];
-        return _buildCustomerCard(customer);
+        return _buildCustomerCard(customer, locale);
       },
     );
   }
 
-  Widget _buildCustomerCard(Customer customer) {
+  Widget _buildCustomerCard(Customer customer, AppLocalizations locale) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(

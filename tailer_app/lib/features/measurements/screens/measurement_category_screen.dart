@@ -6,6 +6,8 @@ import 'package:tailer_app/core/constants/measurement_constants.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/routes/app_routes.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class MeasurementCategoryScreen extends StatefulWidget {
   final String customerId;
@@ -19,44 +21,53 @@ class MeasurementCategoryScreen extends StatefulWidget {
 class _MeasurementCategoryScreenState extends State<MeasurementCategoryScreen> with NavigationMixin {
   final _searchController = TextEditingController();
   List<String> _filteredDressTypes = [];
+  late SimpleLocaleProvider _localeProvider;
 
   @override
   void initState() {
     super.initState();
+    _localeProvider = SimpleLocaleProvider();
     _filteredDressTypes = MeasurementConstants.getAllDressTypes();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: DashboardHeader(
-        title: 'Select Dress Type',
-        backgroundColor: const Color(AppConstants.primaryTeal),
-        notificationCount: 3,
-        onBackPressed: () {
-          context.goNamed(
-            RouteNames.measurementList,
-            pathParameters: {'customerId': widget.customerId},
-          );
-        },
-        onNotificationTap: () {
-          showNavigationMessage(context, 'Notifications');
-        },
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeaderSection(),
-            _buildSearchSection(),
-            Expanded(child: _buildDressTypeGrid()),
-          ],
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, _) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        
+        return Scaffold(
+          backgroundColor: Colors.grey[50],
+          appBar: DashboardHeader(
+            title: locale.translate('selectDressType'),
+            backgroundColor: const Color(AppConstants.primaryTeal),
+            notificationCount: 3,
+            onBackPressed: () {
+              context.goNamed(
+                RouteNames.measurementList,
+                pathParameters: {'customerId': widget.customerId},
+              );
+            },
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.translate('notifications'));
+            },
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildHeaderSection(locale),
+                _buildSearchSection(locale),
+                Expanded(child: _buildDressTypeGrid(locale)),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection(AppLocalizations locale) {
     return Container(
       margin: const EdgeInsets.all(AppConstants.spacingM),
       padding: const EdgeInsets.all(20),
@@ -119,7 +130,7 @@ class _MeasurementCategoryScreenState extends State<MeasurementCategoryScreen> w
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Choose Dress Type',
+                  locale.translate('chooseDressType'),
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -156,7 +167,7 @@ class _MeasurementCategoryScreenState extends State<MeasurementCategoryScreen> w
     );
   }
 
-  Widget _buildSearchSection() {
+  Widget _buildSearchSection(AppLocalizations locale) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppConstants.spacingM),
       padding: const EdgeInsets.all(16),
@@ -176,7 +187,7 @@ class _MeasurementCategoryScreenState extends State<MeasurementCategoryScreen> w
         onChanged: _filterDressTypes,
         style: GoogleFonts.inter(fontSize: 16),
         decoration: InputDecoration(
-          hintText: 'Search dress types...',
+          hintText: locale.translate('searchDressTypes'),
           hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
           prefixIcon: const Icon(Icons.search_rounded, color: Color(AppConstants.primaryTeal)),
           border: OutlineInputBorder(
@@ -197,7 +208,7 @@ class _MeasurementCategoryScreenState extends State<MeasurementCategoryScreen> w
     );
   }
 
-  Widget _buildDressTypeGrid() {
+  Widget _buildDressTypeGrid(AppLocalizations locale) {
     if (_filteredDressTypes.isEmpty) {
       return Center(
         child: Column(
@@ -210,7 +221,7 @@ class _MeasurementCategoryScreenState extends State<MeasurementCategoryScreen> w
             ),
             const SizedBox(height: 16),
             Text(
-              'No dress types found',
+              locale.translate('noDressTypesFound'),
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,

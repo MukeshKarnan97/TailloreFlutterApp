@@ -9,6 +9,8 @@ import 'package:tailer_app/data/models/customer_model.dart';
 import 'package:tailer_app/data/services/local_db_service.dart';
 import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/core/utils/logger.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class AddCustomerScreen extends StatefulWidget {
   const AddCustomerScreen({Key? key}) : super(key: key);
@@ -26,45 +28,59 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
   final _notesController = TextEditingController();
   String _selectedGender = 'Male';
   final List<String> _genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
+  late SimpleLocaleProvider _localeProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _localeProvider = SimpleLocaleProvider();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: DashboardHeader(
-        title: 'Add Customer',
-        backgroundColor: const Color(AppConstants.primaryTeal),
-        notificationCount: 3,
-        onBackPressed: () {
-          context.goNamed(RouteNames.customerProfile);
-        },
-        onNotificationTap: () {
-          showNavigationMessage(context, 'Notifications');
-        },
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppConstants.spacingM),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeaderSection(),
-                const SizedBox(height: AppConstants.spacingL),
-                _buildFormFields(),
-                const SizedBox(height: AppConstants.spacingL),
-                _buildActionButtons(),
-                const SizedBox(height: AppConstants.spacingL), // Extra bottom padding
-              ],
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, _) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        
+        return Scaffold(
+          backgroundColor: Colors.grey[50],
+          appBar: DashboardHeader(
+            title: locale.translate('addCustomer'),
+            backgroundColor: const Color(AppConstants.primaryTeal),
+            notificationCount: 3,
+            onBackPressed: () {
+              context.goNamed(RouteNames.customerProfile);
+            },
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.translate('notifications'));
+            },
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppConstants.spacingM),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeaderSection(locale),
+                    const SizedBox(height: AppConstants.spacingL),
+                    _buildFormFields(locale),
+                    const SizedBox(height: AppConstants.spacingL),
+                    _buildActionButtons(locale),
+                    const SizedBox(height: AppConstants.spacingL), // Extra bottom padding
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection(AppLocalizations locale) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -126,7 +142,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Add New Customer',
+                  locale.translate('addNewCustomer'),
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -146,7 +162,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
                     ),
                   ),
                   child: Text(
-                    'Customer Registration',
+                    locale.translate('customerAdded'),
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -163,12 +179,12 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
     );
   }
 
-  Widget _buildFormFields() {
+  Widget _buildFormFields(AppLocalizations locale) {
     return Column(
       children: [
         _buildTextField(
           controller: _nameController,
-          label: 'Full Name',
+          label: locale.translate('customerName'),
           icon: Icons.person_rounded,
           isRequired: true,
         ),
@@ -177,7 +193,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
         const SizedBox(height: AppConstants.spacingM),
         _buildTextField(
           controller: _phoneController,
-          label: 'Phone Number',
+          label: locale.translate('phoneNumber'),
           icon: Icons.phone_rounded,
           keyboardType: TextInputType.phone,
           isRequired: true,
@@ -185,21 +201,21 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
         const SizedBox(height: AppConstants.spacingM),
         _buildTextField(
           controller: _emailController,
-          label: 'Email Address',
+          label: locale.translate('emailAddress'),
           icon: Icons.email_rounded,
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: AppConstants.spacingM),
         _buildTextField(
           controller: _addressController,
-          label: 'Address',
+          label: locale.translate('address'),
           icon: Icons.location_on_rounded,
           maxLines: 3,
         ),
         const SizedBox(height: AppConstants.spacingM),
         _buildTextField(
           controller: _notesController,
-          label: 'Notes (Optional)',
+          label: locale.translate('optionalNotes'),
           icon: Icons.note_rounded,
           maxLines: 3,
         ),
@@ -418,7 +434,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(AppLocalizations locale) {
     return Row(
       children: [
         Expanded(

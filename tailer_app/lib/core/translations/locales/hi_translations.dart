@@ -166,6 +166,13 @@ const Map<String, String> hiTranslations = {
   'nameRequired': 'नाम आवश्यक है',
   'phoneRequired': 'फोन नंबर आवश्यक है',
   'addressRequired': 'पता आवश्यक है',
+  'gender': 'लिंग',
+  'male': 'पुरुष',
+  'female': 'महिला',
+  'other': 'अन्य',
+  'preferNotToSay': 'कहना पसंद नहीं',
+  'notes': 'टिप्पणियाँ',
+  'optionalNotes': 'वैकल्पिक टिप्पणियाँ',
   
   // Navigation & Actions Extended
   'notifications': 'अधिसूचनाएं',

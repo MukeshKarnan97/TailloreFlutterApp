@@ -7,6 +7,8 @@ import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
 import 'package:tailer_app/routes/app_routes.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class CustomersMainScreen extends StatefulWidget {
   const CustomersMainScreen({Key? key}) : super(key: key);
@@ -17,53 +19,67 @@ class CustomersMainScreen extends StatefulWidget {
 
 class _CustomersMainScreenState extends State<CustomersMainScreen> with NavigationMixin {
   int _currentNavIndex = 1; // Customers is index 1
+  late SimpleLocaleProvider _localeProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _localeProvider = SimpleLocaleProvider();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: DashboardHeader(
-        title: 'Customers',
-        backgroundColor: const Color(AppConstants.primaryTeal),
-        notificationCount: 3,
-        onBackPressed: () {
-          context.goNamed(RouteNames.dashboard);
-        },
-        onNotificationTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Notifications: You have 3 new notifications')),
-          );
-        },
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppConstants.spacingM),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Section
-              _buildHeaderSection(),
-              const SizedBox(height: AppConstants.spacingL),
-              
-              // Main Cards
-              _buildMainCards(),
-              
-              const Spacer(),
-            ],
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, _) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        
+        return Scaffold(
+          backgroundColor: Colors.grey[50],
+          appBar: DashboardHeader(
+            title: locale.translate('customers'),
+            backgroundColor: const Color(AppConstants.primaryTeal),
+            notificationCount: 3,
+            onBackPressed: () {
+              context.goNamed(RouteNames.dashboard);
+            },
+            onNotificationTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('${locale.translate('notifications')}: ${locale.translate('newNotifications')}')),
+              );
+            },
           ),
-        ),
-      ),
-      bottomNavigationBar: AnimatedBottomNavigation(
-        currentIndex: _currentNavIndex,
-        onTap: _onNavTap,
-        items: TailorAppBottomNavItems.defaultItems,
-        selectedItemColor: const Color(AppConstants.primaryTeal),
-        backgroundColor: Colors.white,
-      ),
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.spacingM),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Section
+                  _buildHeaderSection(locale),
+                  const SizedBox(height: AppConstants.spacingL),
+                  
+                  // Main Cards
+                  _buildMainCards(locale),
+                  
+                  const Spacer(),
+                ],
+              ),
+            ),
+          ),
+          bottomNavigationBar: AnimatedBottomNavigation(
+            currentIndex: _currentNavIndex,
+            onTap: _onNavTap,
+            items: TailorAppBottomNavItems.defaultItems,
+            selectedItemColor: const Color(AppConstants.primaryTeal),
+            backgroundColor: Colors.white,
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection(AppLocalizations locale) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -133,7 +149,7 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Customer Management',
+                  locale.translate('customerManagement'),
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -167,14 +183,14 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
     );
   }
 
-  Widget _buildMainCards() {
+  Widget _buildMainCards(AppLocalizations locale) {
     return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: _buildFeatureCard(
-                title: 'Customer Profile',
+                title: locale.translate('customerProfile'),
                 icon: Icons.person_rounded,
                 gradient: [
                   const Color(AppConstants.primaryTeal),
@@ -186,7 +202,7 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
             const SizedBox(width: AppConstants.spacingL),
             Expanded(
               child: _buildFeatureCard(
-                title: 'Measurements',
+                title: locale.translate('measurements'),
                 icon: Icons.straighten,
                 gradient: [
                   const Color(AppConstants.primaryOrange),
