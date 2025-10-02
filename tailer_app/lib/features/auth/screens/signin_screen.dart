@@ -332,7 +332,22 @@ class _SignInState extends State<SignIn> {
                 ),
                 const SizedBox(height: 16),
                 // Center(child: richText(24)),
-                const Center(child: AuthTitle(first: "SIGN", second: "IN", fontSize: 24)),
+                Center(
+                  child: Builder(
+                    builder: (context) {
+                      final signInTitle = AppLocalizations.of(_localeProvider.languageCode).translate('signInTitle');
+                      final titleParts = signInTitle.split(' ');
+                      final firstWord = titleParts.isNotEmpty ? titleParts[0] : 'SIGN';
+                      final secondWord = titleParts.length > 1 ? titleParts.sublist(1).join(' ') : 'IN';
+                      
+                      return AuthTitle(
+                        first: firstWord,
+                        second: secondWord,
+                        fontSize: 24,
+                      );
+                    },
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Center(
                   child: Text(

@@ -365,7 +365,19 @@ class _SignUpState extends State<SignUp> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Center(child: AuthTitle(first: locale.translate('signUpTitle'), second: "", fontSize: 24)),
+                      Center(
+                        child: Builder(
+                          builder: (context) {
+                            final signUpTitle = locale.translate('signUpTitle');
+                            final words = signUpTitle.split(' ');
+                            return AuthTitle(
+                              first: words.isNotEmpty ? words.first : signUpTitle,
+                              second: words.length > 1 ? words.sublist(1).join(' ') : "",
+                              fontSize: 24,
+                            );
+                          },
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Center(
                         child: Text(

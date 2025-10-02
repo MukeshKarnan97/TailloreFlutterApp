@@ -156,11 +156,19 @@ class _PasswordResetState extends State<PasswordReset> {
                       ),
                       const SizedBox(height: 16),
                       Center(
-                        child: AuthTitle(
-                          first: locale.translate('passwordResetTitle'), 
-                          second: locale.translate('passwordResetSecondTitle'), 
-                          fontSize: 24
-                        )
+                        child: Builder(
+                          builder: (context) {
+                            final resetTitle = locale.translate('passwordResetTitle');
+                            final resetSecondTitle = locale.translate('passwordResetSecondTitle');
+                            final fullTitle = '$resetTitle $resetSecondTitle'.trim();
+                            final words = fullTitle.split(' ');
+                            return AuthTitle(
+                              first: words.isNotEmpty ? words.first : resetTitle,
+                              second: words.length > 1 ? words.sublist(1).join(' ') : resetSecondTitle,
+                              fontSize: 24,
+                            );
+                          },
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Center(

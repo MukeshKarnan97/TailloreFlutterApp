@@ -264,7 +264,19 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       const SizedBox(height: 100),
                       Center(child: LogoWidget(height_: size.height / 8, width_:size.height / 8)),
                       const SizedBox(height: 60),
-                      Center(child: AuthTitle(first: locale.translate('forgotPasswordTitle'), second: "", fontSize: 24)),
+                      Center(
+                        child: Builder(
+                          builder: (context) {
+                            final forgotPasswordTitle = locale.translate('forgotPasswordTitle');
+                            final words = forgotPasswordTitle.split(' ');
+                            return AuthTitle(
+                              first: words.isNotEmpty ? words.first : forgotPasswordTitle,
+                              second: words.length > 1 ? words.sublist(1).join(' ') : "",
+                              fontSize: 24,
+                            );
+                          },
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Center(
                         child: Text(

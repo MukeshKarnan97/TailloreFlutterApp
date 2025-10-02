@@ -548,7 +548,18 @@ class LogoWithTitle extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Title
-                  AuthTitle(first: firstTitle, second: secondTitle, fontSize: 24),
+                  Builder(
+                    builder: (context) {
+                      // Combine first and second title for word splitting
+                      final fullTitle = '$firstTitle $secondTitle'.trim();
+                      final words = fullTitle.split(' ');
+                      return AuthTitle(
+                        first: words.isNotEmpty ? words.first : firstTitle,
+                        second: words.length > 1 ? words.sublist(1).join(' ') : secondTitle,
+                        fontSize: 24,
+                      );
+                    },
+                  ),
                   const SizedBox(height: 16),
 
                   // Subtext

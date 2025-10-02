@@ -4,6 +4,8 @@ import 'package:tailer_app/routes/app_routes.dart';
 import '../../core/config/app_config.dart';
 import '../../core/utils/logger.dart';
 import '../../core/utils/onboarding_helper.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
 
 
 
@@ -23,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  final SimpleLocaleProvider _localeProvider = SimpleLocaleProvider();
 
   @override
   void initState() {
@@ -62,63 +65,70 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     Logger.debug(_className, 'Building home screen');
     
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(AppConfig.appName),
-        elevation: 0,
-        backgroundColor: Colors.indigo.shade600,
-        foregroundColor: Colors.white,
-        centerTitle: true,
-      ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.indigo.shade600,
-                Colors.indigo.shade400,
-                Colors.blue.shade300,
-              ],
-            ),
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, child) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(AppConfig.appName),
+            elevation: 0,
+            backgroundColor: Colors.indigo.shade600,
+            foregroundColor: Colors.white,
+            centerTitle: true,
           ),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Welcome section
-                  _buildWelcomeSection(),
-                  
-                  const SizedBox(height: 40),
-                  
-                  // Feature cards
-                  _buildFeatureCards(),
-                  
-                  const SizedBox(height: 40),
-                  
-                  // Action buttons
-                  _buildActionButtons(),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // App info
-                  _buildAppInfo(),
-                ],
+          body: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.indigo.shade600,
+                    Colors.indigo.shade400,
+                    Colors.blue.shade300,
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Welcome section
+                      _buildWelcomeSection(locale),
+                      
+                      const SizedBox(height: 40),
+                      
+                      // Feature cards
+                      _buildFeatureCards(locale),
+                      
+                      const SizedBox(height: 40),
+                      
+                      // Action buttons
+                      _buildActionButtons(locale),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // App info
+                      _buildAppInfo(locale),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildWelcomeSection() {
+  Widget _buildWelcomeSection(AppLocalizations locale) {
     return Column(
       children: [
         Container(
@@ -145,9 +155,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         
         const SizedBox(height: 24),
         
-        const Text(
-          'Welcome to Tailor App!',
-          style: TextStyle(
+        Text(
+          locale.translate('welcomeToTailorApp'),
+          style: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -158,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         const SizedBox(height: 12),
         
         Text(
-          'Your digital assistant for perfect tailoring',
+          locale.translate('digitalAssistantForTailoring'),
           style: TextStyle(
             fontSize: 16,
             color: Colors.white.withOpacity(0.9),
@@ -169,22 +179,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildFeatureCards() {
+  Widget _buildFeatureCards(AppLocalizations locale) {
     final features = [
       {
         'icon': Icons.people,
-        'title': 'Manage Customers',
-        'description': 'Keep track of all your customers',
+        'title': locale.translate('manageCustomers'),
+        'description': locale.translate('trackAllCustomers'),
       },
       {
         'icon': Icons.straighten,
-        'title': 'Store Measurements',
-        'description': 'Record precise measurements',
+        'title': locale.translate('storeMeasurements'),
+        'description': locale.translate('recordPreciseMeasurements'),
       },
       {
         'icon': Icons.assignment,
-        'title': 'Track Orders',
-        'description': 'Monitor order progress',
+        'title': locale.translate('trackOrders'),
+        'description': locale.translate('monitorOrderProgress'),
       },
     ];
 
@@ -236,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(AppLocalizations locale) {
     return Column(
       children: [
         SizedBox(
@@ -255,9 +265,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               elevation: 5,
             ),
-            child: const Text(
-              'Get Started',
-              style: TextStyle(
+            child: Text(
+              locale.translate('getStarted'),
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -268,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildAppInfo() {
+  Widget _buildAppInfo(AppLocalizations locale) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -282,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Column(
         children: [
           Text(
-            'App Version: ${AppConfig.appVersion}',
+            '${locale.translate('appVersion')}: ${AppConfig.appVersion}',
             style: TextStyle(
               color: Colors.white.withOpacity(0.8),
               fontSize: 12,
@@ -290,7 +300,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 4),
           Text(
-            'Environment: ${AppConfig.environment}',
+            '${locale.translate('environment')}: ${AppConfig.environment}',
             style: TextStyle(
               color: Colors.white.withOpacity(0.8),
               fontSize: 12,
@@ -307,9 +317,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.orange, width: 1),
                 ),
-                child: const Text(
-                  'Debug Mode - Tap for info',
-                  style: TextStyle(
+                child: Text(
+                  locale.translate('debugModeTapForInfo'),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
@@ -327,9 +337,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.red, width: 1),
                 ),
-                child: const Text(
-                  'Reset Onboarding Flow',
-                  style: TextStyle(
+                child: Text(
+                  locale.translate('resetOnboardingFlow'),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
@@ -351,20 +361,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       await OnboardingHelper.setGetStartedCompleted();
       Logger.debug(_className, 'Get Started completion status saved');
       
-      // Navigate to Privacy Policy screen
       if (mounted) {
-        context.goNamed(RouteNames.privacyPolicy);
+        Logger.info(_className, 'Navigating to sign-in screen');
+        context.goNamed(RouteNames.signIn);
       }
-    } catch (e) {
-      Logger.error(_className, 'Failed to navigate to privacy policy: $e');
+    } catch (e, stackTrace) {
+      Logger.error(_className, 'Failed to navigate to sign-in', 
+                  error: e, stackTrace: stackTrace);
       
-      // Fallback - show a message if navigation fails
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Something went wrong. Please try again.'),
+          SnackBar(
+            content: Text('Navigation failed: ${e.toString()}'),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
           ),
         );
       }
@@ -372,57 +381,46 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _showDebugInfo() {
-    Logger.info(_className, 'Showing debug information');
-    
-    final config = AppConfig.getAllConfig(includeSensitive: false);
-    
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Debug Information'),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 300,
-          child: SingleChildScrollView(
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(locale.translate('debugInformation')),
+          content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Configuration:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                Text('${locale.translate('appName')}: ${AppConfig.appName}'),
+                Text('${locale.translate('version')}: ${AppConfig.appVersion}'),
+                Text('${locale.translate('environment')}: ${AppConfig.environment}'),
+                Text('${locale.translate('debugMode')}: ${AppConfig.isDevelopment}'),
+                const SizedBox(height: 10),
+                Text(locale.translate('onboardingStatus')),
+                FutureBuilder<bool>(
+                  future: OnboardingHelper.isGetStartedCompleted(),
+                  builder: (context, snapshot) {
+                    return Text('${locale.translate('getStartedCompleted')}: ${snapshot.data ?? false}');
+                  },
                 ),
-                const SizedBox(height: 8),
-                ...config.entries.map((entry) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text(
-                      '${entry.key}: ${entry.value}',
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                      ),
-                    ),
-                  );
-                }).toList(),
+                Text('${locale.translate('privacyCompleted')}: false'), // Since no privacy method exists
               ],
             ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => context.pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(locale.translate('close')),
+            ),
+          ],
+        );
+      },
     );
   }
 
   void _openDebugResetScreen() {
     Logger.info(_className, 'Opening debug reset screen');
-    
-    // For now, we'll navigate to privacy policy as we don't have a debug route
-    // In a real app, you would add a debug route to AppRoutes
-    context.goNamed(RouteNames.privacyPolicy);
+    context.pushNamed('debugReset');
   }
 }

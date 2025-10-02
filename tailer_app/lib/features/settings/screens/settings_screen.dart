@@ -9,6 +9,8 @@ import 'package:tailer_app/core/services/navigation_service.dart';
 import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/core/utils/logger.dart';
 import 'package:tailer_app/routes/app_routes.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -21,53 +23,61 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
   int _currentNavIndex = 3; // Settings is index 3
   final AuthService _authService = AuthService();
   bool _isLoggingOut = false;
+  final SimpleLocaleProvider _localeProvider = SimpleLocaleProvider();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: DashboardHeader(
-        title: 'Settings',
-        backgroundColor: const Color(AppConstants.primaryTeal),
-        notificationCount: 3,
-        onBackPressed: () {
-          context.goNamed(RouteNames.dashboard);
-        },
-        onNotificationTap: () {
-          showNavigationMessage(context, 'Notifications');
-        },
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppConstants.spacingM),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeaderSection(),
-              const SizedBox(height: AppConstants.spacingL),
-              _buildUserAccountSection(),
-              const SizedBox(height: AppConstants.spacingL),
-              _buildAppPreferencesSection(),
-              const SizedBox(height: AppConstants.spacingL),
-              _buildSupportSection(),
-              const SizedBox(height: AppConstants.spacingL),
-              _buildAboutSection(),
-            ],
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, child) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        return Scaffold(
+          backgroundColor: Colors.grey[50],
+          appBar: DashboardHeader(
+            title: locale.translate('settings'),
+            backgroundColor: const Color(AppConstants.primaryTeal),
+            notificationCount: 3,
+            onBackPressed: () {
+              context.goNamed(RouteNames.dashboard);
+            },
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.translate('notifications'));
+            },
           ),
-        ),
-      ),
-      bottomNavigationBar: AnimatedBottomNavigation(
-        currentIndex: _currentNavIndex,
-        onTap: _onNavTap,
-        items: TailorAppBottomNavItems.defaultItems,
-        selectedItemColor: const Color(AppConstants.primaryTeal),
-        backgroundColor: Colors.white,
-      ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppConstants.spacingM),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeaderSection(),
+                  const SizedBox(height: AppConstants.spacingL),
+                  _buildUserAccountSection(),
+                  const SizedBox(height: AppConstants.spacingL),
+                  _buildAppPreferencesSection(),
+                  const SizedBox(height: AppConstants.spacingL),
+                  _buildSupportSection(),
+                  const SizedBox(height: AppConstants.spacingL),
+                  _buildAboutSection(),
+                ],
+              ),
+            ),
+          ),
+          bottomNavigationBar: AnimatedBottomNavigation(
+            currentIndex: _currentNavIndex,
+            onTap: _onNavTap,
+            items: TailorAppBottomNavItems.defaultItems,
+            selectedItemColor: const Color(AppConstants.primaryTeal),
+            backgroundColor: Colors.white,
+          ),
+        );
+      },
     );
   }
 
   Widget _buildHeaderSection() {
     final currentUser = _authService.currentUser;
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     return Container(
       padding: const EdgeInsets.all(20),
@@ -161,7 +171,7 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
                     ),
                   ),
                   child: Text(
-                    'Active',
+                    locale.translate('active'),
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -179,42 +189,43 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
   }
 
   Widget _buildUserAccountSection() {
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
     return _buildSection(
-      title: 'Account',
+      title: locale.translate('account'),
       icon: Icons.person_outline_rounded,
       children: [
         _buildSettingsItem(
           icon: Icons.edit_rounded,
-          title: 'Edit Profile',
-          subtitle: 'Update your personal information',
+          title: locale.translate('editProfile'),
+          subtitle: locale.translate('updatePersonalInformation'),
           onTap: () {
-            showNavigationMessage(context, 'Edit Profile', 
-                customMessage: 'Profile editing feature coming soon!');
+            showNavigationMessage(context, locale.translate('editProfile'), 
+                customMessage: locale.translate('profileEditingComingSoon'));
           },
         ),
         _buildSettingsItem(
           icon: Icons.lock_outline_rounded,
-          title: 'Change Password',
-          subtitle: 'Update your account password',
+          title: locale.translate('changePassword'),
+          subtitle: locale.translate('updateAccountPassword'),
           onTap: () {
-            showNavigationMessage(context, 'Change Password', 
-                customMessage: 'Password change feature coming soon!');
+            showNavigationMessage(context, locale.translate('changePassword'), 
+                customMessage: locale.translate('passwordChangeComingSoon'));
           },
         ),
         _buildSettingsItem(
           icon: Icons.security_rounded,
-          title: 'Privacy & Security',
-          subtitle: 'Manage your privacy settings',
+          title: locale.translate('privacyAndSecurity'),
+          subtitle: locale.translate('managePrivacySettings'),
           onTap: () {
-            showNavigationMessage(context, 'Privacy & Security', 
-                customMessage: 'Privacy settings coming soon!');
+            showNavigationMessage(context, locale.translate('privacyAndSecurity'), 
+                customMessage: locale.translate('privacySettingsComingSoon'));
           },
         ),
         _buildDivider(),
         _buildSettingsItem(
           icon: Icons.logout_rounded,
-          title: 'Logout',
-          subtitle: 'Sign out of your account',
+          title: locale.translate('logout'),
+          subtitle: locale.translate('signOutOfAccount'),
           iconColor: Colors.red,
           titleColor: Colors.red,
           showTrailing: false,
@@ -225,49 +236,49 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
   }
 
   Widget _buildAppPreferencesSection() {
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
     return _buildSection(
-      title: 'App Preferences',
+      title: locale.translate('appPreferences'),
       icon: Icons.tune_rounded,
       children: [
         _buildSettingsItem(
           icon: Icons.dark_mode_rounded,
-          title: 'Theme',
-          subtitle: 'Light, dark, or system default',
+          title: locale.translate('theme'),
+          subtitle: locale.translate('lightDarkSystemDefault'),
           trailing: Text(
-            'System',
+            locale.translate('system'),
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Colors.grey[600],
             ),
           ),
           onTap: () {
-            showNavigationMessage(context, 'Theme Settings', 
-                customMessage: 'Theme selection coming soon!');
+            showNavigationMessage(context, locale.translate('theme'), 
+                customMessage: locale.translate('themeSelectionComingSoon'));
           },
         ),
         _buildSettingsItem(
           icon: Icons.language_rounded,
-          title: 'Language',
-          subtitle: 'Choose your preferred language',
+          title: locale.translate('language'),
+          subtitle: locale.translate('choosePreferredLanguage'),
           trailing: Text(
-            'English',
+            _getCurrentLanguageName(),
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Colors.grey[600],
             ),
           ),
           onTap: () {
-            showNavigationMessage(context, 'Language Settings', 
-                customMessage: 'Language selection coming soon!');
+            _showLanguageSelection(context);
           },
         ),
         _buildSettingsItem(
           icon: Icons.notifications_outlined,
-          title: 'Notifications',
-          subtitle: 'Manage notification preferences',
+          title: locale.translate('notifications'),
+          subtitle: locale.translate('manageNotificationPreferences'),
           onTap: () {
-            showNavigationMessage(context, 'Notification Settings', 
-                customMessage: 'Notification settings coming soon!');
+            showNavigationMessage(context, locale.translate('notifications'), 
+                customMessage: locale.translate('notificationSettingsComingSoon'));
           },
         ),
       ],
@@ -275,35 +286,36 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
   }
 
   Widget _buildSupportSection() {
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
     return _buildSection(
-      title: 'Support',
+      title: locale.translate('support'),
       icon: Icons.help_outline_rounded,
       children: [
         _buildSettingsItem(
           icon: Icons.help_center_rounded,
-          title: 'Help Center',
-          subtitle: 'FAQs and user guides',
+          title: locale.translate('helpCenter'),
+          subtitle: locale.translate('faqsAndUserGuides'),
           onTap: () {
-            showNavigationMessage(context, 'Help Center', 
-                customMessage: 'Help center coming soon!');
+            showNavigationMessage(context, locale.translate('helpCenter'), 
+                customMessage: locale.translate('helpCenterComingSoon'));
           },
         ),
         _buildSettingsItem(
           icon: Icons.feedback_rounded,
-          title: 'Send Feedback',
-          subtitle: 'Share your thoughts with us',
+          title: locale.translate('sendFeedback'),
+          subtitle: locale.translate('shareThoughtsWithUs'),
           onTap: () {
-            showNavigationMessage(context, 'Send Feedback', 
-                customMessage: 'Feedback feature coming soon!');
+            showNavigationMessage(context, locale.translate('sendFeedback'), 
+                customMessage: locale.translate('feedbackFeatureComingSoon'));
           },
         ),
         _buildSettingsItem(
           icon: Icons.bug_report_rounded,
-          title: 'Report a Bug',
-          subtitle: 'Let us know about any issues',
+          title: locale.translate('reportABug'),
+          subtitle: locale.translate('letUsKnowAboutIssues'),
           onTap: () {
-            showNavigationMessage(context, 'Report Bug', 
-                customMessage: 'Bug reporting coming soon!');
+            showNavigationMessage(context, locale.translate('reportABug'), 
+                customMessage: locale.translate('bugReportingComingSoon'));
           },
         ),
       ],
@@ -311,31 +323,32 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
   }
 
   Widget _buildAboutSection() {
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
     return _buildSection(
-      title: 'About',
+      title: locale.translate('about'),
       icon: Icons.info_outline_rounded,
       children: [
         _buildSettingsItem(
           icon: Icons.privacy_tip_rounded,
-          title: 'Privacy Policy',
-          subtitle: 'Read our privacy policy',
+          title: locale.translate('privacyPolicy'),
+          subtitle: locale.translate('readOurPrivacyPolicy'),
           onTap: () {
             context.goNamed(RouteNames.privacyPolicy);
           },
         ),
         _buildSettingsItem(
           icon: Icons.description_rounded,
-          title: 'Terms of Service',
-          subtitle: 'Read our terms of service',
+          title: locale.translate('termsOfService'),
+          subtitle: locale.translate('readOurTermsOfService'),
           onTap: () {
-            showNavigationMessage(context, 'Terms of Service', 
-                customMessage: 'Terms of service coming soon!');
+            showNavigationMessage(context, locale.translate('termsOfService'), 
+                customMessage: locale.translate('termsOfServiceComingSoon'));
           },
         ),
         _buildSettingsItem(
           icon: Icons.info_rounded,
-          title: 'App Version',
-          subtitle: 'Current version information',
+          title: locale.translate('appVersion'),
+          subtitle: locale.translate('currentVersionInformation'),
           trailing: Text(
             'v1.0.0',
             style: GoogleFonts.inter(
@@ -486,6 +499,7 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
   }
 
   void _showLogoutDialog() {
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -502,7 +516,7 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
               ),
               const SizedBox(width: 12),
               Text(
-                'Logout',
+                locale.translate('logout'),
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w700,
                   color: Colors.black87,
@@ -511,7 +525,7 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
             ],
           ),
           content: Text(
-            'Are you sure you want to logout? You will need to sign in again to access your account.',
+            locale.translate('logoutConfirmation'),
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Colors.grey[700],
@@ -521,7 +535,7 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
-                'Cancel',
+                locale.translate('cancel'),
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w600,
                   color: Colors.grey[600],
@@ -546,7 +560,7 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
                       ),
                     )
                   : Text(
-                      'Logout',
+                      locale.translate('logout'),
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -561,6 +575,7 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
 
   Future<void> _handleLogout() async {
     if (_isLoggingOut) return;
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
 
     try {
       setState(() => _isLoggingOut = true);
@@ -594,8 +609,8 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
         // Show success message
         showNavigationMessage(
           context,
-          'Logged Out',
-          customMessage: 'You have been successfully logged out.',
+          locale.translate('loggedOut'),
+          customMessage: locale.translate('loggedOutSuccessfully'),
           backgroundColor: Colors.green,
         );
       }
@@ -611,8 +626,8 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
       if (mounted) {
         showNavigationMessage(
           context,
-          'Logout Failed',
-          customMessage: 'Failed to logout. Please try again.',
+          locale.translate('logoutFailed'),
+          customMessage: locale.translate('logoutFailedMessage'),
           backgroundColor: Colors.red,
         );
       }
@@ -638,5 +653,23 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
         NavigationDestinations.settings,
       ],
     );
+  }
+
+  String _getCurrentLanguageName() {
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
+    switch (_localeProvider.languageCode) {
+      case 'ta':
+        return locale.translate('tamil');
+      case 'hi':
+        return locale.translate('hindi');
+      case 'en':
+      default:
+        return locale.translate('english');
+    }
+  }
+
+  void _showLanguageSelection(BuildContext context) {
+    // Navigate to the existing language selection screen
+    context.pushNamed(RouteNames.languageSelection);
   }
 }
