@@ -266,6 +266,36 @@ class BottomNavItem {
 
 // Common bottom navigation items for the tailor app
 class TailorAppBottomNavItems {
+  /// Get localized navigation items
+  static List<BottomNavItem> getLocalizedItems({
+    required String dashboardLabel,
+    required String customersLabel,
+    required String ordersLabel,
+    required String settingsLabel,
+  }) => [
+    BottomNavItem(
+      icon: Icons.dashboard_outlined,
+      activeIcon: Icons.dashboard,
+      label: dashboardLabel,
+    ),
+    BottomNavItem(
+      icon: Icons.people_outline,
+      activeIcon: Icons.people,
+      label: customersLabel,
+    ),
+    BottomNavItem(
+      icon: Icons.shopping_bag_outlined,
+      activeIcon: Icons.shopping_bag,
+      label: ordersLabel,
+    ),
+    BottomNavItem(
+      icon: Icons.settings_outlined,
+      activeIcon: Icons.settings,
+      label: settingsLabel,
+    ),
+  ];
+  
+  /// Fallback for default items (English) - for backward compatibility
   static List<BottomNavItem> get defaultItems => [
     const BottomNavItem(
       icon: Icons.dashboard_outlined,

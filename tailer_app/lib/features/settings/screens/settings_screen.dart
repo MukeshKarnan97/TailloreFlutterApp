@@ -643,7 +643,7 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
       customRoutes: [
         NavigationRoutes.dashboard,
         NavigationRoutes.customers,
-        null, // Orders - not implemented yet
+        NavigationRoutes.orders, // Use proper route instead of null
         NavigationRoutes.settings, // Current settings page
       ],
       customDestinations: [

@@ -35,6 +35,14 @@ class RouteNames {
   static const String addMeasurement = 'addMeasurement';
   static const String editMeasurement = 'editMeasurement';
   
+  // Orders
+  static const String orders = 'orders';
+  static const String orderList = 'orderList';
+  static const String addOrder = 'addOrder';
+  static const String orderDetails = 'orderDetails';
+  static const String orderDetail = 'orderDetail';
+  static const String editOrder = 'editOrder';
+  
   // Demo
   static const String languageDemo = 'languageDemo';
   static const String languageSelection = 'languageSelection';

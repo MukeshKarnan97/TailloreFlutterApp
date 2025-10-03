@@ -8,6 +8,8 @@ import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
+import 'package:tailer_app/data/services/local_db_service.dart';
+import 'package:tailer_app/core/utils/logger.dart';
 
 class MeasurementCategoryScreen extends StatefulWidget {
   final String customerId;
@@ -20,14 +22,115 @@ class MeasurementCategoryScreen extends StatefulWidget {
 
 class _MeasurementCategoryScreenState extends State<MeasurementCategoryScreen> with NavigationMixin {
   final _searchController = TextEditingController();
+  final LocalDatabaseService _dbService = LocalDatabaseService();
+  
   List<String> _filteredDressTypes = [];
   late SimpleLocaleProvider _localeProvider;
+  String? _customerName;
+  bool _isLoading = true;
+  Map<String, int> _measurementCounts = {};
 
   @override
   void initState() {
     super.initState();
     _localeProvider = SimpleLocaleProvider();
     _filteredDressTypes = MeasurementConstants.getAllDressTypes();
+    _loadCustomerData();
+    _loadMeasurementCounts();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCustomerData() async {
+    try {
+      final customerData = await _dbService.getCustomerByUniqueId(widget.customerId);
+      if (customerData != null && mounted) {
+        setState(() {
+          _customerName = customerData['name'];
+        });
+      }
+    } catch (e, stackTrace) {
+      Logger.error('MeasurementCategoryScreen', 'Failed to load customer data', error: e, stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> _loadMeasurementCounts() async {
+    try {
+      setState(() => _isLoading = true);
+      
+      // Get all measurements for this customer
+      final measurements = await _dbService.select(
+        'measurement',
+        where: 'customer_id = ?',
+        whereArgs: [widget.customerId],
+      );
+      
+      // Count measurements by dress type
+      final counts = <String, int>{};
+      for (final measurementData in measurements) {
+        final dressType = measurementData['dress_type'] as String;
+        counts[dressType] = (counts[dressType] ?? 0) + 1;
+      }
+      
+      setState(() {
+        _measurementCounts = counts;
+        _isLoading = false;
+      });
+    } catch (e, stackTrace) {
+      Logger.error('MeasurementCategoryScreen', 'Failed to load measurement counts', error: e, stackTrace: stackTrace);
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _filterDressTypes(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredDressTypes = MeasurementConstants.getAllDressTypes();
+      } else {
+        _filteredDressTypes = MeasurementConstants.getAllDressTypes()
+            .where((dressType) {
+          final dressTypeDetails = MeasurementConstants.getDressTypeDetails(dressType);
+          final name = dressTypeDetails?['name']?.toLowerCase() ?? dressType.toLowerCase();
+          return name.contains(query.toLowerCase());
+        }).toList();
+      }
+    });
+  }
+
+  /// Get appropriate icon for dress type
+  IconData _getDressTypeIcon(String? iconString) {
+    switch (iconString) {
+      case 'shirt':
+        return Icons.checkroom_rounded;
+      case 'pant':
+        return Icons.straighten_rounded;
+      case 'suit':
+        return Icons.business_center_rounded;
+      case 'blazer':
+        return Icons.work_outline_rounded;
+      case 'kurta':
+        return Icons.person_rounded;
+      case 'sherwani':
+        return Icons.star_rounded;
+      case 'dress':
+        return Icons.woman_rounded;
+      case 'skirt':
+        return Icons.woman_2_rounded;
+      case 'blouse':
+        return Icons.checkroom_outlined;
+      case 'lehenga':
+        return Icons.celebration_rounded;
+      case 'saree':
+        return Icons.accessibility_new_rounded;
+      case 'gown':
+        return Icons.nightlife_rounded;
+      default:
+        return Icons.checkroom_rounded;
+    }
   }
 
   @override
@@ -99,29 +202,15 @@ class _MeasurementCategoryScreenState extends State<MeasurementCategoryScreen> w
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(AppConstants.primaryTeal),
-                  Color(0xFF00A693),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(AppConstants.primaryTeal).withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              color: const Color(AppConstants.primaryTeal),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
-              Icons.checkroom_rounded,
-              size: 28,
+              Icons.category_rounded,
               color: Colors.white,
+              size: 24,
             ),
           ),
           const SizedBox(width: 16),
@@ -130,34 +219,36 @@ class _MeasurementCategoryScreenState extends State<MeasurementCategoryScreen> w
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  locale.translate('chooseDressType'),
+                  locale.translate('chooseDressTypeToMeasure'),
                   style: GoogleFonts.inter(
-                    fontSize: 22,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: Colors.black87,
-                    letterSpacing: 0.3,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(AppConstants.primaryTeal).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(AppConstants.primaryTeal).withOpacity(0.2),
-                      width: 1,
-                    ),
+                Text(
+                  _customerName != null 
+                      ? '${locale.translate('customer')}: $_customerName'
+                      : locale.translate('loadingCustomerInfo'),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.grey[600],
                   ),
-                  child: Text(
-                    '${_filteredDressTypes.length} Available Types',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(AppConstants.primaryTeal),
-                      letterSpacing: 0.2,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      locale.translate('selectDressTypeDescription'),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -168,295 +259,243 @@ class _MeasurementCategoryScreenState extends State<MeasurementCategoryScreen> w
   }
 
   Widget _buildSearchSection(AppLocalizations locale) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppConstants.spacingM),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingM),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey.withOpacity(0.2),
+            width: 1,
           ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: _filterDressTypes,
-        style: GoogleFonts.inter(fontSize: 16),
-        decoration: InputDecoration(
-          hintText: locale.translate('searchDressTypes'),
-          hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
-          prefixIcon: const Icon(Icons.search_rounded, color: Color(AppConstants.primaryTeal)),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: locale.translate('searchDressTypes'),
+            prefixIcon: const Icon(
+              Icons.search,
+              color: Color(AppConstants.primaryTeal),
+            ),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _searchController.clear();
+                      _filterDressTypes('');
+                    },
+                  )
+                : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(AppConstants.primaryTeal)),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          onChanged: _filterDressTypes,
         ),
       ),
     );
   }
 
   Widget _buildDressTypeGrid(AppLocalizations locale) {
-    if (_filteredDressTypes.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off_rounded,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              locale.translate('noDressTypesFound'),
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try adjusting your search',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(AppConstants.primaryTeal)),
         ),
       );
     }
 
-    return GridView.builder(
+    if (_filteredDressTypes.isEmpty) {
+      return _buildEmptyState(locale);
+    }
+
+    return Padding(
       padding: const EdgeInsets.all(AppConstants.spacingM),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.85,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+      child: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 1.1,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemCount: _filteredDressTypes.length,
+        itemBuilder: (context, index) {
+          final dressType = _filteredDressTypes[index];
+          return _buildDressTypeCard(dressType, locale);
+        },
       ),
-      itemCount: _filteredDressTypes.length,
-      itemBuilder: (context, index) {
-        final dressType = _filteredDressTypes[index];
-        return _buildDressTypeCard(dressType);
-      },
     );
   }
 
-  Widget _buildDressTypeCard(String dressType) {
-    final dressTypeDetails = MeasurementConstants.getDressTypeDetails(dressType);
-    final requiredMeasurements = MeasurementConstants.getMeasurementsForDressType(dressType);
-    final measurementCount = requiredMeasurements.length;
-    
-    return GestureDetector(
-      onTap: () => _selectDressType(dressType),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: const Color(AppConstants.primaryTeal).withOpacity(0.1),
-            width: 1,
+  Widget _buildEmptyState(AppLocalizations locale) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: Colors.grey[300],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
+          const SizedBox(height: 16),
+          Text(
+            locale.translate('noDressTypesFound'),
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[500],
             ),
-          ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            locale.translate('tryDifferentSearchTerm'),
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: Colors.grey[400],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDressTypeCard(String dressType, AppLocalizations locale) {
+    final dressTypeDetails = MeasurementConstants.getDressTypeDetails(dressType);
+    final measurementCount = _measurementCounts[dressType] ?? 0;
+    final requiredMeasurements = MeasurementConstants.getMeasurementsForDressType(dressType);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: measurementCount > 0 
+              ? const Color(AppConstants.primaryTeal).withOpacity(0.3)
+              : Colors.grey.withOpacity(0.1),
+          width: measurementCount > 0 ? 2 : 1,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Icon container
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _getDressTypeColor(dressType),
-                    _getDressTypeColor(dressType).withOpacity(0.8),
+        boxShadow: [
+          BoxShadow(
+            color: measurementCount > 0 
+                ? const Color(AppConstants.primaryTeal).withOpacity(0.1)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: measurementCount > 0 ? 15 : 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () {
+            context.goNamed(
+              RouteNames.addMeasurement,
+              pathParameters: {
+                'customerId': widget.customerId,
+              },
+              queryParameters: {
+                'dressType': dressType,
+              },
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Stack(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: measurementCount > 0 
+                            ? const Color(AppConstants.primaryTeal)
+                            : const Color(AppConstants.primaryTeal).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        _getDressTypeIcon(dressTypeDetails?['icon']),
+                        color: measurementCount > 0 
+                            ? Colors.white
+                            : const Color(AppConstants.primaryTeal),
+                        size: 28,
+                      ),
+                    ),
+                    if (measurementCount > 0)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '$measurementCount',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: _getDressTypeColor(dressType).withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                const SizedBox(height: 12),
+                Text(
+                  dressTypeDetails?['name'] ?? dressType,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
                   ),
-                ],
-              ),
-              child: Icon(
-                _getDressTypeIcon(dressType),
-                size: 40,
-                color: Colors.white,
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Dress type name
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                dressTypeDetails?['name'] ?? dressType,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            
-            const SizedBox(height: 8),
-            
-            // Description
-            if (dressTypeDetails?['description'] != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  dressTypeDetails!['description'],
+                const SizedBox(height: 4),
+                Text(
+                  '${requiredMeasurements.length} ${locale.translate('measurements')}',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.grey[600],
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            
-            const SizedBox(height: 12),
-            
-            // Measurement count badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: _getDressTypeColor(dressType).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _getDressTypeColor(dressType).withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                '$measurementCount measurements',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: _getDressTypeColor(dressType),
-                ),
-              ),
+                if (measurementCount > 0) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$measurementCount ${locale.translate('existing')}',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
-            
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
       ),
     );
-  }
-
-  Color _getDressTypeColor(String dressType) {
-    switch (dressType) {
-      case 'shirt':
-        return Colors.blue;
-      case 'pant':
-        return Colors.indigo;
-      case 'suit':
-        return Colors.purple;
-      case 'blazer':
-        return Colors.deepPurple;
-      case 'kurta':
-        return Colors.orange;
-      case 'sherwani':
-        return Colors.amber;
-      case 'dress':
-        return Colors.pink;
-      case 'blouse':
-        return Colors.red;
-      case 'lehenga':
-        return Colors.teal;
-      case 'saree_blouse':
-        return Colors.green;
-      default:
-        return const Color(AppConstants.primaryTeal);
-    }
-  }
-
-  IconData _getDressTypeIcon(String dressType) {
-    switch (dressType) {
-      case 'shirt':
-        return Icons.person_outline;
-      case 'pant':
-        return Icons.man_rounded;
-      case 'suit':
-        return Icons.business_center_rounded;
-      case 'blazer':
-        return Icons.work_outline_rounded;
-      case 'kurta':
-      case 'sherwani':
-        return Icons.self_improvement_rounded;
-      case 'dress':
-      case 'blouse':
-      case 'lehenga':
-      case 'saree_blouse':
-        return Icons.woman_rounded;
-      default:
-        return Icons.checkroom_rounded;
-    }
-  }
-
-  void _filterDressTypes(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredDressTypes = MeasurementConstants.getAllDressTypes();
-      } else {
-        _filteredDressTypes = MeasurementConstants.getAllDressTypes().where((dressType) {
-          final dressTypeDetails = MeasurementConstants.getDressTypeDetails(dressType);
-          final name = dressTypeDetails?['name'] ?? dressType;
-          final description = dressTypeDetails?['description'] ?? '';
-          
-          return name.toLowerCase().contains(query.toLowerCase()) ||
-                 description.toLowerCase().contains(query.toLowerCase()) ||
-                 dressType.toLowerCase().contains(query.toLowerCase());
-        }).toList();
-      }
-    });
-  }
-
-  void _selectDressType(String dressType) {
-    // Navigate to add measurement screen with selected dress type
-    context.goNamed(
-      RouteNames.addMeasurement,
-      pathParameters: {'customerId': widget.customerId},
-      queryParameters: {'dressType': dressType},
-    );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 }

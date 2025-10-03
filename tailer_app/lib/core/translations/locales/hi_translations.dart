@@ -7,6 +7,33 @@ const Map<String, String> hiTranslations = {
   'settings': 'सेटिंग्स',
   'measurements': 'नाप',
   
+  // Customer Management
+  'customerManagement': 'ग्राहक प्रबंधन',
+  'customerProfile': 'ग्राहक प्रोफ़ाइल',
+  'notifications': 'सूचनाएं',
+  
+  // Order Details Screen Keys
+  'amountDetails': 'राशि विवरण',
+  'customerId': 'ग्राहक आईडी',
+  'confirmDeleteOrder': 'क्या आप वाकई इस ऑर्डर को हटाना चाहते हैं',
+  'orderDeletedSuccessfully': 'ऑर्डर सफलतापूर्वक हटा दिया गया',
+  'failedToDeleteOrder': 'ऑर्डर हटाने में असफल',
+  
+  // Orders Main Screen Keys
+  'ordersManagement': 'ऑर्डर प्रबंधन',
+  'manageYourOrders': 'अपने ऑर्डर प्रबंधित करें',
+  'trackOrdersDeliveries': 'ऑर्डर, डिलीवरी और समय सीमा को ट्रैक करें',
+  'viewAllOrders': 'सभी ऑर्डर देखें',
+  'seeOrderHistory': 'ऑर्डर इतिहास देखें',
+  'startNewOrder': 'नया ऑर्डर शुरू करें',
+  'pendingOrders': 'लंबित ऑर्डर',
+  'ordersAwaitingAction': 'कार्रवाई की प्रतीक्षा में ऑर्डर',
+  'inProgressOrders': 'प्रगति में ऑर्डर',
+  'ordersBeingWorked': 'काम किए जा रहे ऑर्डर',
+  'readyOrders': 'तैयार ऑर्डर',
+  'ordersReadyForDelivery': 'डिलीवरी के लिए तैयार ऑर्डर',
+  'quickStats': 'त्वरित आंकड़े',
+  
   // Auth
   'signIn': 'साइन इन',
   'signUp': 'साइन अप',
@@ -175,7 +202,6 @@ const Map<String, String> hiTranslations = {
   'optionalNotes': 'वैकल्पिक टिप्पणियाँ',
   
   // Navigation & Actions Extended
-  'notifications': 'अधिसूचनाएं',
   'help': 'सहायता',
   'about': 'के बारे में',
   'version': 'संस्करण',
@@ -313,4 +339,40 @@ const Map<String, String> hiTranslations = {
   'darkMode': 'डार्क मोड',
   'enabled': 'सक्रिय किया गया',
   'comprehensiveTailorManagement': 'आधुनिक दर्जी व्यवसायों के लिए एक व्यापक दर्जी प्रबंधन ऐप्लिकेशन।',
+
+  // Order Management - Additional Keys
+  'orderList': 'ऑर्डर सूची',
+  'orderDetails': 'ऑर्डर विवरण',
+  'addOrder': 'ऑर्डर जोड़ें',
+  'editOrder': 'ऑर्डर संपादित करें',
+  'orderNumber': 'ऑर्डर नंबर',
+  'orderStatus': 'ऑर्डर स्थिति',
+  'deliveryDate': 'डिलीवरी दिनांक',
+  'orderDate': 'ऑर्डर दिनांक',
+  'totalAmount': 'कुल राशि',
+  'advanceAmount': 'अग्रिम राशि',
+  'balanceAmount': 'शेष राशि',
+  'dressType': 'पोशाक प्रकार',
+  'orderNotes': 'ऑर्डर नोट्स',
+  'notesOptional': 'नोट्स (वैकल्पिक)',
+  'specialInstructions': 'कोई विशेष निर्देश या नोट्स दर्ज करें...',
+  'pending': 'लंबित',
+  'inProgress': 'प्रगति में',
+  'cancelled': 'रद्द किया गया',
+  'orderCreatedSuccessfully': 'ऑर्डर सफलतापूर्वक बनाया गया!',
+  'failedToCreateOrder': 'ऑर्डर बनाने में विफल',
+  'pleaseSelectCustomer': 'कृपया ग्राहक का चयन करें',
+  'pleaseFillAllRequiredFields': 'कृपया सभी आवश्यक फ़ील्ड सही तरीके से भरें',
+  'pleaseEnterTotalAmount': 'कृपया कुल राशि दर्ज करें',
+  'pleaseEnterValidAmount': 'कृपया वैध राशि दर्ज करें',
+  'pleaseEnterValidAdvanceAmount': 'कृपया वैध अग्रिम राशि दर्ज करें',
+  'advanceCannotBeMoreThanTotal': 'अग्रिम राशि कुल राशि से अधिक नहीं हो सकती',
+  'creatingOrder': 'ऑर्डर बनाया जा रहा है...',
+  'noOrdersFound': 'कोई ऑर्डर नहीं मिला',
+  'orderDetailsNotAvailable': 'ऑर्डर विवरण उपलब्ध नहीं है',
+  'manageAllYourOrders': 'अपने सभी ऑर्डर एक ही स्थान पर प्रबंधित करें',
+  'totalOrdersCount': 'कुल ऑर्डर',
+  'searchOrdersHint': 'ID या सेवा प्रकार द्वारा ऑर्डर खोजें...',
+  'noOrdersFoundMessage': 'आपकी खोज से मेल खाने वाला कोई ऑर्डर नहीं मिला।',
+  'addFirstOrder': 'शुरुआत करने के लिए अपना पहला ऑर्डर जोड़ें!',
 };

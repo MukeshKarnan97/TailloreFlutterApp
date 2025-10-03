@@ -3,9 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/routes/app_routes.dart';
+import 'package:tailer_app/core/services/navigation_service.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({Key? key}) : super(key: key);
@@ -16,47 +19,61 @@ class CustomerProfileScreen extends StatefulWidget {
 
 class _CustomerProfileScreenState extends State<CustomerProfileScreen> with NavigationMixin {
   int _currentNavIndex = 1;
+  late SimpleLocaleProvider _localeProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _localeProvider = SimpleLocaleProvider();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: DashboardHeader(
-        title: 'Customer Profile',
-        backgroundColor: const Color(AppConstants.primaryTeal),
-        notificationCount: 3,
-        onBackPressed: () {
-          context.goNamed(RouteNames.customers);
-        },
-        onNotificationTap: () {
-          showNavigationMessage(context, 'Notifications');
-        },
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppConstants.spacingM),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeaderSection(),
-              const SizedBox(height: AppConstants.spacingL),
-              _buildActionCards(),
-              const Spacer(),
-            ],
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, _) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        
+        return Scaffold(
+          backgroundColor: Colors.grey[50],
+          appBar: DashboardHeader(
+            title: locale.translate('customerProfile'),
+            backgroundColor: const Color(AppConstants.primaryTeal),
+            notificationCount: 3,
+            onBackPressed: () {
+              context.goNamed(RouteNames.customers);
+            },
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.translate('notifications'));
+            },
           ),
-        ),
-      ),
-      bottomNavigationBar: AnimatedBottomNavigation(
-        currentIndex: _currentNavIndex,
-        onTap: _onNavTap,
-        items: TailorAppBottomNavItems.defaultItems,
-        selectedItemColor: const Color(AppConstants.primaryTeal),
-        backgroundColor: Colors.white,
-      ),
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.spacingM),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeaderSection(locale),
+                  const SizedBox(height: AppConstants.spacingL),
+                  _buildActionCards(locale),
+                  const Spacer(),
+                ],
+              ),
+            ),
+          ),
+          bottomNavigationBar: AnimatedBottomNavigation(
+            currentIndex: _currentNavIndex,
+            onTap: _onNavTap,
+            items: TailorAppBottomNavItems.defaultItems,
+            selectedItemColor: const Color(AppConstants.primaryTeal),
+            backgroundColor: Colors.white,
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection(AppLocalizations locale) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -118,7 +135,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> with Navi
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Customer Profile',
+                  locale.translate('customerProfile'),
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -138,7 +155,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> with Navi
                     ),
                   ),
                   child: Text(
-                    'Manage Customers',
+                    locale.translate('customerManagement'),
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -155,14 +172,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> with Navi
     );
   }
 
-  Widget _buildActionCards() {
+  Widget _buildActionCards(AppLocalizations locale) {
     return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: _buildFeatureCard(
-                title: 'Add Customer',
+                title: locale.translate('addCustomer'),
                 icon: Icons.person_add_rounded,
                 gradient: [
                   const Color(AppConstants.primaryTeal),
@@ -174,7 +191,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> with Navi
             const SizedBox(width: AppConstants.spacingL),
             Expanded(
               child: _buildFeatureCard(
-                title: 'View Customers',
+                title: locale.translate('viewCustomers'),
                 icon: Icons.people_rounded,
                 gradient: [
                   const Color(AppConstants.primaryOrange),
@@ -320,6 +337,18 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> with Navi
       index,
       _currentNavIndex,
       (newIndex) => setState(() => _currentNavIndex = newIndex),
+      customRoutes: [
+        NavigationRoutes.dashboard,
+        NavigationRoutes.customers,
+        NavigationRoutes.orders,
+        NavigationRoutes.settings,
+      ],
+      customDestinations: [
+        NavigationDestinations.dashboard,
+        NavigationDestinations.customers,
+        NavigationDestinations.orders,
+        NavigationDestinations.settings,
+      ],
     );
   }
 }

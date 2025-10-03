@@ -158,6 +158,15 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
                   ),
                 ),
                 const SizedBox(height: 4),
+                Text(
+                  locale.translate('manageAllYourCustomers'),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[600],
+                    height: 1.3,
+                  ),
+                ),
                
               ],
             ),
@@ -377,8 +386,8 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
       (newIndex) => setState(() => _currentNavIndex = newIndex),
       customRoutes: [
         NavigationRoutes.dashboard,
-        null, // Current customers page
-        null, // Orders - not implemented yet
+        NavigationRoutes.customers, // Use proper route instead of null
+        NavigationRoutes.orders,    // Use proper route instead of null
         NavigationRoutes.settings,
       ],
       customDestinations: [

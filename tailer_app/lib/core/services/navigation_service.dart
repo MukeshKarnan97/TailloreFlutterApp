@@ -117,8 +117,13 @@ class NavigationService {
 
     onIndexChanged(index);
 
-    // Default routes if not provided
-    final defaultRoutes = [NavigationRoutes.dashboard, null, null, null];
+    // Use RouteNames for proper navigation - no more null routes!
+    final defaultRoutes = [
+      NavigationRoutes.dashboard,
+      NavigationRoutes.customers, 
+      NavigationRoutes.orders,
+      NavigationRoutes.settings
+    ];
     final defaultDestinations = ['Dashboard', 'Customers', 'Orders', 'Settings'];
 
     final navigationRoutes = routes ?? defaultRoutes;
@@ -131,12 +136,18 @@ class NavigationService {
           : 'Page ${index + 1}';
 
       if (route != null) {
-        navigateToDestination(context, destination, route: route);
-      } else {
-        // For current page or unimplemented routes
-        if (index != currentIndex) {
+        // Perform actual navigation
+        try {
+          if (context.mounted) {
+            context.go(route);
+          }
+        } catch (e) {
+          // Fallback to showing message if navigation fails
           navigateToDestination(context, destination);
         }
+      } else {
+        // For unimplemented routes, show message
+        navigateToDestination(context, destination);
       }
     }
   }

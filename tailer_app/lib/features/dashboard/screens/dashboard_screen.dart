@@ -437,74 +437,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // Bottom navigation handler
+  // FIXED: Improved navigation handler with proper error handling
   void _onNavTap(int index) {
-    if (index == _currentNavIndex) {
-      // If already on the current tab, do nothing
-      return;
-    }
+    // Prevent navigation to same tab
+    if (index == _currentNavIndex) return;
     
+    // Update UI immediately for visual feedback
     setState(() {
       _currentNavIndex = index;
     });
     
-    switch (index) {
-      case 0:
-        // Already on Dashboard
-        break;
-      case 1:
-        _navigateToCustomers();
-        break;
-      case 2:
-        _navigateToOrders();
-        break;
-      case 3:
-        _navigateToSettings();
-        break;
-    }
+    // Add small delay to ensure state update completes
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (!mounted) return;
+      
+      try {
+        switch (index) {
+          case 0: // Dashboard
+            // Already on dashboard, no navigation needed
+            break;
+          case 1: // Customers
+            context.goNamed(RouteNames.customers);
+            break;
+          case 2: // Orders  
+            context.goNamed(RouteNames.orders);
+            break;
+          case 3: // Settings
+            context.goNamed(RouteNames.settings);
+            break;
+          default:
+            debugPrint('Unknown navigation index: $index');
+        }
+      } catch (e) {
+        debugPrint('Navigation error: $e');
+        // Reset to current screen on error
+        if (mounted) {
+          setState(() {
+            _currentNavIndex = 0; // Dashboard index
+          });
+        }
+      }
+    });
   }
 
-  // Navigation methods - implement these based on your routing
+  // Navigation helper methods for dashboard actions
   void _navigateToCustomers() {
     context.goNamed(RouteNames.customers);
   }
 
   void _navigateToOrders() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Orders')),
-    );
-  }
-
-  void _navigateToRevenue() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Revenue')),
-    );
-  }
-
-  void _navigateToMeasurements() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Measurements')),
-    );
-  }
-
-  void _navigateToAppointments() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Appointments')),
-    );
-  }
-
-  void _navigateToAddCustomer() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Add Customer')),
-    );
-  }
-
-  void _navigateToCreateOrder() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Create Order')),
-    );
+    context.goNamed(RouteNames.orders);
   }
 
   void _navigateToSettings() {
     context.goNamed(RouteNames.settings);
   }
+
+  void _navigateToRevenue() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Revenue feature coming soon!')),
+    );
+  }
+
+  void _navigateToMeasurements() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Measurements feature coming soon!')),
+    );
+  }
+
+  void _navigateToAppointments() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Appointments feature coming soon!')),
+    );
+  }
+
+  void _navigateToAddCustomer() {
+    context.goNamed(RouteNames.addCustomer);
+  }
+
+  void _navigateToCreateOrder() {
+    context.goNamed(RouteNames.addOrder);
+  }
+
+
 }

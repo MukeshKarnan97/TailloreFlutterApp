@@ -3,6 +3,7 @@ class UserPreferencesModel {
   final int userId;
   final String themeMode;
   final String language;
+  final String measurementUnit; // 'inches' or 'cm'
   final bool notificationsEnabled;
   final bool biometricEnabled;
   final bool rememberMe;
@@ -15,6 +16,7 @@ class UserPreferencesModel {
     required this.userId,
     this.themeMode = 'system',
     this.language = 'en',
+    this.measurementUnit = 'inches',
     this.notificationsEnabled = true,
     this.biometricEnabled = false,
     this.rememberMe = false,
@@ -30,6 +32,7 @@ class UserPreferencesModel {
       userId: map['user_id'] as int,
       themeMode: map['theme_mode'] as String? ?? 'system',
       language: map['language'] as String? ?? 'en',
+      measurementUnit: map['measurement_unit'] as String? ?? 'inches',
       notificationsEnabled: (map['notifications_enabled'] as int? ?? 1) == 1,
       biometricEnabled: (map['biometric_enabled'] as int? ?? 0) == 1,
       rememberMe: (map['remember_me'] as int? ?? 0) == 1,
@@ -46,6 +49,7 @@ class UserPreferencesModel {
       'user_id': userId,
       'theme_mode': themeMode,
       'language': language,
+      'measurement_unit': measurementUnit,
       'notifications_enabled': notificationsEnabled ? 1 : 0,
       'biometric_enabled': biometricEnabled ? 1 : 0,
       'remember_me': rememberMe ? 1 : 0,
@@ -61,6 +65,7 @@ class UserPreferencesModel {
     int? userId,
     String? themeMode,
     String? language,
+    String? measurementUnit,
     bool? notificationsEnabled,
     bool? biometricEnabled,
     bool? rememberMe,
@@ -73,6 +78,7 @@ class UserPreferencesModel {
       userId: userId ?? this.userId,
       themeMode: themeMode ?? this.themeMode,
       language: language ?? this.language,
+      measurementUnit: measurementUnit ?? this.measurementUnit,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
       rememberMe: rememberMe ?? this.rememberMe,
@@ -85,7 +91,7 @@ class UserPreferencesModel {
   @override
   String toString() {
     return 'UserPreferencesModel(userId: $userId, themeMode: $themeMode, '
-           'language: $language, rememberMe: $rememberMe)';
+           'language: $language, measurementUnit: $measurementUnit, rememberMe: $rememberMe)';
   }
 
   @override
@@ -114,6 +120,10 @@ class UserPreferencesModel {
 
   bool get isValidLanguage {
     return ['en', 'es', 'fr', 'de', 'hi', 'ar'].contains(language);
+  }
+
+  bool get isValidMeasurementUnit {
+    return ['inches', 'cm'].contains(measurementUnit);
   }
 
   bool get isValidAutoLogoutDuration {
@@ -154,6 +164,28 @@ class UserPreferencesModel {
         return 'العربية';
       default:
         return 'Unknown';
+    }
+  }
+
+  String get measurementUnitDisplayName {
+    switch (measurementUnit) {
+      case 'inches':
+        return 'Inches (in)';
+      case 'cm':
+        return 'Centimeters (cm)';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  String get measurementUnitSymbol {
+    switch (measurementUnit) {
+      case 'inches':
+        return 'in';
+      case 'cm':
+        return 'cm';
+      default:
+        return 'in';
     }
   }
 }

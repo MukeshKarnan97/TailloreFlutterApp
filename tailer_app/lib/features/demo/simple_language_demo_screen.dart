@@ -322,7 +322,7 @@ class _SimpleLanguageDemoScreenState extends State<SimpleLanguageDemoScreen> {
 
   @override
   void dispose() {
-    _localeProvider.dispose();
+    // Don't dispose singleton _localeProvider
     super.dispose();
   }
 }

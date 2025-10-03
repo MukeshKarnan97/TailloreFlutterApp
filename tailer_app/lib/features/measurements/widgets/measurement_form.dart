@@ -8,12 +8,14 @@ class MeasurementForm extends StatefulWidget {
   final String dressType;
   final Map<String, double> measurements;
   final Function(String category, double value) onMeasurementChanged;
+  final String unit;
 
   const MeasurementForm({
     Key? key,
     required this.dressType,
     required this.measurements,
     required this.onMeasurementChanged,
+    this.unit = 'inches',
   }) : super(key: key);
 
   @override
@@ -322,7 +324,7 @@ class _MeasurementFormState extends State<MeasurementForm> {
                 color: Colors.grey[500],
                 fontSize: 14,
               ),
-              suffixText: measurementDetails?['unit'] ?? 'inches',
+              suffixText: widget.unit,
               suffixStyle: GoogleFonts.inter(
                 color: Colors.grey[600],
                 fontSize: 12,

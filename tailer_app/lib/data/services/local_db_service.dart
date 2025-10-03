@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/tailor_model.dart';
@@ -127,10 +128,12 @@ class LocalDatabaseService {
         id TEXT PRIMARY KEY,
         unique_id TEXT UNIQUE NOT NULL,
         customer_id TEXT NOT NULL,
-        type TEXT CHECK(type IN ('shirt', 'pant', 'blouse', 'suit', 'other')) NOT NULL,
-        data TEXT NOT NULL,
+        dress_type TEXT NOT NULL,
+        measurements TEXT NOT NULL,
+        notes TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
+        is_deleted INTEGER DEFAULT 0,
         FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE
       )
     ''');
@@ -144,14 +147,17 @@ class LocalDatabaseService {
         tailor_id TEXT NOT NULL,
         service_type TEXT NOT NULL,
         status TEXT CHECK(status IN ('pending', 'cutting', 'stitching', 'ready', 'delivered')) NOT NULL,
+        payment_status TEXT CHECK(payment_status IN ('pending', 'partial', 'paid', 'overdue')) DEFAULT 'pending',
         delivery_date TEXT NOT NULL,
         notes TEXT NOT NULL,
         design_image_url TEXT,
         total_amount REAL NOT NULL,
         advance_paid REAL NOT NULL,
         balance_amount REAL NOT NULL,
+        measurements TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
+        is_deleted INTEGER DEFAULT 0,
         FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE,
         FOREIGN KEY (tailor_id) REFERENCES tailor (unique_id) ON DELETE CASCADE
       )
@@ -164,8 +170,13 @@ class LocalDatabaseService {
         unique_id TEXT UNIQUE NOT NULL,
         order_id TEXT NOT NULL,
         amount REAL NOT NULL,
-        method TEXT CHECK(method IN ('cash', 'upi', 'card')) NOT NULL,
+        method TEXT CHECK(method IN ('cash', 'card', 'upi', 'bank')) NOT NULL,
+        notes TEXT,
+        transaction_id TEXT,
         paid_on TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_deleted INTEGER DEFAULT 0,
         FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE
       )
     ''');
@@ -212,6 +223,7 @@ class LocalDatabaseService {
         user_id INTEGER NOT NULL,
         theme_mode TEXT DEFAULT 'system',
         language TEXT DEFAULT 'en',
+        measurement_unit TEXT DEFAULT 'inches',
         notifications_enabled INTEGER DEFAULT 1,
         biometric_enabled INTEGER DEFAULT 0,
         remember_me INTEGER DEFAULT 1,
@@ -260,11 +272,177 @@ class LocalDatabaseService {
     await batch.commit();
   }
 
+  /// Reset and recreate the entire database
+  /// This will delete all existing data
+  Future<void> resetDatabase() async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'resetDatabase', () async {
+      try {
+        Logger.warning('LocalDatabaseService', 'Resetting database - all data will be lost');
+        
+        // Close existing database connection
+        if (_database != null) {
+          await _database!.close();
+          _database = null;
+        }
+        
+        // Delete database file
+        final databasePath = await getDatabasesPath();
+        final path = join(databasePath, _databaseName);
+        
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+          Logger.info('LocalDatabaseService', 'Database file deleted: $path');
+        }
+        
+        // Reinitialize database
+        _database = await _initDatabase();
+        Logger.info('LocalDatabaseService', 'Database reset completed successfully');
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to reset database', error: e, stackTrace: stackTrace);
+        throw Exception('Failed to reset database: $e');
+      }
+    });
+  }
+
   /// Handle database upgrades
   /// Called when database version is increased
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle database migrations here when needed
-    // Example: if (oldVersion < 2) { /* migration code */ }
+    Logger.info('LocalDatabaseService', 'Upgrading database from version $oldVersion to $newVersion');
+    
+    // Migrate measurement table schema (version 1/2 to 3)
+    if (oldVersion < 3) {
+      try {
+        // Check current table schema
+        final columns = await db.rawQuery("PRAGMA table_info(measurement)");
+        Logger.debug('LocalDatabaseService', 'Current measurement table columns: ${columns.map((c) => c['name']).toList()}');
+        
+        bool hasOldSchema = columns.any((col) => col['name'] == 'type' || col['name'] == 'data');
+        bool hasNewSchema = columns.any((col) => col['name'] == 'dress_type');
+        
+        if (hasOldSchema && !hasNewSchema) {
+          Logger.info('LocalDatabaseService', 'Migrating measurement table from old schema to new schema');
+          
+          await db.transaction((txn) async {
+            // Create new measurement table with correct schema
+            await txn.execute('''
+              CREATE TABLE measurement_new (
+                id TEXT PRIMARY KEY,
+                unique_id TEXT UNIQUE NOT NULL,
+                customer_id TEXT NOT NULL,
+                dress_type TEXT NOT NULL,
+                measurements TEXT NOT NULL,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                is_deleted INTEGER DEFAULT 0,
+                FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE
+              )
+            ''');
+            
+            // Migrate existing data if any
+            final existingData = await txn.query('measurement');
+            Logger.info('LocalDatabaseService', 'Migrating ${existingData.length} measurement records');
+            
+            for (final row in existingData) {
+              await txn.insert('measurement_new', {
+                'id': row['id'],
+                'unique_id': row['unique_id'],
+                'customer_id': row['customer_id'],
+                'dress_type': row['type'] ?? 'other', // Map old 'type' to 'dress_type'
+                'measurements': row['data'] ?? '{}', // Map old 'data' to 'measurements'
+                'notes': '',
+                'created_at': row['created_at'],
+                'updated_at': row['updated_at'],
+                'is_deleted': row['is_deleted'] ?? 0,
+              });
+            }
+            
+            // Drop old table and rename new one
+            await txn.execute('DROP TABLE measurement');
+            await txn.execute('ALTER TABLE measurement_new RENAME TO measurement');
+          });
+          
+          Logger.info('LocalDatabaseService', 'Successfully migrated measurement table schema');
+        } else if (!hasNewSchema) {
+          Logger.warning('LocalDatabaseService', 'Measurement table has unexpected schema, recreating');
+          await db.execute('DROP TABLE IF EXISTS measurement');
+          await _createMeasurementTable(db);
+        } else {
+          Logger.info('LocalDatabaseService', 'Measurement table already has correct schema');
+        }
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to migrate measurement table', error: e, stackTrace: stackTrace);
+        
+        // As a last resort, recreate the table (data will be lost)
+        Logger.warning('LocalDatabaseService', 'Recreating measurement table due to migration failure');
+        try {
+          await db.execute('DROP TABLE IF EXISTS measurement');
+          await _createMeasurementTable(db);
+          Logger.info('LocalDatabaseService', 'Measurement table recreated successfully');
+        } catch (recreateError) {
+          Logger.error('LocalDatabaseService', 'Failed to recreate measurement table', error: recreateError);
+          rethrow;
+        }
+      }
+    }
+    
+    // Add measurement_unit column to user_preferences table (version 3 to 4)
+    if (oldVersion < 4) {
+      try {
+        Logger.info('LocalDatabaseService', 'Adding measurement_unit column to user_preferences table');
+        
+        // Check if the column already exists
+        final columns = await db.rawQuery("PRAGMA table_info(user_preferences)");
+        final hasColumn = columns.any((col) => col['name'] == 'measurement_unit');
+        
+        if (!hasColumn) {
+          await db.execute('ALTER TABLE user_preferences ADD COLUMN measurement_unit TEXT DEFAULT \'inches\'');
+          Logger.info('LocalDatabaseService', 'Successfully added measurement_unit column');
+        } else {
+          Logger.info('LocalDatabaseService', 'measurement_unit column already exists');
+        }
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to add measurement_unit column', error: e, stackTrace: stackTrace);
+        // Don't rethrow as this is not critical for app functionality
+      }
+
+      try {
+        Logger.info('LocalDatabaseService', 'Adding measurements column to orders table');
+        
+        // Check if the column already exists
+        final columns = await db.rawQuery("PRAGMA table_info(orders)");
+        final hasColumn = columns.any((col) => col['name'] == 'measurements');
+        
+        if (!hasColumn) {
+          await db.execute('ALTER TABLE orders ADD COLUMN measurements TEXT');
+          Logger.info('LocalDatabaseService', 'Successfully added measurements column');
+        } else {
+          Logger.info('LocalDatabaseService', 'measurements column already exists');
+        }
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to add measurements column', error: e, stackTrace: stackTrace);
+        // Don't rethrow as this is not critical for app functionality
+      }
+    }
+  }
+
+  /// Create measurement table with new schema
+  Future<void> _createMeasurementTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE measurement (
+        id TEXT PRIMARY KEY,
+        unique_id TEXT UNIQUE NOT NULL,
+        customer_id TEXT NOT NULL,
+        dress_type TEXT NOT NULL,
+        measurements TEXT NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_deleted INTEGER DEFAULT 0,
+        FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   // ==================== GENERIC CRUD OPERATIONS ====================
@@ -540,7 +718,30 @@ class LocalDatabaseService {
 
   /// Insert a new measurement
   Future<int> insertMeasurement(Measurement measurement) async {
-    return await insert('measurement', measurement.toMap());
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'insertMeasurement', () async {
+      try {
+        // Validate measurement data
+        if (measurement.customerId.isEmpty) {
+          throw Exception('Customer ID cannot be empty');
+        }
+        if (measurement.dressType.isEmpty) {
+          throw Exception('Dress type cannot be empty');
+        }
+        if (measurement.measurements.isEmpty) {
+          throw Exception('At least one measurement is required');
+        }
+        
+        Logger.debug('LocalDatabaseService', 'Inserting measurement: ${measurement.uniqueId} for customer: ${measurement.customerId}');
+        
+        final result = await insert('measurement', measurement.toMap());
+        
+        Logger.info('LocalDatabaseService', 'Successfully inserted measurement: ${measurement.uniqueId}');
+        return result;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to insert measurement', error: e, stackTrace: stackTrace);
+        throw Exception('Failed to save measurement: $e');
+      }
+    }, parameters: {'measurementId': measurement.uniqueId, 'customerId': measurement.customerId});
   }
 
   /// Get all measurements for a customer
@@ -594,9 +795,79 @@ class LocalDatabaseService {
       'total_amount': order.totalAmount,
       'advance_paid': order.advancePaid,
       'balance_amount': order.balanceAmount,
+      'measurements': order.measurements.isNotEmpty ? jsonEncode(order.measurements) : null,
       'created_at': order.createdAt.toIso8601String(),
       'updated_at': order.updatedAt.toIso8601String(),
     });
+  }
+
+  /// Ensure measurements column exists in orders table
+  Future<void> _ensureMeasurementsColumnExists(Database db) async {
+    try {
+      Logger.debug('LocalDatabaseService', 'Checking if measurements column exists in orders table');
+      
+      // Check if the column already exists
+      final columns = await db.rawQuery("PRAGMA table_info(orders)");
+      final hasColumn = columns.any((col) => col['name'] == 'measurements');
+      
+      if (!hasColumn) {
+        Logger.info('LocalDatabaseService', 'Adding missing measurements column to orders table');
+        await db.execute('ALTER TABLE orders ADD COLUMN measurements TEXT');
+        Logger.info('LocalDatabaseService', 'Successfully added measurements column');
+      } else {
+        Logger.debug('LocalDatabaseService', 'measurements column already exists');
+      }
+    } catch (e, stackTrace) {
+      Logger.error('LocalDatabaseService', 'Failed to ensure measurements column exists', error: e, stackTrace: stackTrace);
+      // Don't rethrow as this might not be critical
+    }
+  }
+
+  /// Insert an order without foreign key constraint check for tailor_id
+  /// Used for temporary insertion when tailor authentication is not yet implemented
+  Future<int> insertOrderWithoutTailorForeignKeyCheck(Order order) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'insertOrderWithoutTailorForeignKeyCheck', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Inserting order without tailor FK check: ${order.uniqueId}');
+        final db = await database;
+        
+        // Ensure measurements column exists before insertion
+        await _ensureMeasurementsColumnExists(db);
+        
+        // Temporarily disable foreign key constraints
+        await db.execute('PRAGMA foreign_keys = OFF');
+        
+        final result = await db.insert('orders', {
+          'id': order.id,
+          'unique_id': order.uniqueId,
+          'customer_id': order.customerId,
+          'tailor_id': order.tailorId,
+          'service_type': order.serviceType,
+          'status': order.status,
+          'delivery_date': order.deliveryDate.toIso8601String(),
+          'notes': order.notes,
+          'design_image_url': order.designImageUrl,
+          'total_amount': order.totalAmount,
+          'advance_paid': order.advancePaid,
+          'balance_amount': order.balanceAmount,
+          'measurements': order.measurements.isNotEmpty ? jsonEncode(order.measurements) : null,
+          'created_at': order.createdAt.toIso8601String(),
+          'updated_at': order.updatedAt.toIso8601String(),
+        });
+        
+        // Re-enable foreign key constraints
+        await db.execute('PRAGMA foreign_keys = ON');
+        
+        Logger.info('LocalDatabaseService', 'Successfully inserted order without tailor FK check with ID: $result');
+        return result;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to insert order without tailor FK check', error: e, stackTrace: stackTrace);
+        // Re-enable foreign key constraints in case of error
+        final db = await database;
+        await db.execute('PRAGMA foreign_keys = ON');
+        throw Exception('Failed to insert order without tailor FK check: $e');
+      }
+    }, parameters: {'orderUniqueId': order.uniqueId});
   }
 
   /// Get all orders for a tailor
@@ -627,6 +898,16 @@ class LocalDatabaseService {
       whereArgs: [customerId],
       orderBy: 'created_at DESC',
     );
+  }
+
+  /// Get all orders as Order objects
+  Future<List<Order>> getOrders() async {
+    final maps = await select(
+      'orders',
+      orderBy: 'created_at DESC',
+    );
+    
+    return maps.map((map) => Order.fromMap(map)).toList();
   }
 
   /// Get order by unique ID
@@ -669,45 +950,167 @@ class LocalDatabaseService {
 
   // ==================== PAYMENT OPERATIONS ====================
 
-  /// Insert a new payment
-  Future<int> insertPayment(Payment payment) async {
-    return await insert('payment', {
-      'id': payment.id,
-      'unique_id': payment.uniqueId,
-      'order_id': payment.orderId,
-      'amount': payment.amount,
-      'method': payment.method,
-      'paid_on': payment.paidOn.toIso8601String(),
+  /// Add a new payment
+  Future<bool> addPayment(Payment payment) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'addPayment', () async {
+      try {
+        Logger.info('LocalDatabaseService', 'Adding payment: ${payment.uniqueId}');
+        final result = await insert('payment', payment.toMap());
+        Logger.info('LocalDatabaseService', 'Payment added successfully with ID: $result');
+        return result > 0;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to add payment', error: e, stackTrace: stackTrace);
+        return false;
+      }
     });
   }
 
   /// Get all payments for an order
-  Future<List<Map<String, dynamic>>> getPaymentsByOrderId(String orderId) async {
-    return await select(
-      'payment',
-      where: 'order_id = ?',
-      whereArgs: [orderId],
-      orderBy: 'paid_on DESC',
-    );
+  Future<List<Payment>> getPaymentsByOrderId(String orderId) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'getPaymentsByOrderId', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Getting payments for order: $orderId');
+        final result = await select(
+          'payment',
+          where: 'order_id = ? AND is_deleted = 0',
+          whereArgs: [orderId],
+          orderBy: 'paid_on DESC',
+        );
+        final payments = result.map((map) => Payment.fromMap(map)).toList();
+        Logger.info('LocalDatabaseService', 'Found ${payments.length} payments for order $orderId');
+        return payments;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to get payments for order', error: e, stackTrace: stackTrace);
+        return [];
+      }
+    });
   }
 
   /// Get payments by method
-  Future<List<Map<String, dynamic>>> getPaymentsByMethod(String method) async {
-    return await select(
-      'payment',
-      where: 'method = ?',
-      whereArgs: [method],
-      orderBy: 'paid_on DESC',
-    );
+  Future<List<Payment>> getPaymentsByMethod(String method) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'getPaymentsByMethod', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Getting payments by method: $method');
+        final result = await select(
+          'payment',
+          where: 'method = ? AND is_deleted = 0',
+          whereArgs: [method],
+          orderBy: 'paid_on DESC',
+        );
+        final payments = result.map((map) => Payment.fromMap(map)).toList();
+        Logger.info('LocalDatabaseService', 'Found ${payments.length} payments with method $method');
+        return payments;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to get payments by method', error: e, stackTrace: stackTrace);
+        return [];
+      }
+    });
+  }
+
+  /// Get all payments with optional filters
+  Future<List<Payment>> getPayments({
+    int? limit,
+    int? offset,
+    String? orderBy,
+  }) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'getPayments', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Getting all payments');
+        final result = await select(
+          'payment',
+          where: 'is_deleted = 0',
+          orderBy: orderBy ?? 'paid_on DESC',
+          limit: limit,
+          offset: offset,
+        );
+        final payments = result.map((map) => Payment.fromMap(map)).toList();
+        Logger.info('LocalDatabaseService', 'Found ${payments.length} payments');
+        return payments;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to get payments', error: e, stackTrace: stackTrace);
+        return [];
+      }
+    });
   }
 
   /// Get total payments for an order
   Future<double> getTotalPaymentsForOrder(String orderId) async {
-    final result = await rawQuery(
-      'SELECT SUM(amount) as total FROM payment WHERE order_id = ?',
-      [orderId],
-    );
-    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'getTotalPaymentsForOrder', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Getting total payments for order: $orderId');
+        final result = await rawQuery(
+          'SELECT SUM(amount) as total FROM payment WHERE order_id = ? AND is_deleted = 0',
+          [orderId],
+        );
+        final total = (result.first['total'] as num?)?.toDouble() ?? 0.0;
+        Logger.info('LocalDatabaseService', 'Total payments for order $orderId: $total');
+        return total;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to get total payments for order', error: e, stackTrace: stackTrace);
+        return 0.0;
+      }
+    });
+  }
+
+  /// Update payment
+  Future<bool> updatePayment(Payment payment) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'updatePayment', () async {
+      try {
+        Logger.info('LocalDatabaseService', 'Updating payment: ${payment.uniqueId}');
+        final result = await update(
+          'payment',
+          payment.toMap(),
+          where: 'unique_id = ?',
+          whereArgs: [payment.uniqueId],
+        );
+        Logger.info('LocalDatabaseService', 'Payment updated successfully: ${result > 0}');
+        return result > 0;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to update payment', error: e, stackTrace: stackTrace);
+        return false;
+      }
+    });
+  }
+
+  /// Delete payment (soft delete)
+  Future<bool> deletePayment(String uniqueId) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'deletePayment', () async {
+      try {
+        Logger.info('LocalDatabaseService', 'Deleting payment: $uniqueId');
+        final result = await update(
+          'payment',
+          {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+          where: 'unique_id = ?',
+          whereArgs: [uniqueId],
+        );
+        Logger.info('LocalDatabaseService', 'Payment deleted successfully: ${result > 0}');
+        return result > 0;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to delete payment', error: e, stackTrace: stackTrace);
+        return false;
+      }
+    });
+  }
+
+  /// Get pending payment orders (orders with balance amount)
+  Future<List<Order>> getPendingPaymentOrders() async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'getPendingPaymentOrders', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Getting orders with pending payments');
+        final result = await rawQuery('''
+          SELECT * FROM orders 
+          WHERE (payment_status = 'pending' OR payment_status = 'partial') 
+          AND is_deleted = 0
+          ORDER BY delivery_date ASC
+        ''');
+        final orders = result.map((map) => Order.fromMap(map)).toList();
+        Logger.info('LocalDatabaseService', 'Found ${orders.length} orders with pending payments');
+        return orders;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to get pending payment orders', error: e, stackTrace: stackTrace);
+        return [];
+      }
+    });
   }
 
   // ==================== UTILITY OPERATIONS ====================
@@ -817,5 +1220,54 @@ class LocalDatabaseService {
       WHERE o.tailor_id = ?
       ORDER BY o.created_at DESC
     ''', [tailorId]);
+  }
+
+  // ==================== USER PREFERENCES METHODS ====================
+
+  /// Get user preferences by user ID
+  Future<Map<String, dynamic>?> getUserPreferences(int userId) async {
+    final results = await select('user_preferences', where: 'user_id = ?', whereArgs: [userId]);
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  /// Update user preferences
+  Future<int> updateUserPreferences(int userId, Map<String, dynamic> preferences) async {
+    preferences['updated_at'] = DateTime.now().toIso8601String();
+    return await update('user_preferences', preferences, where: 'user_id = ?', whereArgs: [userId]);
+  }
+
+  /// Insert user preferences
+  Future<int> insertUserPreferences(Map<String, dynamic> preferences) async {
+    preferences['created_at'] = DateTime.now().toIso8601String();
+    preferences['updated_at'] = DateTime.now().toIso8601String();
+    return await insert('user_preferences', preferences);
+  }
+
+  /// Get or create user preferences
+  Future<Map<String, dynamic>> getOrCreateUserPreferences(int userId) async {
+    final existing = await getUserPreferences(userId);
+    if (existing != null) {
+      return existing;
+    }
+
+    // Create default preferences
+    final defaultPrefs = {
+      'user_id': userId,
+      'theme_mode': 'system',
+      'language': 'en',
+      'measurement_unit': 'inches',
+      'notifications_enabled': 1,
+      'biometric_enabled': 0,
+      'remember_me': 1,
+      'auto_logout_duration': 3600,
+    };
+
+    await insertUserPreferences(defaultPrefs);
+    return await getUserPreferences(userId) ?? defaultPrefs;
+  }
+
+  /// Update user measurement unit preference
+  Future<int> updateMeasurementUnit(int userId, String unit) async {
+    return await updateUserPreferences(userId, {'measurement_unit': unit});
   }
 }

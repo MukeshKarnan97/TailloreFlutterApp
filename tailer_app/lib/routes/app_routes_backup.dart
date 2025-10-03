@@ -24,12 +24,6 @@ import '../features/measurements/screens/edit_measurement_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 import '../features/demo/simple_language_demo_screen.dart';
 import '../features/language/screens/language_selection_screen.dart';
-import '../features/orders/screens/add_order_screen.dart';
-import '../features/orders/screens/order_list_screen.dart';
-import '../features/orders/screens/order_details_screen.dart';
-import '../features/orders/screens/order_detail_screen.dart';
-import '../features/orders/screens/orders_main_screen.dart';
-import '../data/models/order_model.dart';
 import 'package:flutter/foundation.dart';
 
 // Export route names for easy access
@@ -247,45 +241,8 @@ class AppRoutes {
       // GoRoute(path: '/customers', builder: (context, state) => CustomerListScreen()),
 
       // // Orders
-      GoRoute(
-        name: 'orders',
-        path: '/orders',
-        pageBuilder: (context, state) => buildPage(const OrdersMainScreen(), state),
-      ),
-      GoRoute(
-        name: 'orderList',
-        path: '/orders/list',
-        pageBuilder: (context, state) => buildPage(const OrderListScreen(), state),
-      ),
-      GoRoute(
-        name: 'addOrder',
-        path: '/orders/add',
-        pageBuilder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          return buildPage(AddOrderScreen(extra: extra), state);
-        },
-      ),
-      GoRoute(
-        name: 'orderDetails',
-        path: '/orders/details',
-        pageBuilder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          return buildPage(OrderDetailsScreen(extra: extra), state);
-        },
-      ),
-      GoRoute(
-        name: 'orderDetail',
-        path: '/orders/detail',
-        pageBuilder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          if (extra != null && extra['order'] != null) {
-            final order = extra['order'] as Order;
-            return buildPage(OrderDetailScreen(order: order), state);
-          }
-          // Fallback - go back if no order provided
-          return buildPage(const OrderListScreen(), state);
-        },
-      ),
+      // GoRoute(path: '/orders', builder: (context, state) => OrderListScreen()),
+      // GoRoute(path: '/orders/add', builder: (context, state) => AddOrderScreen()),
 
       // // Measurements
       // GoRoute(path: '/measurements', builder: (context, state) => MeasurementListScreen()),

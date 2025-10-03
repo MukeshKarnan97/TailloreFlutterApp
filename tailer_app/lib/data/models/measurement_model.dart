@@ -84,7 +84,16 @@ class Measurement {
     
     if (measurementsData is String) {
       try {
-        measurementsMap = jsonDecode(measurementsData);
+        // Handle double-encoded JSON strings
+        var firstDecode = jsonDecode(measurementsData);
+        if (firstDecode is String) {
+          // If first decode returns a string, decode again (double-encoded)
+          measurementsMap = jsonDecode(firstDecode);
+        } else if (firstDecode is Map<String, dynamic>) {
+          measurementsMap = firstDecode;
+        } else {
+          return {};
+        }
       } catch (e) {
         return {};
       }

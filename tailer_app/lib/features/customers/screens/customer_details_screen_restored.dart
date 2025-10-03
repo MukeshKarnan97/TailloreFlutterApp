@@ -10,7 +10,6 @@ import 'package:tailer_app/data/services/local_db_service.dart';
 import 'package:tailer_app/core/utils/logger.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
-import 'package:tailer_app/features/orders/screens/add_order_screen.dart';
 
 class CustomerDetailsScreen extends StatefulWidget {
   final String customerId;
@@ -328,26 +327,7 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> with Navi
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: () {
-            // Navigate to AddOrderScreen with pre-selected customer
-            try {
-              context.goNamed(
-                RouteNames.addOrder,
-                extra: {
-                  'customer': customer?.toMap(),
-                },
-              );
-            } catch (e) {
-              // Fallback: Direct navigation to AddOrderScreen
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => AddOrderScreen(
-                    extra: {
-                      'customer': customer?.toMap(),
-                    },
-                  ),
-                ),
-              );
-            }
+            showNavigationMessage(context, locale.translate('createOrder'), customMessage: locale.translate('orderCreationFeatureComingSoon'));
           },
           icon: const Icon(Icons.add_shopping_cart_rounded, size: 20),
           label: Text(
@@ -565,26 +545,7 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> with Navi
         Expanded(
           child: OutlinedButton.icon(
             onPressed: () {
-              // Navigate to AddOrderScreen with pre-selected customer
-              try {
-                context.goNamed(
-                  RouteNames.addOrder,
-                  extra: {
-                    'customer': customer?.toMap(),
-                  },
-                );
-              } catch (e) {
-                // Fallback: Direct navigation to AddOrderScreen
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => AddOrderScreen(
-                      extra: {
-                        'customer': customer?.toMap(),
-                      },
-                    ),
-                  ),
-                );
-              }
+              showNavigationMessage(context, locale.translate('createOrder'), customMessage: locale.translate('orderCreationFeatureComingSoon'));
             },
             icon: const Icon(Icons.add_shopping_cart_rounded, size: 20),
             label: Text(

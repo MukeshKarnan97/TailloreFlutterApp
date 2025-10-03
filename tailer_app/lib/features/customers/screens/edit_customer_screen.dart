@@ -8,6 +8,8 @@ import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/data/models/customer_model.dart';
 import 'package:tailer_app/data/services/local_db_service.dart';
 import 'package:tailer_app/core/utils/logger.dart';
+import 'package:tailer_app/core/translations/app_localizations.dart';
+import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class EditCustomerScreen extends StatefulWidget {
   final String customerId;
@@ -31,10 +33,12 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
   Customer? _customer;
   bool _isLoading = true;
   bool _isSaving = false;
+  late SimpleLocaleProvider _localeProvider;
 
   @override
   void initState() {
     super.initState();
+    _localeProvider = SimpleLocaleProvider();
     _loadCustomerData();
   }
 
@@ -59,10 +63,11 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
       } else {
         Logger.error('EditCustomerScreen', 'Customer not found with ID: ${widget.customerId}');
         if (mounted) {
+          final locale = AppLocalizations.of(_localeProvider.languageCode);
           showNavigationMessage(
             context,
-            'Customer Not Found',
-            customMessage: 'Could not find customer data.',
+            locale.translate('customerNotFound'),
+            customMessage: locale.translate('couldNotFindCustomerData'),
             backgroundColor: Colors.red,
           );
           context.goNamed(RouteNames.viewCustomers);
@@ -89,47 +94,54 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: DashboardHeader(
-        title: 'Edit Customer',
-        backgroundColor: const Color(AppConstants.primaryTeal),
-        notificationCount: 3,
-        onBackPressed: () {
-          context.goNamed(RouteNames.customerDetails, pathParameters: {'customerId': widget.customerId});
-        },
-        onNotificationTap: () {
-          showNavigationMessage(context, 'Notifications');
-        },
-      ),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  color: Color(AppConstants.primaryTeal),
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, _) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        
+        return Scaffold(
+          backgroundColor: Colors.grey[50],
+          appBar: DashboardHeader(
+            title: locale.translate('editCustomer'),
+            backgroundColor: const Color(AppConstants.primaryTeal),
+            notificationCount: 3,
+            onBackPressed: () {
+              context.goNamed(RouteNames.customerDetails, pathParameters: {'customerId': widget.customerId});
+            },
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.translate('notifications'));
+            },
+          ),
+          body: SafeArea(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(AppConstants.primaryTeal),
+                    ),
+                  )
+                : SingleChildScrollView(
+              padding: const EdgeInsets.all(AppConstants.spacingM),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeaderSection(locale),
+                    const SizedBox(height: AppConstants.spacingL),
+                    _buildFormFields(locale),
+                    const SizedBox(height: AppConstants.spacingXL),
+                    _buildActionButtons(locale),
+                  ],
                 ),
-              )
-            : SingleChildScrollView(
-          padding: const EdgeInsets.all(AppConstants.spacingM),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeaderSection(),
-                const SizedBox(height: AppConstants.spacingL),
-                _buildFormFields(),
-                const SizedBox(height: AppConstants.spacingXL),
-                _buildActionButtons(),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection(AppLocalizations locale) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -191,7 +203,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Edit Customer',
+                  locale.translate('editCustomer'),
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -211,7 +223,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
                     ),
                   ),
                   child: Text(
-                    'ID: ${widget.customerId}',
+                    '${locale.translate('customerID')}: ${widget.customerId}',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -228,45 +240,50 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
     );
   }
 
-  Widget _buildFormFields() {
+  Widget _buildFormFields(AppLocalizations locale) {
     return Column(
       children: [
         _buildTextField(
           controller: _nameController,
-          label: 'Full Name',
+          label: locale.translate('fullName'),
           icon: Icons.person_rounded,
           isRequired: true,
+          locale: locale,
         ),
         const SizedBox(height: AppConstants.spacingM),
-        _buildGenderDropdown(),
+        _buildGenderDropdown(locale),
         const SizedBox(height: AppConstants.spacingM),
         _buildTextField(
           controller: _phoneController,
-          label: 'Phone Number',
+          label: locale.translate('phoneNumber'),
           icon: Icons.phone_rounded,
           keyboardType: TextInputType.phone,
           isRequired: true,
+          locale: locale,
         ),
         const SizedBox(height: AppConstants.spacingM),
         _buildTextField(
           controller: _emailController,
-          label: 'Email Address',
+          label: locale.translate('emailAddress'),
           icon: Icons.email_rounded,
           keyboardType: TextInputType.emailAddress,
+          locale: locale,
         ),
         const SizedBox(height: AppConstants.spacingM),
         _buildTextField(
           controller: _addressController,
-          label: 'Address',
+          label: locale.translate('address'),
           icon: Icons.location_on_rounded,
           maxLines: 3,
+          locale: locale,
         ),
         const SizedBox(height: AppConstants.spacingM),
         _buildTextField(
           controller: _notesController,
-          label: 'Notes',
+          label: locale.translate('notes'),
           icon: Icons.note_rounded,
           maxLines: 3,
+          locale: locale,
         ),
       ],
     );
@@ -276,6 +293,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    required AppLocalizations locale,
     TextInputType? keyboardType,
     int maxLines = 1,
     bool isRequired = false,
@@ -358,7 +376,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
         validator: isRequired
             ? (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return '$label is required';
+                  return '${label} ${locale.translate('isRequired')}';
                 }
                 return null;
               }
@@ -367,7 +385,14 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
     );
   }
 
-  Widget _buildGenderDropdown() {
+  Widget _buildGenderDropdown(AppLocalizations locale) {
+    final genderTranslations = {
+      'Male': locale.translate('male'),
+      'Female': locale.translate('female'),
+      'Other': locale.translate('other'),
+      'Prefer not to say': locale.translate('preferNotToSay'),
+    };
+    
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -382,7 +407,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
       child: DropdownButtonFormField<String>(
         value: _selectedGender,
         decoration: InputDecoration(
-          labelText: 'Gender *',
+          labelText: '${locale.translate('gender')} *',
           labelStyle: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
@@ -440,7 +465,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
           return DropdownMenuItem<String>(
             value: gender,
             child: Text(
-              gender,
+              genderTranslations[gender] ?? gender,
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -468,7 +493,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
         ),
         validator: (value) {
           if (value == null || value.isEmpty) {
-            return 'Gender is required';
+            return '${locale.translate('gender')} ${locale.translate('isRequired')}';
           }
           return null;
         },
@@ -476,14 +501,14 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(AppLocalizations locale) {
     return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: _buildActionButton(
-                label: 'Cancel',
+                label: locale.translate('cancel'),
                 icon: Icons.cancel_outlined,
                 backgroundColor: Colors.grey[100]!,
                 textColor: Colors.grey[700]!,
@@ -493,11 +518,11 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
             const SizedBox(width: AppConstants.spacingM),
             Expanded(
               child: _buildActionButton(
-                label: 'Save',
+                label: locale.translate('save'),
                 icon: Icons.save_rounded,
                 backgroundColor: Colors.orange,
                 textColor: Colors.white,
-                onPressed: _saveChanges,
+                onPressed: () => _saveChanges(locale),
               ),
             ),
           ],
@@ -506,11 +531,11 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
         SizedBox(
           width: double.infinity,
           child: _buildActionButton(
-            label: 'Delete Customer',
+            label: locale.translate('deleteCustomer'),
             icon: Icons.delete_rounded,
             backgroundColor: Colors.red.withOpacity(0.1),
             textColor: Colors.red,
-            onPressed: _deleteCustomer,
+            onPressed: () => _deleteCustomer(locale),
           ),
         ),
       ],
@@ -566,7 +591,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
     );
   }
 
-  void _saveChanges() async {
+  void _saveChanges(AppLocalizations locale) async {
     if (_formKey.currentState!.validate() && _customer != null) {
       try {
         setState(() => _isSaving = true);
@@ -638,24 +663,24 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
     }
   }
 
-  void _deleteCustomer() {
+  void _deleteCustomer(AppLocalizations locale) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(
-            'Delete Customer',
+            locale.translate('deleteCustomer'),
             style: GoogleFonts.inter(fontWeight: FontWeight.w600),
           ),
           content: Text(
-            'Are you sure you want to delete ${_nameController.text}? This action can be undone later from the customer list.',
+            '${locale.translate('areYouSureDeleteCustomer')} ${_nameController.text}? ${locale.translate('thisActionCanBeUndone')}',
             style: GoogleFonts.inter(),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
-                'Cancel',
+                locale.translate('cancel'),
                 style: GoogleFonts.inter(color: Colors.grey[600]),
               ),
             ),
@@ -675,8 +700,8 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
                   if (mounted) {
                     showNavigationMessage(
                       context,
-                      'Customer Deleted',
-                      customMessage: '${_nameController.text} has been moved to deleted customers.',
+                      locale.translate('customerDeleted'),
+                      customMessage: '${_nameController.text} ${locale.translate('hasBeenMovedToDeletedCustomers')}',
                       backgroundColor: Colors.orange,
                     );
                     Future.delayed(const Duration(seconds: 1), () {
@@ -690,8 +715,8 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
                   if (mounted) {
                     showNavigationMessage(
                       context,
-                      'Delete Failed',
-                      customMessage: 'Failed to delete customer. Please try again.',
+                      locale.translate('deleteFailed'),
+                      customMessage: locale.translate('failedToDeleteCustomer'),
                       backgroundColor: Colors.red,
                     );
                   }
@@ -699,7 +724,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               child: Text(
-                'Delete',
+                locale.translate('delete'),
                 style: GoogleFonts.inter(color: Colors.white),
               ),
             ),

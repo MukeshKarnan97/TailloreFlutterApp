@@ -534,11 +534,11 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
   }
 
   void _viewCustomer(Customer customer) {
-    context.goNamed(RouteNames.customerDetails, pathParameters: {'customerId': customer.id});
+    context.goNamed(RouteNames.customerDetails, pathParameters: {'customerId': customer.uniqueId});
   }
 
   void _editCustomer(Customer customer) {
-    context.goNamed(RouteNames.editCustomer, pathParameters: {'customerId': customer.id});
+    context.goNamed(RouteNames.editCustomer, pathParameters: {'customerId': customer.uniqueId});
   }
 
   void _deleteCustomer(Customer customer) {
