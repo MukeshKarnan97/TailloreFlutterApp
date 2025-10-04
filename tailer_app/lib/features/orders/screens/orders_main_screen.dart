@@ -118,6 +118,9 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
             title: locale.t('ordersManagement'),
             backgroundColor: const Color(AppConstants.primaryTeal),
             notificationCount: 3,
+            onBackPressed: () {
+              context.goNamed(RouteNames.dashboard);
+            },
             onNotificationTap: () {
               showNavigationMessage(context, locale.t('notifications'));
             },
@@ -887,13 +890,11 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
   // This method is already defined above
 
   void _navigateToPayments() {
-    // TODO: Implement PaymentCollectionScreen
-    showNavigationMessage(context, 'Payment Collection - Coming Soon!');
+    context.pushNamed(RouteNames.paymentCollection);
   }
 
   void _navigateToPaymentHistory() {
-    // Navigate to existing payment history or show message
-    showNavigationMessage(context, 'Payment History - Feature Available!');
+    context.pushNamed(RouteNames.paymentHistory);
   }
 
   /// Insert test data for all order statuses

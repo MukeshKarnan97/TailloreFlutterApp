@@ -29,6 +29,8 @@ import '../features/orders/screens/order_list_screen.dart';
 import '../features/orders/screens/order_details_screen.dart';
 import '../features/orders/screens/order_detail_screen.dart';
 import '../features/orders/screens/orders_main_screen.dart';
+import '../features/payments/screens/payment_collection_screen.dart';
+import '../features/payments/screens/payment_history_screen.dart';
 import '../data/models/order_model.dart';
 import 'package:flutter/foundation.dart';
 
@@ -285,6 +287,18 @@ class AppRoutes {
           // Fallback - go back if no order provided
           return buildPage(const OrderListScreen(), state);
         },
+      ),
+
+      // Payments
+      GoRoute(
+        name: 'paymentCollection',
+        path: '/payments/collection',
+        pageBuilder: (context, state) => buildPage(const PaymentCollectionScreen(), state),
+      ),
+      GoRoute(
+        name: 'paymentHistory',
+        path: '/payments/history',
+        pageBuilder: (context, state) => buildPage(const PaymentHistoryScreen(), state),
       ),
 
       // // Measurements

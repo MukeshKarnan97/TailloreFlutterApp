@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import '../../../data/services/local_db_service.dart';
@@ -24,6 +23,12 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
   List<Order> _filteredOrders = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  
+  // Statistics
+  int _totalCompletedOrders = 0;
+  double _totalCompletedValue = 0.0;
+  int _recentlyCompleted = 0;
+  double _averageOrderValue = 0.0;
 
   @override
   void initState() {
@@ -51,10 +56,11 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
          order.status.toLowerCase() == 'delivered')
       ).toList();
       
-      // Sort by delivery date (most recent first)
-      _allCompletedOrders.sort((a, b) => b.deliveryDate.compareTo(a.deliveryDate));
+      // Sort by completion date (most recent first)
+      _allCompletedOrders.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
       
       _filteredOrders = List.from(_allCompletedOrders);
+      _calculateStatistics();
       
       setState(() {
         _isLoading = false;
@@ -66,6 +72,18 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _calculateStatistics() {
+    _totalCompletedOrders = _allCompletedOrders.length;
+    _totalCompletedValue = _allCompletedOrders.fold(0.0, (sum, order) => sum + order.totalAmount);
+    _averageOrderValue = _totalCompletedOrders > 0 ? _totalCompletedValue / _totalCompletedOrders : 0.0;
+    
+    final now = DateTime.now();
+    final weekAgo = now.subtract(const Duration(days: 7));
+    _recentlyCompleted = _allCompletedOrders.where((order) {
+      return order.updatedAt.isAfter(weekAgo);
+    }).length;
   }
 
   void _performSearch(String query) {
@@ -96,7 +114,7 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'delivered':
-        return Colors.green.shade700;
+        return Colors.blue;
       case 'completed':
       default:
         return Colors.green;
@@ -120,8 +138,6 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
         return Icons.local_shipping;
       case 'completed':
         return Icons.check_circle;
-      case 'ready':
-        return Icons.inventory;
       default:
         return Icons.check_circle_outline;
     }
@@ -135,169 +151,443 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         
         return Scaffold(
-          backgroundColor: Colors.grey.shade50,
-          appBar: CustomHeader(
-            title: locale.t('completedOrders'),
-            backgroundColor: Colors.green,
-            showBackButton: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _loadCompletedOrders,
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF4CAF50),
+                  Color(0xFF2E7D32),
+                ],
               ),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  switch (value) {
-                    case 'sort_date':
-                      _sortByDate();
-                      break;
-                    case 'sort_customer':
-                      _sortByCustomer();
-                      break;
-                    case 'filter_this_month':
-                      _filterThisMonth();
-                      break;
-                  }
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'sort_date',
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
-                        const Icon(Icons.sort_by_alpha),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        ),
                         const SizedBox(width: 8),
-                        Text(locale.t('sortByDate')),
+                        Text(
+                          locale.t('completedOrders'),
+                          style: GoogleFonts.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          onPressed: _loadCompletedOrders,
+                          icon: const Icon(Icons.refresh, color: Colors.white),
+                        ),
                       ],
                     ),
                   ),
-                  PopupMenuItem(
-                    value: 'sort_customer',
+                  
+                  // Statistics Cards
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        const Icon(Icons.person),
-                        const SizedBox(width: 8),
-                        Text(locale.t('sortByCustomer')),
+                        _buildStatCard(
+                          'Completed',
+                          _totalCompletedOrders.toString(),
+                          Icons.check_circle,
+                          Colors.green,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildStatCard(
+                          'This Week',
+                          _recentlyCompleted.toString(),
+                          Icons.trending_up,
+                          Colors.blue,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildStatCard(
+                          'Avg Value',
+                          '₹${_averageOrderValue.toStringAsFixed(0)}',
+                          Icons.analytics,
+                          Colors.orange,
+                        ),
                       ],
                     ),
                   ),
-                  PopupMenuItem(
-                    value: 'filter_this_month',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_month),
-                        const SizedBox(width: 8),
-                        Text(locale.t('thisMonthOnly')),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Search Bar
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
                       ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _performSearch,
+                      decoration: InputDecoration(
+                        hintText: locale.t('searchCompletedOrders'),
+                        hintStyle: GoogleFonts.inter(
+                          color: Colors.grey[500],
+                          fontSize: 16,
+                        ),
+                        prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _performSearch('');
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Orders List
+                  Expanded(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                              ),
+                            )
+                          : _filteredOrders.isEmpty
+                              ? _buildEmptyState(locale)
+                              : RefreshIndicator(
+                                  onRefresh: _loadCompletedOrders,
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.all(16),
+                                    itemCount: _filteredOrders.length,
+                                    itemBuilder: (context, index) {
+                                      final order = _filteredOrders[index];
+                                      return _buildModernOrderCard(order, locale);
+                                    },
+                                  ),
+                                ),
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
-          body: Column(
-            children: [
-              // Search Bar
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: Colors.white,
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: locale.t('searchCompletedOrders'),
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _performSearch('');
-                            },
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  onChanged: _performSearch,
-                ),
-              ),
-
-              // Statistics Header
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                color: Colors.green.shade50,
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle_outline, color: Colors.green.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${_filteredOrders.length} ${locale.t('completedOrders')}',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.green.shade700,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (_filteredOrders.isNotEmpty) ...[
-                      Text(
-                        '₹${_filteredOrders.fold(0.0, (sum, order) => sum + order.totalAmount).toStringAsFixed(0)}',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green.shade600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        locale.t('totalRevenue'),
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
-              // Orders List
-              Expanded(
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-                        ),
-                      )
-                    : _filteredOrders.isEmpty
-                        ? _buildEmptyState(locale)
-                        : RefreshIndicator(
-                            onRefresh: _loadCompletedOrders,
-                            child: ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _filteredOrders.length,
-                              itemBuilder: (context, index) {
-                                final order = _filteredOrders[index];
-                                return _buildCompletedOrderCard(order, locale);
-                              },
-                            ),
-                          ),
-              ),
-            ],
-          ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: _generateReport,
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.summarize),
-            label: Text(locale.t('generateReport')),
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildModernOrderCard(Order order, AppLocalizations locale) {
+    final statusColor = _getStatusColor(order.status);
+    final bool isDelivered = order.status.toLowerCase() == 'delivered';
+    final daysSinceCompletion = DateTime.now().difference(order.updatedAt).inDays;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: isDelivered
+            ? Border.all(color: Colors.blue.withOpacity(0.3), width: 1)
+            : null,
+      ),
+      child: InkWell(
+        onTap: () => _navigateToOrderDetail(order),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          _getStatusIcon(order.status),
+                          color: statusColor,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            order.uniqueId,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            order.serviceType,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _getStatusDisplayName(order.status),
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (daysSinceCompletion <= 7)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            daysSinceCompletion == 0 
+                                ? 'Today' 
+                                : '${daysSinceCompletion}d ago',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Customer Info
+              Row(
+                children: [
+                  Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${locale.t('customer')}: ${order.customerId}',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Amount and Completion Info
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.currency_rupee,
+                          size: 16,
+                          color: Colors.green[700],
+                        ),
+                        Text(
+                          order.totalAmount.toString(),
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle, size: 14, color: Colors.green[600]),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Completed: ${_formatDate(order.updatedAt)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (isDelivered)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.local_shipping, size: 14, color: Colors.blue[600]),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Delivered',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.blue[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Action Button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _navigateToOrderDetail(order),
+                  icon: const Icon(Icons.visibility_outlined, size: 16),
+                  label: Text(
+                    locale.t('viewDetails'),
+                    style: GoogleFonts.inter(fontSize: 14),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: statusColor,
+                    side: BorderSide(color: statusColor.withOpacity(0.5)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -309,7 +599,7 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
           Icon(
             Icons.check_circle_outline,
             size: 80,
-            color: Colors.grey.shade400,
+            color: Colors.grey[400],
           ),
           const SizedBox(height: 16),
           Text(
@@ -319,17 +609,17 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w500,
-              color: Colors.grey.shade600,
+              color: Colors.grey[600],
             ),
           ),
           const SizedBox(height: 8),
           Text(
             _searchQuery.isEmpty 
-                ? locale.t('noOrdersCompletedYet')
+                ? 'Completed orders will appear here once orders are finished'
                 : locale.t('tryDifferentSearch'),
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.grey.shade500,
+              color: Colors.grey[500],
             ),
             textAlign: TextAlign.center,
           ),
@@ -353,296 +643,6 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
     );
   }
 
-  Widget _buildCompletedOrderCard(Order order, AppLocalizations locale) {
-    final statusColor = _getStatusColor(order.status);
-    final isOverdue = order.deliveryDate.isBefore(DateTime.now()) && 
-                     order.status.toLowerCase() != 'delivered';
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _navigateToOrderDetail(order),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      order.uniqueId,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: statusColor.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _getStatusIcon(order.status),
-                          size: 14,
-                          color: statusColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _getStatusDisplayName(order.status),
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: statusColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              if (isOverdue) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.warning_amber, size: 14, color: Colors.red.shade600),
-                      const SizedBox(width: 4),
-                      Text(
-                        locale.t('deliveryOverdue'),
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.red.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 12),
-
-              // Order Details
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildInfoItem(
-                      locale.t('customer'),
-                      order.customerId,
-                      Icons.person_outline,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildInfoItem(
-                      locale.t('service'),
-                      order.serviceType,
-                      Icons.design_services_outlined,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildInfoItem(
-                      locale.t('deliveryDate'),
-                      _formatDate(order.deliveryDate),
-                      Icons.schedule_outlined,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildInfoItem(
-                      locale.t('amount'),
-                      '₹${order.totalAmount.toStringAsFixed(0)}',
-                      Icons.currency_rupee_outlined,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              // Payment Status
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildPaymentStatus(order, locale),
-                  ),
-                  Expanded(
-                    child: _buildInfoItem(
-                      locale.t('completed'),
-                      _formatCompletionDate(order.updatedAt),
-                      Icons.check_circle_outline,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              // Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _navigateToOrderDetail(order),
-                      icon: const Icon(Icons.visibility_outlined, size: 16),
-                      label: Text(
-                        locale.t('viewDetails'),
-                        style: GoogleFonts.inter(fontSize: 12),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: statusColor,
-                        side: BorderSide(color: statusColor.withOpacity(0.5)),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (order.status.toLowerCase() != 'delivered')
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _markAsDelivered(order),
-                        icon: const Icon(Icons.local_shipping_outlined, size: 16),
-                        label: Text(
-                          locale.t('markDelivered'),
-                          style: GoogleFonts.inter(fontSize: 12),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade600,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                      ),
-                    )
-                  else
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _generateOrderReport(order),
-                        icon: const Icon(Icons.receipt_outlined, size: 16),
-                        label: Text(
-                          locale.t('receipt'),
-                          style: GoogleFonts.inter(fontSize: 12),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoItem(String label, String value, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.grey.shade600),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              Text(
-                value,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPaymentStatus(Order order, AppLocalizations locale) {
-    final isPaid = order.advancePaid >= order.totalAmount;
-    final paymentColor = isPaid ? Colors.green : Colors.orange;
-    final paymentText = isPaid ? locale.t('paid') : locale.t('pending');
-    
-    return Row(
-      children: [
-        Icon(Icons.payment_outlined, size: 16, color: Colors.grey.shade600),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                locale.t('payment'),
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: paymentColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    paymentText,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: paymentColor,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date).inDays;
@@ -656,112 +656,5 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
-  }
-
-  String _formatCompletionDate(DateTime date) {
-    final difference = DateTime.now().difference(date).inDays;
-    
-    if (difference == 0) {
-      return 'Today';
-    } else if (difference == 1) {
-      return 'Yesterday';
-    } else {
-      return '${difference}d ago';
-    }
-  }
-
-  void _sortByDate() {
-    setState(() {
-      _filteredOrders.sort((a, b) => b.deliveryDate.compareTo(a.deliveryDate));
-    });
-  }
-
-  void _sortByCustomer() {
-    setState(() {
-      _filteredOrders.sort((a, b) => a.customerId.compareTo(b.customerId));
-    });
-  }
-
-  void _filterThisMonth() {
-    final now = DateTime.now();
-    final thisMonth = DateTime(now.year, now.month, 1);
-    
-    setState(() {
-      _filteredOrders = _allCompletedOrders.where((order) =>
-          order.deliveryDate.isAfter(thisMonth)).toList();
-    });
-  }
-
-  Future<void> _markAsDelivered(Order order) async {
-    try {
-      await _dbService.updateOrderStatus(order.uniqueId, 'delivered');
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Order marked as delivered'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      
-      _loadCompletedOrders(); // Refresh the list
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update order status'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _generateOrderReport(Order order) {
-    // TODO: Implement order report generation
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Order receipt generation - Coming Soon!'),
-        backgroundColor: Colors.blue,
-      ),
-    );
-  }
-
-  void _generateReport() {
-    // TODO: Implement comprehensive report generation
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Generate Report'),
-        content: const Text('Choose report type:'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Monthly Report - Coming Soon!'),
-                  backgroundColor: Colors.blue,
-                ),
-              );
-            },
-            child: const Text('Monthly Report'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Customer Report - Coming Soon!'),
-                  backgroundColor: Colors.blue,
-                ),
-              );
-            },
-            child: const Text('Customer Report'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
   }
 }

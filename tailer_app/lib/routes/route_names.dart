@@ -43,6 +43,10 @@ class RouteNames {
   static const String orderDetail = 'orderDetail';
   static const String editOrder = 'editOrder';
   
+  // Payments
+  static const String paymentCollection = 'paymentCollection';
+  static const String paymentHistory = 'paymentHistory';
+  
   // Demo
   static const String languageDemo = 'languageDemo';
   static const String languageSelection = 'languageSelection';

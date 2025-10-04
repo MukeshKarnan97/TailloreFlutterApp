@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import '../../../data/services/local_db_service.dart';
@@ -24,6 +23,12 @@ class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> {
   List<Order> _filteredOrders = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  
+  // Statistics
+  int _cuttingOrders = 0;
+  int _stitchingOrders = 0;
+  int _generalInProgressOrders = 0;
+  double _totalInProgressValue = 0.0;
 
   @override
   void initState() {
@@ -53,6 +58,7 @@ class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> {
       ).toList();
       
       _filteredOrders = List.from(_allInProgressOrders);
+      _calculateStatistics();
       
       setState(() {
         _isLoading = false;
@@ -64,6 +70,17 @@ class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _calculateStatistics() {
+    _cuttingOrders = _allInProgressOrders.where((order) => 
+        order.status.toLowerCase() == 'cutting').length;
+    _stitchingOrders = _allInProgressOrders.where((order) => 
+        order.status.toLowerCase() == 'stitching').length;
+    _generalInProgressOrders = _allInProgressOrders.where((order) => 
+        order.status.toLowerCase() == 'in_progress').length;
+    _totalInProgressValue = _allInProgressOrders.fold(0.0, (sum, order) => 
+        sum + order.totalAmount);
   }
 
   void _performSearch(String query) {
@@ -124,112 +141,156 @@ class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> {
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         
         return Scaffold(
-          backgroundColor: Colors.grey.shade50,
-          appBar: CustomHeader(
-            title: locale.t('inProgressOrders'),
-            backgroundColor: Colors.blue,
-            showBackButton: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _loadInProgressOrders,
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF8B5CF6),
+                  Color(0xFF3B82F6),
+                ],
               ),
-            ],
-          ),
-          body: Column(
-            children: [
-              // Search Bar
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: Colors.white,
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: locale.t('searchInProgressOrders'),
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _performSearch('');
-                            },
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  onChanged: _performSearch,
-                ),
-              ),
-
-              // Statistics Header
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                color: Colors.blue.shade50,
-                child: Row(
-                  children: [
-                    Icon(Icons.work_outline, color: Colors.blue.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${_filteredOrders.length} ${locale.t('ordersInProgress')}',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.blue.shade700,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (_filteredOrders.isNotEmpty) ...[
-                      Text(
-                        '₹${_filteredOrders.fold(0.0, (sum, order) => sum + order.totalAmount).toStringAsFixed(0)}',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green.shade600,
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        locale.t('totalValue'),
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
-              // Orders List
-              Expanded(
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                        ),
-                      )
-                    : _filteredOrders.isEmpty
-                        ? _buildEmptyState(locale)
-                        : RefreshIndicator(
-                            onRefresh: _loadInProgressOrders,
-                            child: ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _filteredOrders.length,
-                              itemBuilder: (context, index) {
-                                final order = _filteredOrders[index];
-                                return _buildInProgressOrderCard(order, locale);
-                              },
-                            ),
+                        const SizedBox(width: 8),
+                        Text(
+                          locale.t('inProgressOrders'),
+                          style: GoogleFonts.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          onPressed: _loadInProgressOrders,
+                          icon: const Icon(Icons.refresh, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Statistics Cards
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        _buildStatCard(
+                          'Cutting',
+                          _cuttingOrders.toString(),
+                          Icons.content_cut,
+                          Colors.orange,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildStatCard(
+                          'Stitching',
+                          _stitchingOrders.toString(),
+                          Icons.polymer,
+                          Colors.blue,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildStatCard(
+                          'Total Value',
+                          '₹${_totalInProgressValue.toStringAsFixed(0)}',
+                          Icons.currency_rupee,
+                          Colors.green,
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Search Bar
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _performSearch,
+                      decoration: InputDecoration(
+                        hintText: locale.t('searchInProgressOrders'),
+                        hintStyle: GoogleFonts.inter(
+                          color: Colors.grey[500],
+                          fontSize: 16,
+                        ),
+                        prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _performSearch('');
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Orders List
+                  Expanded(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                              ),
+                            )
+                          : _filteredOrders.isEmpty
+                              ? _buildEmptyState(locale)
+                              : RefreshIndicator(
+                                  onRefresh: _loadInProgressOrders,
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.all(16),
+                                    itemCount: _filteredOrders.length,
+                                    itemBuilder: (context, index) {
+                                      final order = _filteredOrders[index];
+                                      return _buildModernOrderCard(order, locale);
+                                    },
+                                  ),
+                                ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
@@ -288,56 +349,125 @@ class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> {
     );
   }
 
-  Widget _buildInProgressOrderCard(Order order, AppLocalizations locale) {
+  Widget _buildModernOrderCard(Order order, AppLocalizations locale) {
     final statusColor = _getStatusColor(order.status);
     final progress = _getProgress(order.status);
+    final bool isUrgent = order.deliveryDate.difference(DateTime.now()).inDays <= 3;
     
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: isUrgent
+            ? Border.all(color: Colors.red.withOpacity(0.3), width: 2)
+            : null,
+      ),
       child: InkWell(
         onTap: () => _navigateToOrderDetail(order),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header Row
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(
-                      order.uniqueId,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          _getStatusIcon(order.status),
+                          color: statusColor,
+                          size: 20,
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            order.uniqueId,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            order.serviceType,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: statusColor.withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      _getStatusDisplayName(order.status),
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: statusColor,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (isUrgent)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'URGENT',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _getStatusDisplayName(order.status),
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
-
-              const SizedBox(height: 12),
-
+              
+              const SizedBox(height: 16),
+              
               // Progress Bar
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,7 +479,7 @@ class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> {
                         locale.t('progress'),
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.grey.shade600,
+                          color: Colors.grey[600],
                         ),
                       ),
                       Text(
@@ -365,57 +495,89 @@ class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> {
                   const SizedBox(height: 4),
                   LinearProgressIndicator(
                     value: progress,
-                    backgroundColor: Colors.grey.shade200,
+                    backgroundColor: Colors.grey[200],
                     valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 12),
-
-              // Order Details
+              
+              const SizedBox(height: 16),
+              
+              // Customer Info
               Row(
                 children: [
+                  Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: _buildInfoItem(
-                      locale.t('customer'),
-                      order.customerId,
-                      Icons.person_outline,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildInfoItem(
-                      locale.t('service'),
-                      order.serviceType,
-                      Icons.design_services_outlined,
+                    child: Text(
+                      '${locale.t('customer')}: ${order.customerId}',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
                     ),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 8),
-
+              
+              const SizedBox(height: 12),
+              
+              // Amount and Date Row
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: _buildInfoItem(
-                      locale.t('delivery'),
-                      _formatDate(order.deliveryDate),
-                      Icons.schedule_outlined,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.currency_rupee,
+                          size: 16,
+                          color: Colors.green[700],
+                        ),
+                        Text(
+                          order.totalAmount.toString(),
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Expanded(
-                    child: _buildInfoItem(
-                      locale.t('amount'),
-                      '₹${order.totalAmount.toStringAsFixed(0)}',
-                      Icons.currency_rupee_outlined,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${locale.t('delivery')}: ${_formatDate(order.deliveryDate)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
-
-              const SizedBox(height: 12),
-
+              
+              const SizedBox(height: 16),
+              
               // Action Buttons
               Row(
                 children: [
@@ -459,36 +621,71 @@ class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> {
     );
   }
 
-  Widget _buildInfoItem(String label, String value, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.grey.shade600),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              Text(
-                value,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-      ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'cutting':
+        return Icons.content_cut;
+      case 'stitching':
+        return Icons.polymer;
+      case 'in_progress':
+        return Icons.hourglass_empty;
+      default:
+        return Icons.help_outline;
+    }
   }
 
   double _getProgress(String status) {

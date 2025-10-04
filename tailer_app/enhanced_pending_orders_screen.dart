@@ -8,14 +8,14 @@ import '../../../data/models/order_model.dart';
 import '../../../core/utils/logger.dart';
 import 'order_detail_screen.dart';
 
-class PendingOrdersScreen extends StatefulWidget {
-  const PendingOrdersScreen({Key? key}) : super(key: key);
+class EnhancedPendingOrdersScreen extends StatefulWidget {
+  const EnhancedPendingOrdersScreen({Key? key}) : super(key: key);
 
   @override
-  State<PendingOrdersScreen> createState() => _PendingOrdersScreenState();
+  State<EnhancedPendingOrdersScreen> createState() => _EnhancedPendingOrdersScreenState();
 }
 
-class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
+class _EnhancedPendingOrdersScreenState extends State<EnhancedPendingOrdersScreen> {
   late SimpleLocaleProvider _localeProvider;
   final LocalDatabaseService _dbService = LocalDatabaseService();
   final TextEditingController _searchController = TextEditingController();
@@ -24,11 +24,12 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
   List<Order> _filteredOrders = [];
   bool _isLoading = true;
   
-  // Statistics
+  // Enhanced Statistics
   double _totalPendingValue = 0.0;
   double _totalAdvanceReceived = 0.0;
   int _highPriorityOrders = 0;
   int _overdueOrders = 0;
+  double _averageOrderValue = 0.0;
 
   @override
   void initState() {
@@ -74,11 +75,12 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
   void _calculateStatistics() {
     _totalPendingValue = _allPendingOrders.fold(0.0, (sum, order) => sum + order.totalAmount);
     _totalAdvanceReceived = _allPendingOrders.fold(0.0, (sum, order) => sum + order.advancePaid);
+    _averageOrderValue = _allPendingOrders.isNotEmpty ? _totalPendingValue / _allPendingOrders.length : 0.0;
     
     final now = DateTime.now();
     _highPriorityOrders = _allPendingOrders.where((order) {
       final daysDiff = order.deliveryDate.difference(now).inDays;
-      return daysDiff <= 3; // High priority if delivery in 3 days or less
+      return daysDiff <= 3 && daysDiff >= 0;
     }).length;
     
     _overdueOrders = _allPendingOrders.where((order) {
@@ -120,7 +122,7 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
         return Scaffold(
           backgroundColor: Colors.grey.shade50,
           appBar: CustomHeader(
-            title: '${locale.t('pendingOrders')} (${_filteredOrders.length})',
+            title: locale.t('pendingOrders'),
             backgroundColor: Colors.orange,
             showBackButton: true,
             actions: [
@@ -135,10 +137,16 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
             : SafeArea(
                 child: Column(
                   children: [
-                    // Welcome Section with Stats
+                    // Enhanced Welcome Section with Statistics
                     Container(
                       width: double.infinity,
-                      color: Colors.orange,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.orange.shade600, Colors.orange.shade400],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,7 +171,7 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                           ),
                           const SizedBox(height: 20),
                           
-                          // Quick Stats Row
+                          // Enhanced Stats Cards
                           Row(
                             children: [
                               Expanded(
@@ -172,7 +180,7 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                                   _highPriorityOrders.toString(),
                                   Icons.priority_high,
                                   Colors.red.shade100,
-                                  Colors.red.shade600,
+                                  Colors.red.shade700,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -182,17 +190,17 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                                   _overdueOrders.toString(),
                                   Icons.schedule,
                                   Colors.amber.shade100,
-                                  Colors.amber.shade600,
+                                  Colors.amber.shade700,
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _buildStatCard(
-                                  'Advance Paid',
-                                  '₹${_totalAdvanceReceived.toStringAsFixed(0)}',
-                                  Icons.payment,
+                                  'Avg Value',
+                                  '₹${_averageOrderValue.toStringAsFixed(0)}',
+                                  Icons.trending_up,
                                   Colors.green.shade100,
-                                  Colors.green.shade600,
+                                  Colors.green.shade700,
                                 ),
                               ),
                             ],
@@ -201,19 +209,19 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                       ),
                     ),
 
-                    // Search Bar
+                    // Enhanced Search Bar
                     Container(
                       padding: const EdgeInsets.all(20),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
                             ),
                           ],
                         ),
@@ -221,19 +229,19 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                           controller: _searchController,
                           decoration: InputDecoration(
                             hintText: '${locale.t('searchOrders')}...',
-                            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                            prefixIcon: Icon(Icons.search, color: Colors.orange.shade400),
                             suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
                                   onPressed: () {
                                     _searchController.clear();
                                     _performSearch('');
                                   },
-                                  icon: const Icon(Icons.clear, color: Colors.grey),
+                                  icon: Icon(Icons.clear, color: Colors.grey.shade400),
                                 )
                               : null,
                             border: InputBorder.none,
                             hintStyle: GoogleFonts.inter(
-                              color: Colors.grey.shade600,
+                              color: Colors.grey.shade500,
                               fontSize: 14,
                             ),
                           ),
@@ -242,7 +250,7 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                       ),
                     ),
 
-                    // Orders List
+                    // Enhanced Orders List
                     Expanded(
                       child: _filteredOrders.isEmpty
                         ? _buildEmptyState(locale)
@@ -268,16 +276,17 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: textColor.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: textColor, size: 16),
-          const SizedBox(height: 4),
+          Icon(icon, color: textColor, size: 18),
+          const SizedBox(height: 6),
           Text(
             value,
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: textColor,
             ),
@@ -286,6 +295,7 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
             label,
             style: GoogleFonts.inter(
               fontSize: 10,
+              fontWeight: FontWeight.w500,
               color: textColor,
             ),
             textAlign: TextAlign.center,
@@ -307,16 +317,22 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
             ? Colors.orange 
             : Colors.green;
 
+    String priorityLabel = isOverdue 
+        ? 'OVERDUE' 
+        : isHighPriority 
+            ? 'URGENT' 
+            : 'NORMAL';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -324,7 +340,7 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _navigateToOrderDetail(order),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -333,18 +349,18 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: Colors.orange.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.pending_actions,
                         color: Colors.orange.shade600,
-                        size: 20,
+                        size: 22,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 15),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -352,17 +368,18 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                           Text(
                             order.uniqueId,
                             style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
                               color: Colors.black87,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Text(
-                            '${order.serviceType} • Customer: ${order.customerId}',
+                            '${order.serviceType} • ${order.customerId}',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -372,25 +389,25 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
                             color: priorityColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                           ),
                           child: Text(
-                            isOverdue ? 'OVERDUE' : isHighPriority ? 'HIGH' : 'NORMAL',
+                            priorityLabel,
                             style: GoogleFonts.inter(
                               fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               color: priorityColor,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Text(
                           '₹${order.totalAmount.toStringAsFixed(0)}',
                           style: GoogleFonts.inter(
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: FontWeight.w700,
                             color: Colors.green.shade600,
                           ),
@@ -401,51 +418,59 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                 ),
                 const SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.schedule, size: 14, color: Colors.grey.shade600),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Delivery: ${order.deliveryDate.toString().substring(0, 10)}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ],
+                      Row(
+                        children: [
+                          Icon(Icons.schedule, size: 16, color: Colors.grey.shade600),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delivery: ${order.deliveryDate.toString().substring(0, 10)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(Icons.payment, size: 14, color: Colors.grey.shade600),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Advance: ₹${order.advancePaid.toStringAsFixed(0)} • Balance: ₹${order.balanceAmount.toStringAsFixed(0)}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ],
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${daysDiff >= 0 ? daysDiff : 'Overdue'} ${daysDiff >= 0 ? 'days left' : ''}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: priorityColor,
+                              fontWeight: FontWeight.w600,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 14,
-                        color: Colors.grey.shade400,
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.payment, size: 16, color: Colors.grey.shade600),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Advance: ₹${order.advancePaid.toStringAsFixed(0)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            'Pending: ₹${order.balanceAmount.toStringAsFixed(0)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.red.shade600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -463,36 +488,43 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.pending_actions,
-            size: 64,
-            color: Colors.grey.shade400,
+          Container(
+            padding: const EdgeInsets.all(30),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.pending_actions,
+              size: 64,
+              color: Colors.orange.shade400,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Text(
             _searchController.text.isNotEmpty 
               ? 'No orders found for "${_searchController.text}"'
               : 'No pending orders found',
             style: GoogleFonts.inter(
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+              color: Colors.grey.shade700,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             _searchController.text.isNotEmpty
               ? 'Try adjusting your search terms'
               : 'All orders are either in progress or completed',
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: 16,
               color: Colors.grey.shade500,
             ),
             textAlign: TextAlign.center,
           ),
           if (_searchController.text.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
                 _searchController.clear();
@@ -503,6 +535,10 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
