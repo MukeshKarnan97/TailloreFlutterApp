@@ -122,8 +122,31 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
+  List<String> _getAvailableStatuses() {
+    // Define status progression
+    switch (_currentOrder.status.toLowerCase()) {
+      case 'pending':
+        return ['pending', 'cutting', 'stitching', 'in_progress'];
+      case 'cutting':
+        return ['cutting', 'stitching', 'in_progress', 'ready'];
+      case 'stitching':
+        return ['stitching', 'in_progress', 'ready'];
+      case 'in_progress':
+        return ['in_progress', 'ready', 'completed'];
+      case 'ready':
+        return ['ready', 'completed', 'delivered'];
+      case 'completed':
+        return ['completed', 'delivered'];
+      case 'delivered':
+        return ['delivered'];
+      default:
+        return ['pending', 'cutting', 'stitching', 'in_progress', 'ready', 'completed', 'delivered'];
+    }
+  }
+
   void _showStatusUpdateDialog() {
-    final statuses = ['pending', 'cutting', 'stitching', 'in_progress', 'ready', 'completed'];
+    // Status mapping: pending -> in_progress (cutting/stitching) -> completed -> delivered
+    final statuses = _getAvailableStatuses();
     String selectedStatus = _currentOrder.status;
     
     showDialog(
@@ -250,6 +273,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               onSelected: (value) {
                 if (value == 'update_status') {
                   _showStatusUpdateDialog();
+                } else if (value == 'update_payment') {
+                  _showPaymentUpdateDialog();
                 }
               },
               itemBuilder: (context) => [
@@ -263,6 +288,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ],
                   ),
                 ),
+                if (_currentOrder.balanceAmount > 0)
+                  PopupMenuItem(
+                    value: 'update_payment',
+                    child: Row(
+                      children: [
+                        Icon(Icons.payment, size: 20, color: Colors.green.shade600),
+                        const SizedBox(width: 8),
+                        Text('Add Payment', style: GoogleFonts.inter()),
+                      ],
+                    ),
+                  ),
               ],
               icon: const Icon(Icons.more_vert, color: Colors.white),
             ),
@@ -811,5 +847,136 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ],
       ),
     );
+  }
+
+  void _showPaymentUpdateDialog() {
+    final TextEditingController paymentController = TextEditingController();
+    final remainingAmount = _currentOrder.totalAmount - _currentOrder.advancePaid;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Update Payment',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Total Amount: ₹${_currentOrder.totalAmount.toStringAsFixed(0)}',
+              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+            Text(
+              'Paid Amount: ₹${_currentOrder.advancePaid.toStringAsFixed(0)}',
+              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+            Text(
+              'Remaining: ₹${remainingAmount.toStringAsFixed(0)}',
+              style: GoogleFonts.inter(
+                fontSize: 14, 
+                fontWeight: FontWeight.w600,
+                color: remainingAmount > 0 ? Colors.red : Colors.green,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: paymentController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Add Payment Amount',
+                prefixText: '₹',
+                border: const OutlineInputBorder(),
+                hintText: 'Enter amount to add',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final amount = double.tryParse(paymentController.text);
+              if (amount != null && amount > 0) {
+                _updatePayment(amount);
+                Navigator.pop(context);
+              }
+            },
+            child: Text('Add Payment'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _updatePayment(double additionalPayment) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final newAdvancePaid = _currentOrder.advancePaid + additionalPayment;
+      final newBalanceAmount = _currentOrder.totalAmount - newAdvancePaid;
+      
+      // Update in database
+      await _dbService.updateOrder(_currentOrder.uniqueId, {
+        'advance_paid': newAdvancePaid,
+        'balance_amount': newBalanceAmount,
+        'payment_status': newBalanceAmount <= 0 ? 'paid' : 'partial',
+      });
+      
+      // Update local order object
+      _currentOrder = Order(
+        id: _currentOrder.id,
+        uniqueId: _currentOrder.uniqueId,
+        customerId: _currentOrder.customerId,
+        tailorId: _currentOrder.tailorId,
+        serviceType: _currentOrder.serviceType,
+        status: _currentOrder.status,
+        paymentStatus: newBalanceAmount <= 0 ? 'paid' : 'partial',
+        deliveryDate: _currentOrder.deliveryDate,
+        notes: _currentOrder.notes,
+        designImageUrl: _currentOrder.designImageUrl,
+        totalAmount: _currentOrder.totalAmount,
+        advancePaid: newAdvancePaid,
+        balanceAmount: newBalanceAmount,
+        measurements: _currentOrder.measurements,
+        createdAt: _currentOrder.createdAt,
+        updatedAt: DateTime.now(),
+        isDeleted: _currentOrder.isDeleted,
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Payment of ₹${additionalPayment.toStringAsFixed(0)} added successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      Logger.error('OrderDetailScreen', 'Failed to update payment', 
+                   error: e, stackTrace: stackTrace);
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update payment'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

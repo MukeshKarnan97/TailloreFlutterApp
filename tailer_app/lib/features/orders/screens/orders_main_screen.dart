@@ -10,8 +10,12 @@ import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import '../../../data/services/local_db_service.dart';
 import '../../../data/models/order_model.dart';
+import '../../../data/models/customer_model.dart';
 import '../../../core/utils/logger.dart';
 import 'pending_orders_screen.dart';
+import 'in_progress_orders_screen.dart';
+import 'completed_orders_screen.dart';
+import 'ready_orders_screen.dart';
 // Import for Order extension methods if needed
 
 class OrdersMainScreen extends StatefulWidget {
@@ -34,11 +38,13 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
   int _pendingOrders = 0;
   int _inProgressOrders = 0;
   int _readyOrders = 0;
+  int _completedOrders = 0;
   double _totalRevenue = 0.0;
   double _pendingPayments = 0.0;
   double _pendingOrdersValue = 0.0;
   double _inProgressOrdersValue = 0.0;
   double _readyOrdersValue = 0.0;
+  double _completedOrdersValue = 0.0;
 
   @override
   void initState() {
@@ -263,6 +269,20 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                               count: _readyOrders.toString(),
                               paymentAmount: '₹${_readyOrdersValue.toStringAsFixed(0)}',
                               priority: _readyOrders > 2 ? 'Medium' : 'Low',
+                              onTap: () => _navigateToOrderList('ready'),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            _buildEnhancedStatusCard(
+                              context: context,
+                              title: locale.t('completedOrders'),
+                              subtitle: locale.t('ordersDeliveredAndPaid'),
+                              icon: Icons.done_all,
+                              color: Colors.purple,
+                              count: _completedOrders.toString(),
+                              paymentAmount: '₹${_completedOrdersValue.toStringAsFixed(0)}',
+                              priority: _completedOrders > 5 ? 'Low' : 'Low',
                               onTap: () => _navigateToOrderList('completed'),
                             ),
 
@@ -324,6 +344,12 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                   ],
                 ),
               ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: _insertTestData,
+            backgroundColor: Colors.orange,
+            child: const Icon(Icons.add_box, color: Colors.white),
+            tooltip: 'Insert Test Data',
+          ),
           bottomNavigationBar: AnimatedBottomNavigation(
             currentIndex: _currentNavIndex,
             onTap: _onNavTap,
@@ -776,8 +802,10 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
         order.status.toLowerCase() == 'cutting' || 
         order.status.toLowerCase() == 'stitching').length;
     _readyOrders = _allOrders.where((order) => 
-        order.status.toLowerCase() == 'completed' || 
         order.status.toLowerCase() == 'ready').length;
+    _completedOrders = _allOrders.where((order) => 
+        order.status.toLowerCase() == 'completed' || 
+        order.status.toLowerCase() == 'delivered').length;
     
     // Calculate financial data
     _totalRevenue = _allOrders.fold(0.0, (sum, order) => sum + order.advancePaid);
@@ -796,8 +824,12 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
         .fold(0.0, (sum, order) => sum + order.totalAmount);
     
     _readyOrdersValue = _allOrders
+        .where((order) => order.status.toLowerCase() == 'ready')
+        .fold(0.0, (sum, order) => sum + order.totalAmount);
+    
+    _completedOrdersValue = _allOrders
         .where((order) => order.status.toLowerCase() == 'completed' || 
-                         order.status.toLowerCase() == 'ready')
+                         order.status.toLowerCase() == 'delivered')
         .fold(0.0, (sum, order) => sum + order.totalAmount);
   }
 
@@ -830,13 +862,22 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
         );
         break;
       case 'in_progress':
-        // TODO: Implement InProgressOrdersScreen
-        showNavigationMessage(context, 'In Progress Orders - Coming Soon!');
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const InProgressOrdersScreen()),
+        );
+        break;
+      case 'ready':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ReadyOrdersScreen()),
+        );
         break;
       case 'completed':
-      case 'ready':
-        // TODO: Implement CompletedOrdersScreen
-        showNavigationMessage(context, 'Completed Orders - Coming Soon!');
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const CompletedOrdersScreen()),
+        );
         break;
       default:
         context.pushNamed(RouteNames.orderList);
@@ -853,5 +894,179 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
   void _navigateToPaymentHistory() {
     // Navigate to existing payment history or show message
     showNavigationMessage(context, 'Payment History - Feature Available!');
+  }
+
+  /// Insert test data for all order statuses
+  Future<void> _insertTestData() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text('Inserting test data...'),
+            ],
+          ),
+        ),
+      );
+
+      const String tailorId = 'admin1@gmail.com';
+      
+      // Create test customers first
+      final customers = [
+        {'name': 'Raj Kumar', 'phone': '9876543210', 'address': '123 MG Road, Bangalore'},
+        {'name': 'Priya Sharma', 'phone': '9876543211', 'address': '456 Brigade Road, Bangalore'},
+        {'name': 'Arjun Singh', 'phone': '9876543212', 'address': '789 Commercial Street, Bangalore'},
+      ];
+
+      List<Customer> insertedCustomers = [];
+      for (var customerData in customers) {
+        final customer = Customer.create(
+          tailorId: tailorId,
+          name: customerData['name']!,
+          phone: customerData['phone']!,
+          address: customerData['address']!,
+          gender: 'Male',
+        );
+        
+        try {
+          await _dbService.insertCustomerWithoutForeignKeyCheck(customer);
+          insertedCustomers.add(customer);
+        } catch (e) {
+          print('Customer already exists: ${customer.name}');
+          // Customer might already exist, try to get it
+          final existingCustomers = await _dbService.select('customer', 
+            where: 'name = ?', whereArgs: [customer.name]);
+          if (existingCustomers.isNotEmpty) {
+            insertedCustomers.add(Customer.fromMap(existingCustomers.first));
+          }
+        }
+      }
+
+      // Order statuses to test
+      final statuses = ['pending', 'cutting', 'stitching', 'in_progress', 'ready', 'completed', 'delivered'];
+      final dressTypes = ['Shirt', 'Pant', 'Kurta', 'Dress', 'Suit', 'Blouse', 'Lehenga'];
+      
+      // Insert 3 orders for each status
+      int orderIndex = 0;
+      for (String status in statuses) {
+        for (int i = 0; i < 3; i++) {
+          final customer = insertedCustomers[i % insertedCustomers.length];
+          final dressType = dressTypes[orderIndex % dressTypes.length];
+          
+          double totalAmount = 2000.0 + (orderIndex * 150);
+          double advance = _getAdvanceForStatus(status, totalAmount);
+          
+          final order = Order.create(
+            customerId: customer.uniqueId,
+            tailorId: tailorId,
+            serviceType: dressType,
+            status: status,
+            deliveryDate: _getDeliveryDateForStatus(status),
+            notes: 'Test order - $status status for $dressType',
+            totalAmount: totalAmount,
+            advancePaid: advance,
+            balanceAmount: totalAmount - advance,
+            measurements: _getSampleMeasurements(dressType),
+          );
+          
+          try {
+            await _dbService.insertOrderWithoutTailorForeignKeyCheck(order);
+            orderIndex++;
+          } catch (e) {
+            print('Failed to insert order: $e');
+          }
+        }
+      }
+
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      // Refresh data
+      await _loadOrderData();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Inserted ${statuses.length * 3} test orders!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      Navigator.of(context).pop(); // Close loading dialog
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error inserting test data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  double _getAdvanceForStatus(String status, double totalAmount) {
+    switch (status) {
+      case 'pending':
+        return totalAmount * 0.3;
+      case 'cutting':
+      case 'stitching':
+        return totalAmount * 0.5;
+      case 'in_progress':
+        return totalAmount * 0.7;
+      case 'ready':
+        return totalAmount * 0.8;
+      case 'completed':
+      case 'delivered':
+        return totalAmount;
+      default:
+        return totalAmount * 0.3;
+    }
+  }
+
+  DateTime _getDeliveryDateForStatus(String status) {
+    final now = DateTime.now();
+    switch (status) {
+      case 'pending':
+        return now.add(Duration(days: 10));
+      case 'cutting':
+        return now.add(Duration(days: 8));
+      case 'stitching':
+        return now.add(Duration(days: 6));
+      case 'in_progress':
+        return now.add(Duration(days: 4));
+      case 'ready':
+        return now.add(Duration(days: 2));
+      case 'completed':
+        return now.subtract(Duration(days: 1));
+      case 'delivered':
+        return now.subtract(Duration(days: 3));
+      default:
+        return now.add(Duration(days: 7));
+    }
+  }
+
+  Map<String, double> _getSampleMeasurements(String dressType) {
+    switch (dressType.toLowerCase()) {
+      case 'shirt':
+        return {'chest': 40.0, 'waist': 36.0, 'sleeve_length': 24.0, 'shoulder': 16.0, 'neck': 15.0};
+      case 'pant':
+        return {'waist': 32.0, 'length': 40.0, 'hip': 38.0, 'thigh': 22.0, 'bottom': 14.0};
+      case 'suit':
+        return {'chest': 42.0, 'waist': 36.0, 'sleeve_length': 25.0, 'shoulder': 17.0, 'pant_waist': 34.0, 'pant_length': 42.0};
+      case 'kurta':
+        return {'chest': 44.0, 'length': 42.0, 'sleeve_length': 22.0, 'shoulder': 18.0, 'neck': 16.0};
+      case 'dress':
+        return {'bust': 36.0, 'waist': 30.0, 'hip': 38.0, 'length': 40.0, 'sleeve_length': 20.0};
+      case 'blouse':
+        return {'bust': 34.0, 'waist': 28.0, 'sleeve_length': 12.0, 'shoulder': 13.0, 'neck': 13.0};
+      case 'lehenga':
+        return {'bust': 36.0, 'waist': 28.0, 'hip': 40.0, 'skirt_length': 42.0, 'blouse_length': 14.0};
+      default:
+        return {'chest': 38.0, 'waist': 34.0, 'length': 38.0};
+    }
   }
 }
