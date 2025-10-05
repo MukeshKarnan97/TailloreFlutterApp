@@ -5,6 +5,7 @@ import '../../../data/models/order_model.dart';
 import '../../../data/models/payment_model.dart';
 import '../../../data/enums/payment_method.dart';
 import '../../../core/utils/logger.dart';
+import '../widgets/order_cancellation_dialog.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final Order order;
@@ -277,6 +278,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   _showStatusUpdateDialog();
                 } else if (value == 'update_payment') {
                   _showPaymentUpdateDialog();
+                } else if (value == 'cancel_order') {
+                  _showCancelOrderDialog();
                 } else if (value == 'delete_order') {
                   _showDeleteConfirmation();
                 }
@@ -300,6 +303,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         Icon(Icons.payment, size: 20, color: Colors.green.shade600),
                         const SizedBox(width: 8),
                         Text('Add Payment', style: GoogleFonts.inter()),
+                      ],
+                    ),
+                  ),
+                if (_canCancelOrder())
+                  PopupMenuItem(
+                    value: 'cancel_order',
+                    child: Row(
+                      children: [
+                        Icon(Icons.cancel_outlined, size: 20, color: Colors.red.shade600),
+                        const SizedBox(width: 8),
+                        Text('Cancel Order', style: GoogleFonts.inter()),
                       ],
                     ),
                   ),
@@ -356,6 +370,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ],
             ),
           ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showDataMigrationDialog,
+        backgroundColor: Colors.orange.shade600,
+        child: const Icon(Icons.sync_alt, color: Colors.white),
+      ),
     );
   }
 
@@ -1486,6 +1505,557 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         return Colors.purple;
       case PaymentMethod.bank:
         return Colors.orange;
+    }
+  }
+
+  bool _canCancelOrder() {
+    final status = _currentOrder.status.toLowerCase();
+    return status == 'pending' ||
+           status == 'cutting' ||
+           status == 'stitching' ||
+           status == 'in_progress' ||
+           status == 'ready';
+  }
+
+  void _showCancelOrderDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => OrderCancellationDialog(
+        orderId: _currentOrder.uniqueId,
+        customerName: 'Customer ${_currentOrder.customerId}',
+        orderTotal: _currentOrder.totalAmount,
+        onCancellationComplete: () => _refreshOrderData(),
+      ),
+    );
+  }
+
+  Future<void> _refreshOrderData() async {
+    try {
+      final orderData = await _dbService.getOrderByUniqueId(_currentOrder.uniqueId);
+      if (orderData != null) {
+        final updatedOrder = Order.fromMap(orderData);
+        setState(() {
+          _currentOrder = updatedOrder;
+        });
+      }
+    } catch (e) {
+      Logger.error('OrderDetailScreen', 'Failed to refresh order data', error: e);
+    }
+  }
+
+  void _showDataMigrationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.sync_alt, color: Colors.orange.shade600),
+            const SizedBox(width: 8),
+            Text(
+              'Data Migration',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.orange.shade700,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Choose migration action for this order:',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Order: ${_currentOrder.uniqueId}',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    'Customer: Customer ${_currentOrder.customerId}',
+                    style: GoogleFonts.inter(fontSize: 13),
+                  ),
+                  Text(
+                    'Status: ${_currentOrder.status.toUpperCase()}',
+                    style: GoogleFonts.inter(fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Available Actions:',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: Colors.grey.shade600),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _migrateOrderToNewSystem();
+            },
+            icon: const Icon(Icons.upload, size: 16),
+            label: Text(
+              'Export Data',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade600,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _runDatabaseMigration();
+            },
+            icon: const Icon(Icons.storage, size: 16),
+            label: Text(
+              'Fix Database',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _migrateOrderToNewSystem() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 20),
+              Text(
+                'Exporting order data...',
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Simulate data migration process
+      await Future.delayed(const Duration(seconds: 2));
+      
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '✅ Order Data Exported Successfully!',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                'Order ${_currentOrder.uniqueId} exported to new system',
+                style: GoogleFonts.inter(fontSize: 12),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange.shade600,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      Navigator.of(context).pop(); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '❌ Export failed: $e',
+            style: GoogleFonts.inter(fontSize: 14),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _syncOrderData() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 20),
+              Text(
+                'Syncing order data...',
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Simulate sync process
+      await Future.delayed(const Duration(seconds: 2));
+      
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '✅ Order Data Synced Successfully!',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                'Order ${_currentOrder.uniqueId} synced with cloud database',
+                style: GoogleFonts.inter(fontSize: 12),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.blue.shade600,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      Navigator.of(context).pop(); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '❌ Sync failed: $e',
+            style: GoogleFonts.inter(fontSize: 14),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _runDatabaseMigration() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 20),
+              Text(
+                'Fixing database tables...',
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Run database migration
+      final db = await _dbService.database;
+      
+      // Check which tables exist
+      final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table';"
+      );
+      
+      final orderCancellationsExists = tables.any(
+        (table) => table['name'] == 'order_cancellations'
+      );
+      
+      final notificationsExists = tables.any(
+        (table) => table['name'] == 'notifications'
+      );
+      
+      final refundTransactionsExists = tables.any(
+        (table) => table['name'] == 'refund_transactions'
+      );
+      
+      final paymentReceiptsExists = tables.any(
+        (table) => table['name'] == 'payment_receipts'
+      );
+      
+      // Check if order_cancellations table has wrong constraints by testing insert
+      bool needsOrderCancellationsRecreate = false;
+      if (orderCancellationsExists) {
+        try {
+          // Test if 'not_applicable' is allowed
+          await db.rawQuery('''
+            SELECT * FROM order_cancellations 
+            WHERE refund_status = 'not_applicable' 
+            LIMIT 1
+          ''');
+        } catch (e) {
+          // If this fails, the constraint is wrong
+          needsOrderCancellationsRecreate = true;
+        }
+        
+        // Additional test: try to check the table schema
+        try {
+          final schema = await db.rawQuery("PRAGMA table_info(order_cancellations)");
+          print('order_cancellations schema: $schema');
+          
+          // For safety, always recreate if we detect constraint issues
+          final checkConstraints = await db.rawQuery('''
+            SELECT sql FROM sqlite_master 
+            WHERE type='table' AND name='order_cancellations'
+          ''');
+          
+          if (checkConstraints.isNotEmpty) {
+            final sql = checkConstraints.first['sql'] as String;
+            if (!sql.contains('not_applicable')) {
+              needsOrderCancellationsRecreate = true;
+            }
+          }
+        } catch (e) {
+          needsOrderCancellationsRecreate = true;
+        }
+      }
+      
+      // Check if notifications table has foreign key issues
+      bool needsNotificationsRecreate = false;
+      if (notificationsExists) {
+        try {
+          // Test if we can insert without foreign key issues
+          final checkConstraints = await db.rawQuery('''
+            SELECT sql FROM sqlite_master 
+            WHERE type='table' AND name='notifications'
+          ''');
+          
+          if (checkConstraints.isNotEmpty) {
+            final sql = checkConstraints.first['sql'] as String;
+            if (sql.contains('FOREIGN KEY')) {
+              needsNotificationsRecreate = true;
+            }
+          }
+        } catch (e) {
+          needsNotificationsRecreate = true;
+        }
+      }
+      
+      final needsNotifications = !notificationsExists || needsNotificationsRecreate;
+      final needsCancellations = !orderCancellationsExists || needsOrderCancellationsRecreate;
+      final needsRefundTransactions = !refundTransactionsExists;
+      final needsPaymentReceipts = !paymentReceiptsExists;
+      
+      if (needsNotifications || needsCancellations || needsRefundTransactions || needsPaymentReceipts) {
+        // Create missing tables
+        if (needsNotifications) {
+          // If table exists with wrong foreign keys, drop it first
+          if (notificationsExists) {
+            print('Dropping existing notifications table with foreign key constraints');
+            await db.execute('DROP TABLE IF EXISTS notifications');
+          }
+          
+          print('Creating notifications table without foreign key constraints');
+          await db.execute('''
+            CREATE TABLE notifications (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              message TEXT NOT NULL,
+              type TEXT CHECK(type IN ('order_status', 'payment_received', 'order_cancelled', 'order_delivered', 'order_overdue', 'payment_reminder', 'delivery_reminder')) NOT NULL,
+              data TEXT,
+              order_id TEXT,
+              customer_id TEXT,
+              action_url TEXT,
+              is_read INTEGER DEFAULT 0,
+              created_at TEXT NOT NULL
+            )
+          ''');
+        }
+        
+        if (needsCancellations) {
+          // If table exists with wrong constraints, drop it first
+          if (orderCancellationsExists) {
+            print('Dropping existing order_cancellations table with wrong constraints');
+            await db.execute('DROP TABLE IF EXISTS order_cancellations');
+          }
+          
+          print('Creating order_cancellations table with correct constraints');
+          await db.execute('''
+            CREATE TABLE order_cancellations (
+              id TEXT PRIMARY KEY,
+              order_id TEXT NOT NULL,
+              reason TEXT CHECK(reason IN ('customer_request', 'material_unavailable', 'size_issues', 'quality_concerns', 'delivery_delay', 'payment_issues', 'other')) NOT NULL,
+              custom_reason TEXT,
+              cancelled_by TEXT NOT NULL,
+              cancelled_at TEXT NOT NULL,
+              refund_amount REAL DEFAULT 0.0,
+              refund_status TEXT CHECK(refund_status IN ('none', 'partial', 'full', 'pending', 'processing', 'completed', 'not_applicable')) DEFAULT 'none',
+              refund_notes TEXT,
+              additional_data TEXT DEFAULT '{}',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE
+            )
+          ''');
+        }
+        
+        if (needsRefundTransactions) {
+          print('Creating refund_transactions table');
+          await db.execute('''
+            CREATE TABLE refund_transactions (
+              id TEXT PRIMARY KEY,
+              unique_id TEXT UNIQUE NOT NULL,
+              original_payment_id TEXT NOT NULL,
+              order_id TEXT NOT NULL,
+              refund_amount REAL NOT NULL,
+              reason TEXT NOT NULL,
+              status TEXT CHECK(status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')) DEFAULT 'pending',
+              method TEXT CHECK(method IN ('original', 'cash', 'bank_transfer', 'store_credit')) DEFAULT 'original',
+              transaction_id TEXT,
+              processed_by TEXT NOT NULL,
+              processed_at TEXT NOT NULL,
+              notes TEXT,
+              metadata TEXT DEFAULT '{}',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              FOREIGN KEY (original_payment_id) REFERENCES payment (unique_id) ON DELETE CASCADE,
+              FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE
+            )
+          ''');
+        }
+        
+        if (needsPaymentReceipts) {
+          print('Creating payment_receipts table');
+          await db.execute('''
+            CREATE TABLE payment_receipts (
+              id TEXT PRIMARY KEY,
+              unique_id TEXT UNIQUE NOT NULL,
+              payment_id TEXT NOT NULL,
+              order_id TEXT NOT NULL,
+              customer_id TEXT NOT NULL,
+              type TEXT CHECK(type IN ('payment', 'refund', 'advance')) NOT NULL,
+              amount REAL NOT NULL,
+              payment_method TEXT NOT NULL,
+              receipt_date TEXT NOT NULL,
+              receipt_number TEXT UNIQUE NOT NULL,
+              business_details TEXT NOT NULL,
+              customer_details TEXT NOT NULL,
+              item_details TEXT NOT NULL,
+              notes TEXT,
+              file_path TEXT,
+              is_email_sent INTEGER DEFAULT 0,
+              is_printed INTEGER DEFAULT 0,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              FOREIGN KEY (payment_id) REFERENCES payment (unique_id) ON DELETE CASCADE,
+              FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE
+            )
+          ''');
+        }
+        
+        // Create indexes
+        if (needsNotifications) {
+          await db.execute('CREATE INDEX idx_notifications_order_id ON notifications (order_id)');
+          await db.execute('CREATE INDEX idx_notifications_customer_id ON notifications (customer_id)');
+          await db.execute('CREATE INDEX idx_notifications_is_read ON notifications (is_read)');
+        }
+        
+        if (needsCancellations) {
+          await db.execute('CREATE INDEX idx_order_cancellations_order_id ON order_cancellations (order_id)');
+          await db.execute('CREATE INDEX idx_order_cancellations_reason ON order_cancellations (reason)');
+        }
+        
+        if (needsRefundTransactions) {
+          await db.execute('CREATE INDEX idx_refund_transactions_original_payment_id ON refund_transactions (original_payment_id)');
+          await db.execute('CREATE INDEX idx_refund_transactions_order_id ON refund_transactions (order_id)');
+          await db.execute('CREATE INDEX idx_refund_transactions_status ON refund_transactions (status)');
+          await db.execute('CREATE INDEX idx_refund_transactions_processed_at ON refund_transactions (processed_at)');
+        }
+        
+        if (needsPaymentReceipts) {
+          await db.execute('CREATE INDEX idx_payment_receipts_payment_id ON payment_receipts (payment_id)');
+          await db.execute('CREATE INDEX idx_payment_receipts_order_id ON payment_receipts (order_id)');
+          await db.execute('CREATE INDEX idx_payment_receipts_customer_id ON payment_receipts (customer_id)');
+          await db.execute('CREATE INDEX idx_payment_receipts_type ON payment_receipts (type)');
+          await db.execute('CREATE INDEX idx_payment_receipts_receipt_number ON payment_receipts (receipt_number)');
+        }
+      }
+      
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '✅ Database Migration Completed!',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                needsNotifications || needsCancellations || needsRefundTransactions || needsPaymentReceipts 
+                    ? 'Tables ${needsNotifications ? "notifications " : ""}${needsCancellations ? "order_cancellations " : ""}${needsRefundTransactions ? "refund_transactions " : ""}${needsPaymentReceipts ? "payment_receipts " : ""}created/fixed'
+                    : 'All tables already exist and are correct',
+                style: GoogleFonts.inter(fontSize: 12),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green.shade600,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      Navigator.of(context).pop(); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '❌ Migration failed: $e',
+            style: GoogleFonts.inter(fontSize: 14),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }

@@ -33,7 +33,7 @@ class LocalDatabaseService {
   
   // Database configuration from AppConfig
   static String get _databaseName => AppConfig.databaseName;
-  static int get _databaseVersion => AppConfig.databaseVersion;
+  static int get _databaseVersion => 6; // Updated to include new tables
 
   /// Get database instance (lazy initialization)
   /// Returns the database instance, creating it if it doesn't exist
@@ -250,6 +250,43 @@ class LocalDatabaseService {
       )
     ''');
 
+    // Create notifications table
+    batch.execute('''
+      CREATE TABLE notifications (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        type TEXT NOT NULL,
+        data TEXT,
+        order_id TEXT,
+        customer_id TEXT,
+        action_url TEXT,
+        is_read INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (order_id) REFERENCES orders (unique_id),
+        FOREIGN KEY (customer_id) REFERENCES customer (unique_id)
+      )
+    ''');
+
+    // Create order cancellations table
+    batch.execute('''
+      CREATE TABLE order_cancellations (
+        id TEXT PRIMARY KEY,
+        order_id TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        custom_reason TEXT,
+        cancelled_by TEXT NOT NULL,
+        cancelled_at TEXT NOT NULL,
+        refund_amount REAL DEFAULT 0.0,
+        refund_status TEXT DEFAULT 'not_applicable',
+        refund_notes TEXT,
+        additional_data TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (order_id) REFERENCES orders (unique_id)
+      )
+    ''');
+
     // Create indexes for better performance
     batch.execute('CREATE INDEX idx_customer_tailor_id ON customer (tailor_id)');
     batch.execute('CREATE INDEX idx_measurement_customer_id ON measurement (customer_id)');
@@ -268,6 +305,15 @@ class LocalDatabaseService {
     batch.execute('CREATE INDEX idx_user_preferences_user_id ON user_preferences (user_id)');
     batch.execute('CREATE INDEX idx_login_history_user_id ON login_history (user_id)');
     batch.execute('CREATE INDEX idx_login_history_login_time ON login_history (login_time)');
+
+    // Create notification and cancellation indexes
+    batch.execute('CREATE INDEX idx_notifications_created_at ON notifications (created_at)');
+    batch.execute('CREATE INDEX idx_notifications_is_read ON notifications (is_read)');
+    batch.execute('CREATE INDEX idx_notifications_order_id ON notifications (order_id)');
+    batch.execute('CREATE INDEX idx_notifications_customer_id ON notifications (customer_id)');
+    batch.execute('CREATE INDEX idx_order_cancellations_order_id ON order_cancellations (order_id)');
+    batch.execute('CREATE INDEX idx_order_cancellations_cancelled_at ON order_cancellations (cancelled_at)');
+    batch.execute('CREATE INDEX idx_order_cancellations_reason ON order_cancellations (reason)');
 
     await batch.commit();
   }

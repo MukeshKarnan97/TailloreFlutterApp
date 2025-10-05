@@ -46,6 +46,9 @@ class RouteNames {
   // Payments
   static const String paymentCollection = 'paymentCollection';
   static const String paymentHistory = 'paymentHistory';
+  static const String paymentReports = 'paymentReports';
+  static const String refundManagement = 'refundManagement';
+  static const String receiptManagement = 'receiptManagement';
   
   // Demo
   static const String languageDemo = 'languageDemo';

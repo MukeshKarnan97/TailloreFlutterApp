@@ -26,11 +26,13 @@ import '../features/demo/simple_language_demo_screen.dart';
 import '../features/language/screens/language_selection_screen.dart';
 import '../features/orders/screens/add_order_screen.dart';
 import '../features/orders/screens/order_list_screen.dart';
-import '../features/orders/screens/order_details_screen.dart';
 import '../features/orders/screens/order_detail_screen.dart';
 import '../features/orders/screens/orders_main_screen.dart';
 import '../features/payments/screens/payment_collection_screen.dart';
 import '../features/payments/screens/payment_history_screen.dart';
+import '../screens/payment_reports_screen.dart';
+import '../screens/refund_management_screen.dart';
+import '../screens/receipt_management_screen.dart';
 import '../data/models/order_model.dart';
 import 'package:flutter/foundation.dart';
 
@@ -272,7 +274,13 @@ class AppRoutes {
         path: '/orders/details',
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          return buildPage(OrderDetailsScreen(extra: extra), state);
+          if (extra != null && extra['order'] != null) {
+            final orderData = extra['order'] as Map<String, dynamic>;
+            final order = Order.fromMap(orderData);
+            return buildPage(OrderDetailScreen(order: order), state);
+          }
+          // Fallback - redirect to dashboard if no order data
+          return buildPage(const DashboardScreen(), state);
         },
       ),
       GoRoute(
@@ -299,6 +307,21 @@ class AppRoutes {
         name: 'paymentHistory',
         path: '/payments/history',
         pageBuilder: (context, state) => buildPage(const PaymentHistoryScreen(), state),
+      ),
+      GoRoute(
+        name: 'paymentReports',
+        path: '/payments/reports',
+        pageBuilder: (context, state) => buildPage(const PaymentReportsScreen(), state),
+      ),
+      GoRoute(
+        name: 'refundManagement',
+        path: '/payments/refunds',
+        pageBuilder: (context, state) => buildPage(const RefundManagementScreen(), state),
+      ),
+      GoRoute(
+        name: 'receiptManagement',
+        path: '/payments/receipts',
+        pageBuilder: (context, state) => buildPage(const ReceiptManagementScreen(), state),
       ),
 
       // // Measurements

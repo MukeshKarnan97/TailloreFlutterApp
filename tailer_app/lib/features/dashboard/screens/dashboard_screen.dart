@@ -7,6 +7,7 @@ import 'package:tailer_app/features/dashboard/widgets/dashboard_card.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
 import 'package:tailer_app/routes/app_routes.dart';
+import 'package:tailer_app/core/services/back_button_handler.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -80,7 +81,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BackButtonHandler.wrapWithBackHandler(
+      type: BackHandlerType.main,
+      context: context,
+      homeRoute: '/home',
+      child: Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: DashboardHeader(
         title: 'Dashboard',
@@ -127,6 +132,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _buildTodayOverview(),
                       const SizedBox(height: AppConstants.spacingL),
                       
+                      // Recent Activity Section
+                      _buildRecentActivity(),
+                      const SizedBox(height: AppConstants.spacingL),
+                      
                       // Quick Actions
                       _buildQuickActions(),
                       const SizedBox(height: AppConstants.spacingXL),
@@ -153,9 +162,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               backgroundColor: const Color(AppConstants.primaryTeal),
               child: const Icon(Icons.refresh, color: Colors.white),
             ),
+      ),
     );
-  }  Widget _buildHeader() {
+  }
+
+  Widget _buildHeader() {
     final hour = DateTime.now().hour;
+    final now = DateTime.now();
     String greeting;
     if (hour < 12) {
       greeting = 'Good Morning';
@@ -165,45 +178,144 @@ class _DashboardScreenState extends State<DashboardScreen> {
       greeting = 'Good Evening';
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          greeting,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            color: Colors.grey[600],
-          ),
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingL),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(AppConstants.primaryTeal).withOpacity(0.1),
+            const Color(AppConstants.primaryTeal).withOpacity(0.05),
+          ],
         ),
-        const SizedBox(height: AppConstants.spacingXS),
-        Text(
-          'Welcome back to your tailoring business',
-          style: GoogleFonts.inter(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
+        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+        border: Border.all(
+          color: const Color(AppConstants.primaryTeal).withOpacity(0.2),
+          width: 1,
         ),
-        const SizedBox(height: AppConstants.spacingS),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.spacingM,
-            vertical: AppConstants.spacingS,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      greeting,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: AppConstants.spacingXS),
+                    Text(
+                      'Tailor Business Manager',
+                      style: GoogleFonts.inter(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: AppConstants.spacingS),
+                    Text(
+                      'Managing your business since ${now.year}',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(AppConstants.primaryTeal).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.design_services,
+                  color: Color(AppConstants.primaryTeal),
+                  size: 32,
+                ),
+              ),
+            ],
           ),
-          decoration: BoxDecoration(
-            color: const Color(AppConstants.primaryTeal).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
+          const SizedBox(height: AppConstants.spacingM),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingM,
+                  vertical: AppConstants.spacingS,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(AppConstants.primaryTeal),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.calendar_today,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                    const SizedBox(width: AppConstants.spacingXS),
+                    Text(
+                      '${now.day}/${now.month}/${now.year}',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppConstants.spacingS),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingM,
+                  vertical: AppConstants.spacingS,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: AppConstants.spacingXS),
+                    Text(
+                      'Business Active',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          child: Text(
-            'Dashboard Overview',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: const Color(AppConstants.primaryTeal),
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -303,6 +415,140 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildRecentActivity() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Activity',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            TextButton(
+              onPressed: () => _navigateToOrders(),
+              child: Text(
+                'View All',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(AppConstants.primaryTeal),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppConstants.spacingM),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 4, // Show recent 4 activities
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final activities = [
+                {
+                  'title': 'Order #ORD001 completed',
+                  'subtitle': 'Wedding dress for Sarah Johnson',
+                  'time': '2 hours ago',
+                  'icon': Icons.check_circle,
+                  'color': Colors.green,
+                },
+                {
+                  'title': 'New customer registered',
+                  'subtitle': 'Mike Wilson added to database',
+                  'time': '4 hours ago',
+                  'icon': Icons.person_add,
+                  'color': const Color(AppConstants.primaryTeal),
+                },
+                {
+                  'title': 'Payment received',
+                  'subtitle': '₹2,500 from Order #ORD002',
+                  'time': '1 day ago',
+                  'icon': Icons.payment,
+                  'color': Colors.blue,
+                },
+                {
+                  'title': 'Order #ORD003 in progress',
+                  'subtitle': 'Formal suit measurements taken',
+                  'time': '2 days ago',
+                  'icon': Icons.work_outline,
+                  'color': Colors.orange,
+                },
+              ];
+
+              final activity = activities[index];
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingL,
+                  vertical: AppConstants.spacingS,
+                ),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: (activity['color'] as Color).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    activity['icon'] as IconData,
+                    color: activity['color'] as Color,
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  activity['title'] as String,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                subtitle: Text(
+                  activity['subtitle'] as String,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                trailing: Text(
+                  activity['time'] as String,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.grey[500],
+                  ),
+                ),
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Viewing details for: ${activity['title']}'),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildQuickActions() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,6 +562,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         const SizedBox(height: AppConstants.spacingM),
+        
+        // Primary Actions Grid
         Container(
           padding: const EdgeInsets.all(AppConstants.spacingL),
           decoration: BoxDecoration(
@@ -332,30 +580,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           child: Column(
             children: [
-              _buildActionButton(
-                title: 'Add New Customer',
-                subtitle: 'Register a new customer',
-                icon: Icons.person_add_outlined,
-                color: const Color(AppConstants.primaryTeal),
-                onTap: () => _navigateToAddCustomer(),
+              // First row of actions
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      title: 'Add Customer',
+                      subtitle: 'Register new customer',
+                      icon: Icons.person_add_outlined,
+                      color: const Color(AppConstants.primaryTeal),
+                      onTap: () => _navigateToAddCustomer(),
+                    ),
+                  ),
+                  const SizedBox(width: AppConstants.spacingM),
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      title: 'Create Order',
+                      subtitle: 'Start new order',
+                      icon: Icons.add_shopping_cart_outlined,
+                      color: const Color(AppConstants.primaryOrange),
+                      onTap: () => _navigateToCreateOrder(),
+                    ),
+                  ),
+                ],
               ),
-              const Divider(height: AppConstants.spacingL),
-              _buildActionButton(
-                title: 'Create Order',
-                subtitle: 'Start a new tailoring order',
-                icon: Icons.add_shopping_cart_outlined,
-                color: const Color(AppConstants.primaryOrange),
-                onTap: () => _navigateToCreateOrder(),
+              const SizedBox(height: AppConstants.spacingM),
+              
+              // Second row of actions
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      title: 'Measurements',
+                      subtitle: 'Record measurements',
+                      icon: Icons.straighten,
+                      color: Colors.purple,
+                      onTap: () => _navigateToMeasurements(),
+                    ),
+                  ),
+                  const SizedBox(width: AppConstants.spacingM),
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      title: 'Payment Reports',
+                      subtitle: 'View receipts & refunds',
+                      icon: Icons.receipt_long,
+                      color: Colors.blue,
+                      onTap: () => _navigateToRevenue(),
+                    ),
+                  ),
+                ],
               ),
-              const Divider(height: AppConstants.spacingL),
-              _buildActionButton(
-                title: 'Take Measurements',
-                subtitle: 'Record customer measurements',
-                icon: Icons.straighten,
-                color: Colors.purple,
-                onTap: () => _navigateToMeasurements(),
-              ),
-              const Divider(height: AppConstants.spacingL),
+              
+              const Divider(height: AppConstants.spacingL * 2),
+              
+              // Language Demo Section
               _buildActionButton(
                 title: '🌍 Language Demo',
                 subtitle: 'Test English ⇄ Tamil switching',
@@ -367,6 +645,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildQuickActionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppConstants.spacingM),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: AppConstants.spacingS),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              subtitle,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -489,14 +824,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     context.goNamed(RouteNames.orders);
   }
 
-  void _navigateToSettings() {
-    context.goNamed(RouteNames.settings);
-  }
-
   void _navigateToRevenue() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Revenue feature coming soon!')),
-    );
+    context.goNamed(RouteNames.paymentReports);
   }
 
   void _navigateToMeasurements() {

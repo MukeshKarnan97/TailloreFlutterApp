@@ -54,6 +54,8 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
                   const SizedBox(height: AppConstants.spacingL),
                   _buildUserAccountSection(),
                   const SizedBox(height: AppConstants.spacingL),
+                  _buildPaymentManagementSection(),
+                  const SizedBox(height: AppConstants.spacingL),
                   _buildAppPreferencesSection(),
                   const SizedBox(height: AppConstants.spacingL),
                   _buildSupportSection(),
@@ -230,6 +232,39 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
           titleColor: Colors.red,
           showTrailing: false,
           onTap: _showLogoutDialog,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentManagementSection() {
+    return _buildSection(
+      title: 'Payment Management',
+      icon: Icons.payment_rounded,
+      children: [
+        _buildSettingsItem(
+          icon: Icons.analytics_outlined,
+          title: 'Payment Reports',
+          subtitle: 'View payment analytics and reports',
+          onTap: () {
+            context.goNamed(RouteNames.paymentReports);
+          },
+        ),
+        _buildSettingsItem(
+          icon: Icons.money_off_outlined,
+          title: 'Refund Management',
+          subtitle: 'Manage refunds and cancellations',
+          onTap: () {
+            context.goNamed(RouteNames.refundManagement);
+          },
+        ),
+        _buildSettingsItem(
+          icon: Icons.receipt_long_outlined,
+          title: 'Receipt Management',
+          subtitle: 'Generate and manage receipts',
+          onTap: () {
+            context.goNamed(RouteNames.receiptManagement);
+          },
         ),
       ],
     );

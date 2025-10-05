@@ -6,6 +6,8 @@ import '../../core/utils/logger.dart';
 import '../../core/utils/onboarding_helper.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
+import '../../data/services/notification_service.dart';
+import '../notifications/widgets/notification_list_widget.dart';
 
 
 
@@ -26,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   final SimpleLocaleProvider _localeProvider = SimpleLocaleProvider();
+  final NotificationService _notificationService = NotificationService();
 
   @override
   void initState() {
@@ -33,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Logger.startTrace(_className, 'initState');
     
     _initializeAnimations();
+    _initializeNotifications();
     
     Logger.endTrace(_className, 'initState');
   }
@@ -55,6 +59,55 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _fadeController.forward();
   }
 
+  void _initializeNotifications() {
+    // Initialize notification service
+    _notificationService.initialize().catchError((error) {
+      Logger.error(_className, 'Failed to initialize notifications', error: error);
+    });
+  }
+
+  void _showNotifications() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Notifications',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    _notificationService.markAllAsRead();
+                  },
+                  child: const Text('Mark All Read'),
+                ),
+              ],
+            ),
+            const Divider(),
+            // Notification list
+            const Expanded(
+              child: NotificationListWidget(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _fadeController.dispose();
@@ -65,18 +118,44 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     Logger.debug(_className, 'Building home screen');
     
-    return AnimatedBuilder(
-      animation: _localeProvider,
-      builder: (context, child) {
-        final locale = AppLocalizations.of(_localeProvider.languageCode);
+    return PopScope(
+      canPop: false, // Prevent default back behavior
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
         
-        return Scaffold(
+        // Show exit confirmation for home screen
+        final shouldExit = await _showExitConfirmation(context);
+        if (shouldExit) {
+          // Actually exit the app from home screen
+          if (context.mounted) {
+            // You can use SystemNavigator.pop() to exit the app
+            // or handle it as needed
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: AnimatedBuilder(
+        animation: _localeProvider,
+        builder: (context, child) {
+          final locale = AppLocalizations.of(_localeProvider.languageCode);
+          
+          return Scaffold(
           appBar: AppBar(
             title: Text(AppConfig.appName),
             elevation: 0,
             backgroundColor: Colors.indigo.shade600,
             foregroundColor: Colors.white,
             centerTitle: true,
+            actions: [
+              NotificationBadge(
+                notificationService: _notificationService,
+                child: IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: _showNotifications,
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
           ),
           body: FadeTransition(
             opacity: _fadeAnimation,
@@ -125,7 +204,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         );
       },
-    );
+    ), // End of AnimatedBuilder
+    ); // End of PopScope
+  }
+
+  /// Show exit confirmation dialog
+  Future<bool> _showExitConfirmation(BuildContext context) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Exit App'),
+        content: const Text('Do you want to exit the application?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    ) ?? false;
   }
 
   Widget _buildWelcomeSection(AppLocalizations locale) {
