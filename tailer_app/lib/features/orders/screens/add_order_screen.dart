@@ -6,6 +6,8 @@ import '../../../core/providers/simple_locale_provider.dart';
 import '../../../core/translations/app_localizations.dart';
 import '../../../data/models/order_model.dart';
 import '../../../data/models/customer_model.dart';
+import '../../../data/models/payment_model.dart';
+import '../../../data/enums/payment_method.dart';
 import '../../../data/services/local_db_service.dart';
 import '../../../core/utils/logger.dart';
 import '../widgets/customer_selector.dart';
@@ -33,6 +35,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
   String? _selectedDressType;
   Map<String, double> _measurements = {};
   DateTime _deliveryDate = DateTime.now().add(const Duration(days: 7));
+  PaymentMethod _advancePaymentMethod = PaymentMethod.cash; // Default to cash
   bool _isLoading = false;
 
   @override
@@ -186,6 +189,19 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
       final result = await _dbService.insertOrderWithoutTailorForeignKeyCheck(order);
       
       if (result > 0) {
+        // If advance payment is made, create a payment record
+        if (advancePaid > 0) {
+          final payment = Payment.create(
+            orderId: order.uniqueId,
+            amount: advancePaid,
+            method: _advancePaymentMethod,
+            notes: 'Advance payment during order creation',
+          );
+          
+          await _dbService.addPayment(payment);
+          Logger.info('AddOrderScreen', 'Advance payment record created: ${payment.uniqueId}');
+        }
+        
         Logger.info('AddOrderScreen', 'Order created successfully: ${order.uniqueId}');
         
         if (mounted) {
@@ -508,6 +524,63 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
               },
             ),
             
+            // Payment Method Selection (only show if advance amount is entered)
+            if (_advanceController.text.isNotEmpty && 
+                double.tryParse(_advanceController.text) != null && 
+                double.parse(_advanceController.text) > 0) ...[
+              const SizedBox(height: 16),
+              
+              Text(
+                'Advance Payment Method',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<PaymentMethod>(
+                    value: _advancePaymentMethod,
+                    isExpanded: true,
+                    icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    items: PaymentMethod.values.map((PaymentMethod method) {
+                      return DropdownMenuItem<PaymentMethod>(
+                        value: method,
+                        child: Row(
+                          children: [
+                            Icon(
+                              _getPaymentMethodIcon(method),
+                              size: 20,
+                              color: _getPaymentMethodColor(method),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              method.displayName,
+                              style: GoogleFonts.inter(fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: _isLoading ? null : (PaymentMethod? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _advancePaymentMethod = newValue;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+            
             // Balance Amount Display
             if (_totalAmountController.text.isNotEmpty)
               Padding(
@@ -558,5 +631,31 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
         ),
       ),
     );
+  }
+
+  IconData _getPaymentMethodIcon(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.cash:
+        return Icons.money;
+      case PaymentMethod.card:
+        return Icons.credit_card;
+      case PaymentMethod.upi:
+        return Icons.qr_code;
+      case PaymentMethod.bank:
+        return Icons.account_balance;
+    }
+  }
+
+  Color _getPaymentMethodColor(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.cash:
+        return Colors.green;
+      case PaymentMethod.card:
+        return Colors.blue;
+      case PaymentMethod.upi:
+        return Colors.purple;
+      case PaymentMethod.bank:
+        return Colors.orange;
+    }
   }
 }

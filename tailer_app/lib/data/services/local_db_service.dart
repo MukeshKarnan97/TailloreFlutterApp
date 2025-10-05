@@ -170,8 +170,8 @@ class LocalDatabaseService {
         unique_id TEXT UNIQUE NOT NULL,
         order_id TEXT NOT NULL,
         amount REAL NOT NULL,
-        method TEXT CHECK(method IN ('cash', 'card', 'upi', 'bank')) NOT NULL,
-        notes TEXT,
+        method TEXT NOT NULL DEFAULT 'cash',
+        notes TEXT DEFAULT '',
         transaction_id TEXT,
         paid_on TEXT NOT NULL,
         created_at TEXT NOT NULL,
@@ -310,6 +310,48 @@ class LocalDatabaseService {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     Logger.info('LocalDatabaseService', 'Upgrading database from version $oldVersion to $newVersion');
     
+    // Add missing columns (version 4 to 5)
+    if (oldVersion < 5) {
+      try {
+        // Check and add is_deleted column to orders table
+        final orderColumns = await db.rawQuery("PRAGMA table_info(orders)");
+        final hasIsDeletedInOrders = orderColumns.any((col) => col['name'] == 'is_deleted');
+        final hasPaymentStatusInOrders = orderColumns.any((col) => col['name'] == 'payment_status');
+        
+        if (!hasIsDeletedInOrders) {
+          Logger.info('LocalDatabaseService', 'Adding is_deleted column to orders table');
+          await db.execute('ALTER TABLE orders ADD COLUMN is_deleted INTEGER DEFAULT 0');
+        }
+        
+        if (!hasPaymentStatusInOrders) {
+          Logger.info('LocalDatabaseService', 'Adding payment_status column to orders table');
+          await db.execute('ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT "pending"');
+        }
+        
+        // Check and add is_deleted column to payment table
+        final paymentColumns = await db.rawQuery("PRAGMA table_info(payment)");
+        final hasIsDeletedInPayment = paymentColumns.any((col) => col['name'] == 'is_deleted');
+        
+        if (!hasIsDeletedInPayment) {
+          Logger.info('LocalDatabaseService', 'Adding is_deleted column to payment table');
+          await db.execute('ALTER TABLE payment ADD COLUMN is_deleted INTEGER DEFAULT 0');
+        }
+        
+        // Check and add is_deleted column to customer table
+        final customerColumns = await db.rawQuery("PRAGMA table_info(customer)");
+        final hasIsDeletedInCustomer = customerColumns.any((col) => col['name'] == 'is_deleted');
+        
+        if (!hasIsDeletedInCustomer) {
+          Logger.info('LocalDatabaseService', 'Adding is_deleted column to customer table');
+          await db.execute('ALTER TABLE customer ADD COLUMN is_deleted INTEGER DEFAULT 0');
+        }
+        
+        Logger.info('LocalDatabaseService', 'Successfully added missing columns');
+      } catch (e) {
+        Logger.error('LocalDatabaseService', 'Failed to add missing columns', error: e);
+      }
+    }
+    
     // Migrate measurement table schema (version 1/2 to 3)
     if (oldVersion < 3) {
       try {
@@ -422,6 +464,52 @@ class LocalDatabaseService {
         }
       } catch (e, stackTrace) {
         Logger.error('LocalDatabaseService', 'Failed to add measurements column', error: e, stackTrace: stackTrace);
+        // Don't rethrow as this is not critical for app functionality
+      }
+    }
+    
+    // Fix payment table constraint (version 4 to 5)
+    if (oldVersion < 5) {
+      try {
+        Logger.info('LocalDatabaseService', 'Fixing payment table constraints');
+        
+        // First, backup existing payment data
+        final existingPayments = await db.query('payment');
+        Logger.info('LocalDatabaseService', 'Backing up ${existingPayments.length} existing payments');
+        
+        // Drop the old payment table
+        await db.execute('DROP TABLE IF EXISTS payment');
+        
+        // Create new payment table without the CHECK constraint
+        await db.execute('''
+          CREATE TABLE payment (
+            id TEXT PRIMARY KEY,
+            unique_id TEXT UNIQUE NOT NULL,
+            order_id TEXT NOT NULL,
+            amount REAL NOT NULL,
+            method TEXT NOT NULL DEFAULT 'cash',
+            notes TEXT DEFAULT '',
+            transaction_id TEXT,
+            paid_on TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            is_deleted INTEGER DEFAULT 0,
+            FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE
+          )
+        ''');
+        
+        // Restore payment data
+        for (final payment in existingPayments) {
+          try {
+            await db.insert('payment', payment);
+          } catch (e) {
+            Logger.warning('LocalDatabaseService', 'Failed to restore payment ${payment['unique_id']}: $e');
+          }
+        }
+        
+        Logger.info('LocalDatabaseService', 'Successfully fixed payment table constraints');
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to fix payment table', error: e, stackTrace: stackTrace);
         // Don't rethrow as this is not critical for app functionality
       }
     }
@@ -946,6 +1034,78 @@ class LocalDatabaseService {
   /// Delete order
   Future<int> deleteOrder(String uniqueId) async {
     return await delete('orders', where: 'unique_id = ?', whereArgs: [uniqueId]);
+  }
+
+  /// Soft delete order (mark as deleted without removing from database)
+  Future<bool> softDeleteOrder(String uniqueId) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'softDeleteOrder', () async {
+      try {
+        // Check if is_deleted column exists
+        final columns = await (await database).rawQuery("PRAGMA table_info(orders)");
+        final hasIsDeleted = columns.any((col) => col['name'] == 'is_deleted');
+        
+        if (!hasIsDeleted) {
+          // Add the column if it doesn't exist
+          await (await database).execute('ALTER TABLE orders ADD COLUMN is_deleted INTEGER DEFAULT 0');
+          Logger.info('LocalDatabaseService', 'Added is_deleted column to orders table');
+        }
+        
+        final result = await update(
+          'orders',
+          {
+            'is_deleted': 1,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          where: 'unique_id = ?',
+          whereArgs: [uniqueId],
+        );
+        
+        Logger.info('LocalDatabaseService', 'Soft deleted order: $uniqueId');
+        return result > 0;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to soft delete order', 
+                     error: e, stackTrace: stackTrace);
+        return false;
+      }
+    });
+  }
+
+  /// Restore soft deleted order
+  Future<bool> restoreOrder(String uniqueId) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'restoreOrder', () async {
+      try {
+        final result = await update(
+          'orders',
+          {
+            'is_deleted': 0,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          where: 'unique_id = ?',
+          whereArgs: [uniqueId],
+        );
+        
+        Logger.info('LocalDatabaseService', 'Restored order: $uniqueId');
+        return result > 0;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to restore order', 
+                     error: e, stackTrace: stackTrace);
+        return false;
+      }
+    });
+  }
+
+  /// Get deleted orders
+  Future<List<Order>> getDeletedOrders() async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'getDeletedOrders', () async {
+      try {
+        final results = await select('orders', where: 'is_deleted = 1');
+        return results.map((map) => Order.fromMap(map)).toList();
+      } catch (e) {
+        // If is_deleted column doesn't exist, return empty list
+        Logger.info('LocalDatabaseService', 'is_deleted column not found, returning empty deleted orders list');
+        return <Order>[];
+      }
+    });
   }
 
   // ==================== PAYMENT OPERATIONS ====================

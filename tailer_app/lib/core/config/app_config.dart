@@ -111,7 +111,7 @@ class AppConfig {
   static String get databaseName => _getEnvVar('DATABASE_NAME', fallback: 'tailor_app.db');
 
   /// Database version
-  static int get databaseVersion => _getIntVar('DATABASE_VERSION', fallback: 4);
+  static int get databaseVersion => _getIntVar('DATABASE_VERSION', fallback: 5);
 
   /// Database connection timeout in seconds
   static int get databaseTimeout => _getIntVar('DATABASE_TIMEOUT', fallback: 30);

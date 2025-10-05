@@ -347,11 +347,33 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                   ],
                 ),
               ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: _insertTestData,
-            backgroundColor: Colors.orange,
-            child: const Icon(Icons.add_box, color: Colors.white),
-            tooltip: 'Insert Test Data',
+          floatingActionButton: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              FloatingActionButton(
+                onPressed: _showDeletedOrders,
+                backgroundColor: Colors.grey.shade600,
+                heroTag: "deletedOrders",
+                child: const Icon(Icons.delete_outline, color: Colors.white),
+                tooltip: 'View Deleted Orders',
+              ),
+              const SizedBox(width: 10),
+              FloatingActionButton(
+                onPressed: _updateOrdersForPaymentCollection,
+                backgroundColor: Colors.blue,
+                heroTag: "updatePayments",
+                child: const Icon(Icons.payment, color: Colors.white),
+                tooltip: 'Update Orders for Payment Collection',
+              ),
+              const SizedBox(width: 10),
+              FloatingActionButton(
+                onPressed: _insertTestData,
+                backgroundColor: Colors.orange,
+                heroTag: "insertTest",
+                child: const Icon(Icons.add_box, color: Colors.white),
+                tooltip: 'Insert Test Data',
+              ),
+            ],
           ),
           bottomNavigationBar: AnimatedBottomNavigation(
             currentIndex: _currentNavIndex,
@@ -772,9 +794,18 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
     });
 
     try {
-      final orders = await _dbService.getOrders();
-      _allOrders = orders.where((order) => !order.isDeleted).toList();
+      List<Order> orders;
+      try {
+        // Try to get orders excluding deleted ones
+        final orderMaps = await _dbService.select('orders', where: 'is_deleted = 0');
+        orders = orderMaps.map((map) => Order.fromMap(map)).toList();
+      } catch (e) {
+        // If is_deleted column doesn't exist, get all orders
+        Logger.info('OrdersMainScreen', 'is_deleted column not found, loading all orders');
+        orders = await _dbService.getOrders();
+      }
       
+      _allOrders = orders;
       _calculateStats();
       
       setState(() {
@@ -797,6 +828,12 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
     _thisMonthOrders = _allOrders.where((order) => 
         order.createdAt.isAfter(thisMonth)).length;
     
+    // Add logging to see what orders we have
+    Logger.info('OrdersMainScreen', 'Total orders loaded: ${_allOrders.length}');
+    for (var order in _allOrders) {
+      Logger.debug('OrdersMainScreen', 'Order ${order.uniqueId}: Status=${order.status}, Total=₹${order.totalAmount}, Paid=₹${order.advancePaid}, IsDeleted=${order.isDeleted}');
+    }
+    
     // Count orders by status
     _pendingOrders = _allOrders.where((order) => 
         order.status.toLowerCase() == 'pending').length;
@@ -809,6 +846,9 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
     _completedOrders = _allOrders.where((order) => 
         order.status.toLowerCase() == 'completed' || 
         order.status.toLowerCase() == 'delivered').length;
+    
+    // Log the counts
+    Logger.info('OrdersMainScreen', 'Order Status Summary: Pending=$_pendingOrders, InProgress=$_inProgressOrders, Ready=$_readyOrders, Completed=$_completedOrders');
     
     // Calculate financial data
     _totalRevenue = _allOrders.fold(0.0, (sum, order) => sum + order.advancePaid);
@@ -895,6 +935,314 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
 
   void _navigateToPaymentHistory() {
     context.pushNamed(RouteNames.paymentHistory);
+  }
+
+  /// Show deleted orders
+  Future<void> _showDeletedOrders() async {
+    try {
+      final deletedOrders = await _dbService.getDeletedOrders();
+      
+      if (!mounted) return;
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(
+            'Deleted Orders (${deletedOrders.length})',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.red.shade700,
+            ),
+          ),
+          content: deletedOrders.isEmpty
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.delete_outline,
+                      size: 48,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No deleted orders found',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                )
+              : Container(
+                  width: double.maxFinite,
+                  height: 400,
+                  child: ListView.builder(
+                    itemCount: deletedOrders.length,
+                    itemBuilder: (context, index) {
+                      final order = deletedOrders[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          title: Text(
+                            'Order ${order.uniqueId}',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Status: ${order.status}',
+                                style: GoogleFonts.inter(fontSize: 12),
+                              ),
+                              Text(
+                                'Amount: ₹${order.totalAmount.toStringAsFixed(0)}',
+                                style: GoogleFonts.inter(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                          trailing: ElevatedButton(
+                            onPressed: () async {
+                              await _dbService.restoreOrder(order.uniqueId);
+                              Navigator.of(context).pop();
+                              await _loadOrderData();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '↩️ Order ${order.uniqueId} has been restored',
+                                    style: GoogleFonts.inter(fontSize: 14),
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            ),
+                            child: Text(
+                              'Restore',
+                              style: GoogleFonts.inter(fontSize: 12),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Close',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '❌ Error loading deleted orders: $e',
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Update orders to make them appear in payment collection screen
+  Future<void> _updateOrdersForPaymentCollection() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text('Updating database and orders...'),
+            ],
+          ),
+        ),
+      );
+
+      print('🔄 Starting order updates for payment collection...');
+      
+      // First, ensure database columns exist
+      await _ensureDatabaseColumns();
+      
+      // Get all orders (handle case where is_deleted column might not exist)
+      List<Map<String, Object?>> orders;
+      try {
+        orders = await _dbService.select('orders', where: 'is_deleted = 0');
+      } catch (e) {
+        // If is_deleted column doesn't exist, get all orders
+        Logger.info('OrdersMainScreen', 'is_deleted column not found, getting all orders');
+        orders = await _dbService.select('orders');
+      }
+      
+      print('📊 Found ${orders.length} total orders');
+      
+      // Find orders that need updating (excluding the 2 reference orders)
+      final excludeIds = ['ORDLQD6QU5', 'ORD70OC1ME'];
+      final ordersToUpdate = orders.where((order) {
+        final orderId = order['unique_id'] as String;
+        final totalAmount = (order['total_amount'] as num?)?.toDouble() ?? 0.0;
+        final status = (order['status'] as String?)?.toLowerCase() ?? '';
+        
+        // Skip excluded orders and completed/delivered orders
+        return !excludeIds.contains(orderId) && 
+               status != 'completed' && 
+               status != 'delivered' &&
+               totalAmount > 0;
+      }).toList();
+      
+      print('🎯 Found ${ordersToUpdate.length} orders to update');
+      
+      int updateCount = 0;
+      for (int i = 0; i < ordersToUpdate.length && i < 12; i++) {
+        final order = ordersToUpdate[i];
+        final orderId = order['unique_id'] as String;
+        final totalAmount = (order['total_amount'] as num?)?.toDouble() ?? 0.0;
+        
+        // Calculate new advance payment (varying percentages)
+        double paymentPercentage;
+        switch (i % 5) {
+          case 0: paymentPercentage = 0.30; break; // 30% paid
+          case 1: paymentPercentage = 0.50; break; // 50% paid  
+          case 2: paymentPercentage = 0.70; break; // 70% paid
+          case 3: paymentPercentage = 0.40; break; // 40% paid
+          case 4: paymentPercentage = 0.60; break; // 60% paid
+          default: paymentPercentage = 0.50; break;
+        }
+        
+        final newAdvancePaid = totalAmount * paymentPercentage;
+        final newBalanceAmount = totalAmount - newAdvancePaid;
+        
+        // Update the order (handle missing payment_status column)
+        Map<String, dynamic> updateData = {
+          'advance_paid': newAdvancePaid,
+          'balance_amount': newBalanceAmount,
+          'updated_at': DateTime.now().toIso8601String(),
+          'show_in_payment_collection': 1, // Set flag to show in payment collection
+        };
+        
+        // Only add payment_status if the column exists
+        try {
+          final db = await _dbService.database;
+          final columns = await db.rawQuery("PRAGMA table_info(orders)");
+          final hasPaymentStatus = columns.any((col) => col['name'] == 'payment_status');
+          
+          if (hasPaymentStatus) {
+            updateData['payment_status'] = newAdvancePaid > 0 ? 'partial' : 'pending';
+          }
+        } catch (e) {
+          Logger.info('OrdersMainScreen', 'Could not check payment_status column, skipping');
+        }
+        
+        await _dbService.update(
+          'orders',
+          updateData,
+          where: 'unique_id = ?',
+          whereArgs: [orderId],
+        );
+        
+        print('✅ Updated $orderId: Total=₹${totalAmount.toStringAsFixed(0)}, '
+              'Paid=₹${newAdvancePaid.toStringAsFixed(0)} (${(paymentPercentage*100).toStringAsFixed(0)}%), '
+              'Balance=₹${newBalanceAmount.toStringAsFixed(0)}');
+        
+        updateCount++;
+      }
+
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      // Refresh data
+      await _loadOrderData();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Updated $updateCount orders for payment collection!\n'
+                         'Database columns added successfully.'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      
+      print('🎉 Update complete! Updated $updateCount orders');
+      print('💡 Kept ORDLQD6QU5 and ORD70OC1ME unchanged as requested');
+      
+    } catch (e) {
+      Navigator.of(context).pop(); // Close loading dialog
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error updating orders: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      print('❌ Error updating orders: $e');
+    }
+  }
+
+  /// Ensure database has required columns
+  Future<void> _ensureDatabaseColumns() async {
+    try {
+      final db = await _dbService.database;
+      
+      // Check and add missing columns to orders table
+      final orderColumns = await db.rawQuery("PRAGMA table_info(orders)");
+      final hasIsDeleted = orderColumns.any((col) => col['name'] == 'is_deleted');
+      final hasPaymentStatus = orderColumns.any((col) => col['name'] == 'payment_status');
+      
+      if (!hasIsDeleted) {
+        await db.execute('ALTER TABLE orders ADD COLUMN is_deleted INTEGER DEFAULT 0');
+        Logger.info('OrdersMainScreen', 'Added is_deleted column to orders table');
+      }
+      
+      if (!hasPaymentStatus) {
+        await db.execute('ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT "pending"');
+        Logger.info('OrdersMainScreen', 'Added payment_status column to orders table');
+      }
+      
+      // Check and add is_deleted to payment table
+      final paymentColumns = await db.rawQuery("PRAGMA table_info(payment)");
+      final hasPaymentIsDeleted = paymentColumns.any((col) => col['name'] == 'is_deleted');
+      
+      if (!hasPaymentIsDeleted) {
+        await db.execute('ALTER TABLE payment ADD COLUMN is_deleted INTEGER DEFAULT 0');
+        Logger.info('OrdersMainScreen', 'Added is_deleted column to payment table');
+      }
+      
+      // Check and add is_deleted to customer table
+      final customerColumns = await db.rawQuery("PRAGMA table_info(customer)");
+      final hasCustomerIsDeleted = customerColumns.any((col) => col['name'] == 'is_deleted');
+      
+      if (!hasCustomerIsDeleted) {
+        await db.execute('ALTER TABLE customer ADD COLUMN is_deleted INTEGER DEFAULT 0');
+        Logger.info('OrdersMainScreen', 'Added is_deleted column to customer table');
+      }
+      
+      Logger.info('OrdersMainScreen', 'Database column check completed successfully');
+    } catch (e) {
+      Logger.error('OrdersMainScreen', 'Failed to ensure database columns', error: e);
+    }
   }
 
   /// Insert test data for all order statuses

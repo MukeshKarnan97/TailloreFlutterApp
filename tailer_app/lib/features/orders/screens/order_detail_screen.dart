@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../data/services/local_db_service.dart';
 import '../../../data/models/order_model.dart';
+import '../../../data/models/payment_model.dart';
+import '../../../data/enums/payment_method.dart';
 import '../../../core/utils/logger.dart';
 
 class OrderDetailScreen extends StatefulWidget {
@@ -275,6 +277,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   _showStatusUpdateDialog();
                 } else if (value == 'update_payment') {
                   _showPaymentUpdateDialog();
+                } else if (value == 'delete_order') {
+                  _showDeleteConfirmation();
                 }
               },
               itemBuilder: (context) => [
@@ -299,6 +303,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       ],
                     ),
                   ),
+                PopupMenuItem(
+                  value: 'delete_order',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, size: 20, color: Colors.red.shade600),
+                      const SizedBox(width: 8),
+                      Text('Delete Order', style: GoogleFonts.inter()),
+                    ],
+                  ),
+                ),
               ],
               icon: const Icon(Icons.more_vert, color: Colors.white),
             ),
@@ -512,6 +526,70 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             _currentOrder.balanceAmount > 0 ? Colors.red : Colors.green,
             Icons.account_balance_wallet,
             isFullWidth: true,
+          ),
+          
+          // Payment Progress Bar
+          const SizedBox(height: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Payment Progress',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  Text(
+                    '${(_currentOrder.advancePaid / _currentOrder.totalAmount * 100).toStringAsFixed(0)}%',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green.shade600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: _currentOrder.totalAmount > 0 ? _currentOrder.advancePaid / _currentOrder.totalAmount : 0.0,
+                backgroundColor: Colors.grey.shade200,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade600),
+                minHeight: 6,
+              ),
+              const SizedBox(height: 12),
+              
+              // Quick Payment Button
+              if (_currentOrder.balanceAmount > 0 && 
+                  _currentOrder.status.toLowerCase() != 'completed' && 
+                  _currentOrder.status.toLowerCase() != 'cancelled')
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _showPaymentUpdateDialog,
+                    icon: const Icon(Icons.payment, size: 16),
+                    label: Text(
+                      'Collect Payment (₹${_currentOrder.balanceAmount.toStringAsFixed(0)})',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -849,71 +927,443 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  void _showPaymentUpdateDialog() {
-    final TextEditingController paymentController = TextEditingController();
-    final remainingAmount = _currentOrder.totalAmount - _currentOrder.advancePaid;
+  Future<void> _showDeleteConfirmation() async {
+    final customerName = 'Customer ${_currentOrder.customerId}'; // You might want to fetch actual customer name
     
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          'Update Payment',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          'Delete Order',
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.red.shade700,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Total Amount: ₹${_currentOrder.totalAmount.toStringAsFixed(0)}',
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
-            ),
-            Text(
-              'Paid Amount: ₹${_currentOrder.advancePaid.toStringAsFixed(0)}',
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
-            ),
-            Text(
-              'Remaining: ₹${remainingAmount.toStringAsFixed(0)}',
+              'Are you sure you want to delete this order?',
               style: GoogleFonts.inter(
-                fontSize: 14, 
-                fontWeight: FontWeight.w600,
-                color: remainingAmount > 0 ? Colors.red : Colors.green,
+                fontSize: 14,
+                color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: paymentController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Add Payment Amount',
-                prefixText: '₹',
-                border: const OutlineInputBorder(),
-                hintText: 'Enter amount to add',
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Order ID: ${_currentOrder.uniqueId}',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Customer: $customerName',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Total Amount: ₹${_currentOrder.totalAmount.toStringAsFixed(0)}',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This action will move the order to deleted items. You can restore it later if needed.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
               ),
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
           ),
           ElevatedButton(
-            onPressed: () {
-              final amount = double.tryParse(paymentController.text);
-              if (amount != null && amount > 0) {
-                _updatePayment(amount);
-                Navigator.pop(context);
-              }
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _deleteOrder();
             },
-            child: Text('Add Payment'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _updatePayment(double additionalPayment) async {
+  Future<void> _deleteOrder() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 20),
+              Text(
+                'Deleting order...',
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final success = await _dbService.softDeleteOrder(_currentOrder.uniqueId);
+      
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '✅ Order ${_currentOrder.uniqueId} has been deleted',
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'Undo',
+              textColor: Colors.white,
+              onPressed: () async {
+                await _dbService.restoreOrder(_currentOrder.uniqueId);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '↩️ Order ${_currentOrder.uniqueId} has been restored',
+                      style: GoogleFonts.inter(fontSize: 14),
+                    ),
+                    backgroundColor: Colors.blue,
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        
+        // Navigate back to previous screen after deletion
+        Navigator.of(context).pop();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '❌ Failed to delete order',
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      Navigator.of(context).pop(); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '❌ Error deleting order: $e',
+            style: GoogleFonts.inter(fontSize: 14),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showPaymentUpdateDialog() {
+    final TextEditingController paymentController = TextEditingController();
+    final TextEditingController notesController = TextEditingController();
+    PaymentMethod selectedMethod = PaymentMethod.cash; // Default to cash
+    final remainingAmount = _currentOrder.totalAmount - _currentOrder.advancePaid;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          bool isAmountValid = true;
+          String? errorMessage;
+          
+          // Validate amount in real-time
+          void validateAmount(String value) {
+            final amount = double.tryParse(value);
+            setState(() {
+              if (amount == null || amount <= 0) {
+                isAmountValid = false;
+                errorMessage = 'Please enter a valid amount';
+              } else if (amount > remainingAmount) {
+                isAmountValid = false;
+                errorMessage = 'Amount cannot exceed ₹${remainingAmount.toStringAsFixed(0)}';
+              } else {
+                isAmountValid = true;
+                errorMessage = null;
+              }
+            });
+          }
+          
+          return AlertDialog(
+            title: Text(
+              'Update Payment',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Order Info
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Order: ${_currentOrder.uniqueId}',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Total Amount: ₹${_currentOrder.totalAmount.toStringAsFixed(0)}',
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                        Text(
+                          'Paid Amount: ₹${_currentOrder.advancePaid.toStringAsFixed(0)}',
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                        Text(
+                          'Pending Amount: ₹${remainingAmount.toStringAsFixed(0)}',
+                          style: GoogleFonts.inter(
+                            fontSize: 14, 
+                            fontWeight: FontWeight.w600,
+                            color: remainingAmount > 0 ? Colors.red.shade600 : Colors.green,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 12, color: Colors.blue.shade600),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Max payment: ₹${remainingAmount.toStringAsFixed(0)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  color: Colors.blue.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Payment Method Selection
+                  Text(
+                    'Payment Method',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<PaymentMethod>(
+                        value: selectedMethod,
+                        isExpanded: true,
+                        icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        items: PaymentMethod.values.map((PaymentMethod method) {
+                          return DropdownMenuItem<PaymentMethod>(
+                            value: method,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _getPaymentMethodIcon(method),
+                                  size: 20,
+                                  color: _getPaymentMethodColor(method),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  method.displayName,
+                                  style: GoogleFonts.inter(fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (PaymentMethod? newValue) {
+                          if (newValue != null) {
+                            setState(() {
+                              selectedMethod = newValue;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Payment Amount Input
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: paymentController,
+                        keyboardType: TextInputType.number,
+                        onChanged: validateAmount,
+                        decoration: InputDecoration(
+                          labelText: 'Payment Amount',
+                          hintText: 'Max: ₹${remainingAmount.toStringAsFixed(0)}',
+                          prefixIcon: Icon(Icons.currency_rupee, color: Colors.green.shade600),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: isAmountValid ? Colors.green.shade600 : Colors.red.shade600,
+                            ),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.red.shade600),
+                          ),
+                        ),
+                      ),
+                      if (errorMessage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                          child: Text(
+                            errorMessage!,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.red.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Payment Notes
+                  TextField(
+                    controller: notesController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      labelText: 'Notes (Optional)',
+                      hintText: 'Transaction reference, etc.',
+                      prefixIcon: Icon(Icons.note, color: Colors.grey.shade600),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.green.shade600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.inter(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: isAmountValid ? () {
+                  final amount = double.tryParse(paymentController.text);
+                  if (amount != null && amount > 0 && amount <= remainingAmount) {
+                    _updatePayment(amount, selectedMethod, notesController.text.trim());
+                    Navigator.pop(context);
+                  }
+                } : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isAmountValid ? Colors.green.shade600 : Colors.grey.shade400,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(
+                  'Collect Payment',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _updatePayment(double additionalPayment, PaymentMethod method, String notes) async {
     setState(() {
       _isLoading = true;
     });
@@ -921,6 +1371,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     try {
       final newAdvancePaid = _currentOrder.advancePaid + additionalPayment;
       final newBalanceAmount = _currentOrder.totalAmount - newAdvancePaid;
+      
+      // Create payment record
+      final payment = Payment.create(
+        orderId: _currentOrder.uniqueId,
+        amount: additionalPayment,
+        method: method,
+        notes: notes.isEmpty ? 'Payment added from order details' : notes,
+      );
+      
+      // Insert payment into database
+      await _dbService.addPayment(payment);
       
       // Update in database
       await _dbService.updateOrder(_currentOrder.uniqueId, {
@@ -957,8 +1418,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Payment of ₹${additionalPayment.toStringAsFixed(0)} added successfully'),
-            backgroundColor: Colors.green,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '✅ Payment Collected Successfully!',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Amount: ₹${additionalPayment.toStringAsFixed(0)} via ${method.displayName}',
+                  style: GoogleFonts.inter(fontSize: 12),
+                ),
+                Text(
+                  'Remaining Balance: ₹${newBalanceAmount.toStringAsFixed(0)}',
+                  style: GoogleFonts.inter(fontSize: 12),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -977,6 +1460,32 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
         );
       }
+    }
+  }
+
+  IconData _getPaymentMethodIcon(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.cash:
+        return Icons.money;
+      case PaymentMethod.card:
+        return Icons.credit_card;
+      case PaymentMethod.upi:
+        return Icons.qr_code;
+      case PaymentMethod.bank:
+        return Icons.account_balance;
+    }
+  }
+
+  Color _getPaymentMethodColor(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.cash:
+        return Colors.green;
+      case PaymentMethod.card:
+        return Colors.blue;
+      case PaymentMethod.upi:
+        return Colors.purple;
+      case PaymentMethod.bank:
+        return Colors.orange;
     }
   }
 }
