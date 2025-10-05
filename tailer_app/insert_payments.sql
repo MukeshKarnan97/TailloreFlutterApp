@@ -1,0 +1,3 @@
+INSERT INTO payment (id, unique_id, order_id, amount, method, status, paid_on, notes, transaction_id, is_deleted, created_at, updated_at) VALUES 
+('PAYTEST001', 'PAYTEST001', 'ORDZTM56YW', 250.00, 'Cash', 'Completed', '2025-09-30 20:45:50', 'Advance payment for order', 'TXN001CASH', 0, '2025-09-30 20:45:50', '2025-09-30 20:45:50'),
+('PAYTEST002', 'PAYTEST002', 'ORDZTM56YW', 150.00, 'UPI', 'Completed', '2025-10-03 20:45:50', 'Partial payment via UPI', 'UPI002TEST', 0, '2025-10-03 20:45:50', '2025-10-03 20:45:50');

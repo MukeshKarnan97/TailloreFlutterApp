@@ -1,0 +1,24 @@
+🔥 Adding Test Payment Data...
+
+📋 Checking existing orders...
+📦 Found 5 orders:
+  - Order ID: ORDZTM56YW, Unique ID: ORDZTM56YW, Amount: ₹500.0
+  - Order ID: ORDDG5Y9PW, Unique ID: ORDDG5Y9PW, Amount: ₹300.0
+  - Order ID: ORDXR9MYKB, Unique ID: ORDXR9MYKB, Amount: ₹200.0
+  - Order ID: ORDV1NXYWV, Unique ID: ORDV1NXYWV, Amount: ₹150.0
+  - Order ID: ORDNZ2T6FC, Unique ID: ORDNZ2T6FC, Amount: ₹100.0
+
+💰 Adding payments to order: ORDZTM56YW (Total: ₹500.0)
+✅ Inserted payment: ID=1, Amount=₹250.00, Method=Cash
+✅ Inserted payment: ID=2, Amount=₹150.00, Method=UPI
+
+🎉 Successfully added 2 payments to order ORDZTM56YW
+💡 Remaining balance: ₹100.00 (20%)
+
+🔍 Verifying payments...
+✅ Found 3 payments for order ORDZTM56YW:
+  - Payment ID: PAYDNSBR24, Amount: ₹200.0, Method: cash, Date: 2025-10-05 18:45:02.584
+  - Payment ID: 1, Amount: ₹250.00, Method: Cash, Date: 2025-09-30T20:45:50.088
+  - Payment ID: 2, Amount: ₹150.00, Method: UPI, Date: 2025-10-03T20:45:50.088
+
+🎯 Now test the receipt generation in the app!

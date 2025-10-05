@@ -1031,9 +1031,44 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
       
       Logger.info('PaymentCollectionScreen', 'Processing payment: ₹$amount for order $uniqueId via ${method.displayName}');
       
-      // Create payment record
+      // ENHANCED: Verify order exists in database before creating payment to prevent foreign key errors
+      final db = await _dbService.database;
+      final orderVerification = await db.rawQuery(
+        'SELECT unique_id, customer_id FROM orders WHERE unique_id = ? AND is_deleted = 0',
+        [uniqueId]
+      );
+      
+      if (orderVerification.isEmpty) {
+        Logger.error('PaymentCollectionScreen', 'Order $uniqueId not found in database for payment insertion');
+        
+        // Try to find the order with flexible matching (handles case/whitespace differences)
+        final flexibleSearch = await db.rawQuery(
+          'SELECT unique_id FROM orders WHERE TRIM(UPPER(unique_id)) = TRIM(UPPER(?)) AND is_deleted = 0',
+          [uniqueId]
+        );
+        
+        if (flexibleSearch.isNotEmpty) {
+          final correctedOrderId = flexibleSearch.first['unique_id'] as String;
+          Logger.info('PaymentCollectionScreen', 'Found order with corrected ID: $correctedOrderId');
+          
+          // Update the uniqueId to use the corrected version
+          final correctedOrderMap = Map<String, dynamic>.from(orderMap);
+          correctedOrderMap['unique_id'] = correctedOrderId;
+          
+          // Retry with corrected order ID
+          return _processPayment(correctedOrderMap, amount, method, notes);
+        } else {
+          throw Exception('Order $uniqueId not found in database. Cannot process payment.');
+        }
+      }
+      
+      // Use the verified order ID from database
+      final verifiedOrderId = orderVerification.first['unique_id'] as String;
+      Logger.debug('PaymentCollectionScreen', 'Verified order ID: $verifiedOrderId');
+      
+      // Create payment record with verified order ID
       final payment = Payment.create(
-        orderId: uniqueId,
+        orderId: verifiedOrderId, // Use verified ID from database
         amount: amount,
         method: method,
         notes: notes,
@@ -1041,7 +1076,7 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
       
       Logger.debug('PaymentCollectionScreen', 'Created payment object: ${payment.uniqueId}');
       
-      // Insert payment into database
+      // Insert payment into database with enhanced error handling
       final paymentSaved = await _dbService.addPayment(payment);
       Logger.info('PaymentCollectionScreen', 'Payment save result: $paymentSaved');
       
@@ -1049,8 +1084,17 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
         throw Exception('Failed to save payment to database');
       }
       
+      // Verify payment was actually inserted
+      final paymentVerification = await _dbService.getPaymentsByOrderId(verifiedOrderId);
+      final newPayment = paymentVerification.firstWhere(
+        (p) => p.uniqueId == payment.uniqueId,
+        orElse: () => throw Exception('Payment not found after insertion'),
+      );
+      
+      Logger.info('PaymentCollectionScreen', 'Payment verified: ${newPayment.uniqueId} for ₹${newPayment.amount}');
+      
       // Update order with new advance paid amount
-      await _dbService.updateOrder(uniqueId, {
+      await _dbService.updateOrder(verifiedOrderId, {
         'advance_paid': newAdvancePaid,
         'balance_amount': (orderMap['total_amount'] as num?)?.toDouble() ?? 0.0 - newAdvancePaid,
         'updated_at': DateTime.now().toIso8601String(),
@@ -1073,14 +1117,34 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
         ),
       );
     } catch (e) {
+      Logger.error('PaymentCollectionScreen', 'Payment processing failed: $e');
+      
+      // Provide specific error messages based on the error type
+      String errorMessage;
+      if (e.toString().contains('FOREIGN KEY constraint failed')) {
+        errorMessage = 'Payment failed: Order reference issue. Please try again or contact support.';
+      } else if (e.toString().contains('not found')) {
+        errorMessage = 'Payment failed: Order not found in database.';
+      } else {
+        errorMessage = 'Failed to process payment: ${e.toString()}';
+      }
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Failed to process payment: ${e.toString()}',
+            errorMessage,
             style: GoogleFonts.inter(fontWeight: FontWeight.w500),
           ),
           backgroundColor: Colors.red.shade600,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: () {
+              // Retry the payment
+              _showPaymentDialog(orderMap);
+            },
+          ),
         ),
       );
     }
