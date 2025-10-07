@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
@@ -86,10 +87,10 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
         final locale = AppLocalizations(_localeProvider.languageCode);
         
         return Scaffold(
-          backgroundColor: Colors.grey[50],
+          backgroundColor: AppColors.background,
           appBar: DashboardHeader(
             title: locale.translate('viewCustomers'),
-            backgroundColor: const Color(AppConstants.primaryTeal),
+            backgroundColor: AppColors.primary,
             notificationCount: 3,
             onBackPressed: () {
               context.goNamed(RouteNames.customerProfile);
@@ -197,7 +198,7 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                    color: AppColors.textPrimary,
                     letterSpacing: 0.3,
                   ),
                 ),
@@ -207,7 +208,7 @@ class _ViewCustomersScreenState extends State<ViewCustomersScreen> with Navigati
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 8),

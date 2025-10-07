@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
@@ -44,10 +45,10 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         
         return Scaffold(
-          backgroundColor: Colors.grey[50],
+          backgroundColor: AppColors.background,
           appBar: DashboardHeader(
             title: locale.translate('addCustomer'),
-            backgroundColor: const Color(AppConstants.primaryTeal),
+            backgroundColor: AppColors.primary,
             notificationCount: 3,
             onBackPressed: () {
               context.goNamed(RouteNames.customerProfile);

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:tailer_app/core/services/navigation_service.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
+import '../widgets/sub_header.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
@@ -35,10 +37,10 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         
         return Scaffold(
-          backgroundColor: Colors.grey[50],
+          backgroundColor: AppColors.background,
           appBar: DashboardHeader(
             title: locale.translate('customers'),
-            backgroundColor: const Color(AppConstants.primaryTeal),
+            backgroundColor: AppColors.primary,
             notificationCount: 3,
             onBackPressed: () {
               context.goNamed(RouteNames.dashboard);
@@ -55,6 +57,10 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Sub Header Section
+                  _buildSubHeader(locale),
+                  const SizedBox(height: AppConstants.spacingM),
+                  
                   // Header Section
                   _buildHeaderSection(locale),
                   const SizedBox(height: AppConstants.spacingL),
@@ -71,11 +77,39 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
             currentIndex: _currentNavIndex,
             onTap: _onNavTap,
             items: TailorAppBottomNavItems.defaultItems,
-            selectedItemColor: const Color(AppConstants.primaryTeal),
-            backgroundColor: Colors.white,
+            selectedItemColor: AppColors.primary,
+            backgroundColor: AppColors.background,
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSubHeader(AppLocalizations locale) {
+    return SubHeaderStyles.feature(
+      title: locale.translate('customerManagement'),
+      subtitle: '${locale.translate('addCustomer')} • ${locale.translate('viewCustomers')} • ${locale.translate('customerDetails')}',
+      icon: Icons.people_alt_outlined,
+      action: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.success.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.success.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          locale.translate('active'),
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: AppColors.success,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
     );
   }
 
@@ -85,9 +119,9 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(AppConstants.primaryTeal).withOpacity(0.1),
-            const Color(AppConstants.primaryTeal).withOpacity(0.05),
-            Colors.white.withOpacity(0.8),
+            AppColors.primary.withOpacity(0.1),
+            AppColors.primary.withOpacity(0.05),
+            AppColors.background.withOpacity(0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -95,18 +129,18 @@ class _CustomersMainScreenState extends State<CustomersMainScreen> with Navigati
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(AppConstants.primaryTeal).withOpacity(0.15),
+          color: AppColors.primary.withOpacity(0.15),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(AppConstants.primaryTeal).withOpacity(0.1),
+            color: AppColors.primary.withOpacity(0.1),
             blurRadius: 20,
             offset: const Offset(0, 8),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: AppColors.shadow,
             blurRadius: 10,
             offset: const Offset(0, 4),
             spreadRadius: 0,

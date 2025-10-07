@@ -25,6 +25,7 @@ class OrderCard extends StatelessWidget {
     final locale = AppLocalizations.of(localeProvider.languageCode);
 
     return Card(
+      color: Colors.white,
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
       shape: RoundedRectangleBorder(

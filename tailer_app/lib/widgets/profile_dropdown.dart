@@ -50,6 +50,7 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
       builder: (context, child) {
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         return PopupMenuButton<String>(
+          color: Colors.white,
           offset: const Offset(0, 50),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),

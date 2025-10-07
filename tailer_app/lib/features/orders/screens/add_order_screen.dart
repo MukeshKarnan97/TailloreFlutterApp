@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_constants.dart';
@@ -13,6 +14,8 @@ import '../../../core/utils/logger.dart';
 import '../widgets/customer_selector.dart';
 import '../widgets/dress_type_selector.dart';
 import '../widgets/order_measurement_form.dart';
+import '../../../widgets/custom_header.dart';
+import '../widgets/sub_header.dart';
 
 class AddOrderScreen extends StatefulWidget {
   final Map<String, dynamic>? extra;
@@ -256,17 +259,10 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         
         return Scaffold(
-          backgroundColor: Colors.grey.shade50,
-          appBar: AppBar(
-            backgroundColor: const Color(AppConstants.primaryTeal),
-            foregroundColor: Colors.white,
-            title: Text(
-              locale.t('createNewOrder'),
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                fontSize: 20,
-              ),
-            ),
+          backgroundColor: AppColors.background,
+          appBar: CustomHeader(
+            title: locale.t('createNewOrder'),
+            showBackButton: true,
             elevation: 0,
             actions: [
               if (_isFormValid)

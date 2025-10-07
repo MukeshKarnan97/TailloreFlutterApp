@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import '../../core/utils/logger.dart';
@@ -90,11 +91,11 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
     Logger.debug(_className, 'Building privacy policy screen');
     
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Privacy Policy & User Agreement'),
         elevation: 0,
-        backgroundColor: Colors.indigo.shade600,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         centerTitle: true,
         automaticallyImplyLeading: false, // Remove back button
@@ -114,10 +115,10 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.indigo.shade50,
+                        color: AppColors.panel,
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(
-                          color: Colors.indigo.shade200,
+                          color: AppColors.border,
                           width: 1,
                         ),
                       ),
@@ -126,7 +127,7 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
                           Icon(
                             Icons.security,
                             size: 40,
-                            color: Colors.indigo.shade600,
+                            color: AppColors.primary,
                           ),
                           const SizedBox(height: 12),
                           Text(

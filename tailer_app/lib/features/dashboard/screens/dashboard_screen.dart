@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
+import 'package:tailer_app/core/theme/text_styles.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/data/services/dashboard_service.dart';
@@ -22,11 +24,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
   bool _isRefreshing = false;
   int _currentNavIndex = 0;
+  Timer? _refreshTimer;
+  DateTime? _lastUpdated;
+  String _selectedTimePeriod = 'today'; // today, this_week, this_month, this_year, all_time
 
   @override
   void initState() {
     super.initState();
     _loadDashboardData();
+    _startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Start automatic refresh every 30 seconds for real-time updates
+  void _startAutoRefresh() {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted && !_isRefreshing) {
+        _refreshDashboardSilently();
+      }
+    });
+  }
+
+  /// Refresh dashboard data silently without showing loading indicator
+  Future<void> _refreshDashboardSilently() async {
+    try {
+      await _dashboardService.refreshDashboard();
+      if (mounted) {
+        setState(() {
+          _dashboardData = _dashboardService.dashboardStats;
+          _lastUpdated = DateTime.now();
+        });
+      }
+    } catch (e) {
+      // Silently fail for auto-refresh, don't show error to user
+      debugPrint('Auto-refresh failed: $e');
+    }
   }
 
   Future<void> _loadDashboardData() async {
@@ -35,6 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (mounted) {
         setState(() {
           _dashboardData = _dashboardService.dashboardStats;
+          _lastUpdated = DateTime.now();
           _isLoading = false;
         });
       }
@@ -44,7 +82,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load dashboard data: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Load dashboard data with specific time period filter
+  Future<void> _loadDashboardDataWithFilter(String timePeriod) async {
+    setState(() => _isRefreshing = true);
+    
+    try {
+      await _dashboardService.initializeDashboard(timePeriod: timePeriod);
+      if (mounted) {
+        setState(() {
+          _dashboardData = _dashboardService.dashboardStats;
+          _lastUpdated = DateTime.now();
+          _isRefreshing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load dashboard data: $e'),
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -57,18 +121,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _isRefreshing = true);
     
     try {
+      // Force refresh from database
       await _dashboardService.refreshDashboard();
       if (mounted) {
         setState(() {
           _dashboardData = _dashboardService.dashboardStats;
+          _lastUpdated = DateTime.now();
         });
+        
+        // Show success feedback
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Dashboard updated with latest data'),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to refresh dashboard: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -86,10 +161,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       homeRoute: '/home',
       child: Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: DashboardHeader(
-        title: 'Dashboard',
-        backgroundColor: const Color(AppConstants.primaryTeal),
+        backgroundColor: AppColors.background,
+        appBar: DashboardHeader(
+          title: 'Dashboard',
+          backgroundColor: AppColors.primary,
         notificationCount: 3, // You can make this dynamic
         onBackPressed: () {
           // Handle back button press - maybe go to previous screen or drawer
@@ -106,17 +181,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(
+            ? Center(
                 child: CircularProgressIndicator(
-                  color: Color(AppConstants.primaryTeal),
+                  color: AppColors.primary,
                 ),
               )
             : RefreshIndicator(
                 onRefresh: _refreshDashboard,
-                color: const Color(AppConstants.primaryTeal),
+                color: AppColors.primary,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(AppConstants.spacingM),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final padding = constraints.maxWidth > 600 
+                          ? AppConstants.spacingL 
+                          : AppConstants.spacingM;
+                      return Padding(
+                        padding: EdgeInsets.all(padding),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -138,18 +219,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       
                       // Quick Actions
                       _buildQuickActions(),
-                      const SizedBox(height: AppConstants.spacingXL),
-                    ],
+                        const SizedBox(height: AppConstants.spacingXL),
+                      ],
+                    ),
+                      );
+                    },
                   ),
                 ),
               ),
-              ),
+      ),
       bottomNavigationBar: AnimatedBottomNavigation(
         currentIndex: _currentNavIndex,
         onTap: _onNavTap,
         items: TailorAppBottomNavItems.defaultItems,
-        selectedItemColor: const Color(AppConstants.primaryTeal),
-        backgroundColor: Colors.white,
+  selectedItemColor: AppColors.primary,
+  backgroundColor: AppColors.panel,
       ),
       floatingActionButton: _isRefreshing
           ? const SizedBox(
@@ -159,7 +243,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             )
           : FloatingActionButton(
               onPressed: _refreshDashboard,
-              backgroundColor: const Color(AppConstants.primaryTeal),
+              backgroundColor: AppColors.primary,
               child: const Icon(Icons.refresh, color: Colors.white),
             ),
       ),
@@ -185,13 +269,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(AppConstants.primaryTeal).withOpacity(0.1),
-            const Color(AppConstants.primaryTeal).withOpacity(0.05),
+            AppColors.primary.withOpacity(0.1),
+            AppColors.primary.withOpacity(0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(AppConstants.borderRadius),
         border: Border.all(
-          color: const Color(AppConstants.primaryTeal).withOpacity(0.2),
+          color: AppColors.primary.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -207,27 +291,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Text(
                       greeting,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        color: Colors.grey[600],
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: AppColors.textSecondary,
                         fontWeight: FontWeight.w500,
+                        fontSize: 16,
                       ),
                     ),
                     const SizedBox(height: AppConstants.spacingXS),
                     Text(
                       'Tailor Business Manager',
-                      style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                      style: AppTextStyles.heading3.copyWith(
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: AppConstants.spacingS),
                     Text(
                       'Managing your business since ${now.year}',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -236,12 +317,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(AppConstants.primaryTeal).withOpacity(0.1),
+                  color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.design_services,
-                  color: Color(AppConstants.primaryTeal),
+                  color: AppColors.primary,
                   size: 32,
                 ),
               ),
@@ -256,13 +337,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   vertical: AppConstants.spacingS,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(AppConstants.primaryTeal),
+                  color: AppColors.primary,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.calendar_today,
                       color: Colors.white,
                       size: 14,
@@ -270,10 +351,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(width: AppConstants.spacingXS),
                     Text(
                       '${now.day}/${now.month}/${now.year}',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                      style: AppTextStyles.labelMedium.copyWith(
                         color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -286,7 +367,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   vertical: AppConstants.spacingS,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: AppColors.success.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -295,18 +376,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
+                      decoration: BoxDecoration(
+                        color: AppColors.success,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: AppConstants.spacingXS),
                     Text(
                       'Business Active',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: AppColors.success,
                         fontWeight: FontWeight.w500,
-                        color: Colors.green[700],
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -323,53 +404,146 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Business Overview',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
+        Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    Expanded(
+      child: Text(
+        'Business Overview',
+        style: AppTextStyles.heading4.copyWith(
+          color: AppColors.textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
-        const SizedBox(height: AppConstants.spacingM),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          childAspectRatio: 1.4,
-          crossAxisSpacing: AppConstants.spacingM,
-          mainAxisSpacing: AppConstants.spacingM,
-          children: [
-            DashboardCard(
-              title: 'Total Customers',
-              value: '${_dashboardData['totalCustomers']}',
-              icon: Icons.people_outline,
-              iconColor: const Color(AppConstants.primaryTeal),
-              onTap: () => _navigateToCustomers(),
+        overflow: TextOverflow.ellipsis, // prevent overflow
+      ),
+    ),
+    Flexible(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Dropdown
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.3),
+                width: 1,
+              ),
             ),
-            DashboardCard(
-              title: 'Active Orders',
-              value: '${_dashboardData['activeOrders']}',
-              icon: Icons.pending_actions_outlined,
-              iconColor: const Color(AppConstants.primaryOrange),
-              onTap: () => _navigateToOrders(),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedTimePeriod,
+                isDense: true,
+                icon: Icon(Icons.arrow_drop_down, color: AppColors.primary, size: 20),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'today', child: Text('Today')),
+                  DropdownMenuItem(value: 'this_week', child: Text('This Week')),
+                  DropdownMenuItem(value: 'this_month', child: Text('This Month')),
+                  DropdownMenuItem(value: 'this_year', child: Text('This Year')),
+                  DropdownMenuItem(value: 'all_time', child: Text('All Time')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedTimePeriod = value;
+                    });
+                    _loadDashboardDataWithFilter(value);
+                  }
+                },
+              ),
             ),
-            DashboardCard(
-              title: 'Completed Orders',
-              value: '${_dashboardData['completedOrders']}',
-              icon: Icons.check_circle_outline,
-              iconColor: Colors.green,
-              onTap: () => _navigateToOrders(),
-            ),
-            DashboardCard(
-              title: 'Total Revenue',
-              value: '₹${_formatRevenue(_dashboardData['totalRevenue'])}',
-              icon: Icons.currency_rupee,
-              iconColor: Colors.purple,
-              subtitle: 'This month',
-              onTap: () => _navigateToRevenue(),
+          ),
+
+          if (_lastUpdated != null) ...[
+            const SizedBox(width: 8),
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.access_time, size: 14, color: AppColors.textHint),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      _getLastUpdatedText(),
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.textHint,
+                        fontSize: 11,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
+        ],
+      ),
+    ),
+  ],
+),
+
+        const SizedBox(height: AppConstants.spacingM),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Responsive grid layout with overflow prevention
+            final screenWidth = constraints.maxWidth;
+            final crossAxisCount = screenWidth > 600 ? 4 : 2;
+            final childAspectRatio = screenWidth > 600 ? 2.0 :
+                                   screenWidth > 450 ? 1.7 :
+                                   screenWidth > 350 ? 1.5 : 1.3;
+            
+            return GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: childAspectRatio,
+              crossAxisSpacing: AppConstants.spacingM,
+              mainAxisSpacing: AppConstants.spacingM,
+              children: [
+                DashboardCard(
+                  title: 'Total Customers',
+                  value: '${_dashboardData['totalCustomers']}',
+                  icon: Icons.people_outline,
+                  iconColor: AppColors.primary,
+                  backgroundColor: AppColors.panel,
+                  onTap: () => _navigateToCustomers(),
+                ),
+                DashboardCard(
+                  title: 'Active Orders',
+                  value: '${_dashboardData['activeOrders']}',
+                  icon: Icons.pending_actions_outlined,
+                  iconColor: AppColors.accent,
+                  backgroundColor: AppColors.panel,
+                  onTap: () => _navigateToOrders(),
+                ),
+                DashboardCard(
+                  title: 'Completed Orders',
+                  value: '${_dashboardData['completedOrders']}',
+                  icon: Icons.check_circle_outline,
+                  iconColor: AppColors.success,
+                  backgroundColor: AppColors.panel,
+                  onTap: () => _navigateToOrders(),
+                ),
+                DashboardCard(
+                  title: 'Total Revenue',
+                  value: '₹${_formatRevenue(_dashboardData['totalRevenue'])}',
+                  icon: Icons.currency_rupee,
+                  iconColor: AppColors.secondary,
+                  backgroundColor: AppColors.panel,
+                  subtitle: 'This month',
+                  onTap: () => _navigateToRevenue(),
+                ),
+            ],
+            );
+          },
         ),
       ],
     );
@@ -381,35 +555,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         Text(
           'Today\'s Overview',
-          style: GoogleFonts.inter(
+          style: AppTextStyles.heading4.copyWith(
+            color: AppColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
           ),
         ),
         const SizedBox(height: AppConstants.spacingM),
-        Row(
-          children: [
-            Expanded(
-              child: DashboardCard(
-                title: 'Pending Measurements',
-                value: '${_dashboardData['pendingMeasurements']}',
-                icon: Icons.straighten,
-                iconColor: Colors.amber[700]!,
-                onTap: () => _navigateToMeasurements(),
-              ),
-            ),
-            const SizedBox(width: AppConstants.spacingM),
-            Expanded(
-              child: DashboardCard(
-                title: 'Today\'s Appointments',
-                value: '${_dashboardData['todayAppointments']}',
-                icon: Icons.schedule,
-                iconColor: Colors.blue,
-                onTap: () => _navigateToAppointments(),
-              ),
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final screenWidth = constraints.maxWidth;
+            final crossAxisCount = screenWidth > 600 ? 4 : 2;
+            final childAspectRatio = screenWidth > 600 ? 2.0 :
+                                   screenWidth > 450 ? 1.7 :
+                                   screenWidth > 350 ? 1.5 : 1.3;
+            
+            return GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: childAspectRatio,
+              crossAxisSpacing: AppConstants.spacingM,
+              mainAxisSpacing: AppConstants.spacingM,
+              children: [
+                DashboardCard(
+                  title: 'Pending Measurements',
+                  value: '${_dashboardData['pendingMeasurements']}',
+                  icon: Icons.straighten,
+                  iconColor: AppColors.warning,
+                  backgroundColor: AppColors.panel,
+                  onTap: () => _navigateToMeasurements(),
+                ),
+                DashboardCard(
+                  title: 'Today\'s Appointments',
+                  value: '${_dashboardData['todayAppointments']}',
+                  icon: Icons.schedule,
+                  iconColor: AppColors.info,
+                  backgroundColor: AppColors.panel,
+                  onTap: () => _navigateToAppointments(),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -424,20 +611,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Text(
               'Recent Activity',
-              style: GoogleFonts.inter(
+              style: AppTextStyles.heading4.copyWith(
+                color: AppColors.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87,
               ),
             ),
             TextButton(
               onPressed: () => _navigateToOrders(),
               child: Text(
                 'View All',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.primary,
                   fontWeight: FontWeight.w500,
-                  color: const Color(AppConstants.primaryTeal),
+                  fontSize: 14,
                 ),
               ),
             ),
@@ -446,11 +633,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: AppConstants.spacingM),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.panel,
             borderRadius: BorderRadius.circular(AppConstants.borderRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: AppColors.shadow,
                 spreadRadius: 1,
                 blurRadius: 6,
                 offset: const Offset(0, 3),
@@ -470,6 +657,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'time': '2 hours ago',
                   'icon': Icons.check_circle,
                   'color': Colors.green,
+                  'type': 'order',
+                  'orderId': 'ORD001',
                 },
                 {
                   'title': 'New customer registered',
@@ -477,6 +666,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'time': '4 hours ago',
                   'icon': Icons.person_add,
                   'color': const Color(AppConstants.primaryTeal),
+                  'type': 'customer',
                 },
                 {
                   'title': 'Payment received',
@@ -484,6 +674,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'time': '1 day ago',
                   'icon': Icons.payment,
                   'color': Colors.blue,
+                  'type': 'payment',
                 },
                 {
                   'title': 'Order #ORD003 in progress',
@@ -491,6 +682,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'time': '2 days ago',
                   'icon': Icons.work_outline,
                   'color': Colors.orange,
+                  'type': 'order',
+                  'orderId': 'ORD003',
                 },
               ];
 
@@ -514,32 +707,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 title: Text(
                   activity['title'] as String,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    fontSize: 14,
                   ),
                 ),
                 subtitle: Text(
                   activity['subtitle'] as String,
-                  style: GoogleFonts.inter(
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
                     fontSize: 12,
-                    color: Colors.grey[600],
                   ),
                 ),
                 trailing: Text(
                   activity['time'] as String,
-                  style: GoogleFonts.inter(
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.textHint,
                     fontSize: 11,
-                    color: Colors.grey[500],
                   ),
                 ),
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Viewing details for: ${activity['title']}'),
-                    ),
-                  );
+                  // Navigate based on activity type
+                  final type = activity['type'] as String?;
+                  
+                  switch (type) {
+                    case 'order':
+                      // Navigate to order list where user can search for the order
+                      context.goNamed(RouteNames.orderList);
+                      break;
+                    case 'customer':
+                      // Navigate to customers list
+                      context.goNamed(RouteNames.viewCustomers);
+                      break;
+                    case 'payment':
+                      // Navigate to payment history
+                      context.goNamed(RouteNames.paymentHistory);
+                      break;
+                    default:
+                      // Fallback to orders list
+                      context.goNamed(RouteNames.orders);
+                  }
                 },
               );
             },
@@ -555,10 +763,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         Text(
           'Quick Actions',
-          style: GoogleFonts.inter(
+          style: AppTextStyles.heading4.copyWith(
+            color: AppColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
           ),
         ),
         const SizedBox(height: AppConstants.spacingM),
@@ -567,11 +775,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Container(
           padding: const EdgeInsets.all(AppConstants.spacingL),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.panel,
             borderRadius: BorderRadius.circular(AppConstants.borderRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: AppColors.shadow,
                 spreadRadius: 1,
                 blurRadius: 6,
                 offset: const Offset(0, 3),
@@ -588,7 +796,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       title: 'Add Customer',
                       subtitle: 'Register new customer',
                       icon: Icons.person_add_outlined,
-                      color: const Color(AppConstants.primaryTeal),
+                      color: AppColors.primary,
                       onTap: () => _navigateToAddCustomer(),
                     ),
                   ),
@@ -598,7 +806,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       title: 'Create Order',
                       subtitle: 'Start new order',
                       icon: Icons.add_shopping_cart_outlined,
-                      color: const Color(AppConstants.primaryOrange),
+                      color: AppColors.accent,
                       onTap: () => _navigateToCreateOrder(),
                     ),
                   ),
@@ -614,7 +822,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       title: 'Measurements',
                       subtitle: 'Record measurements',
                       icon: Icons.straighten,
-                      color: Colors.purple,
+                      color: AppColors.accent,
                       onTap: () => _navigateToMeasurements(),
                     ),
                   ),
@@ -624,7 +832,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       title: 'Payment Reports',
                       subtitle: 'View receipts & refunds',
                       icon: Icons.receipt_long,
-                      color: Colors.blue,
+                      color: AppColors.secondary,
                       onTap: () => _navigateToRevenue(),
                     ),
                   ),
@@ -638,7 +846,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 title: '🌍 Language Demo',
                 subtitle: 'Test English ⇄ Tamil switching',
                 icon: Icons.translate,
-                color: Colors.blue,
+                color: AppColors.secondary,
                 onTap: () => context.goNamed(RouteNames.languageDemo),
               ),
             ],
@@ -660,7 +868,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Container(
         padding: const EdgeInsets.all(AppConstants.spacingM),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.05),
+          color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: color.withOpacity(0.2),
@@ -672,7 +880,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -684,18 +892,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: AppConstants.spacingS),
             Text(
               title,
-              style: GoogleFonts.inter(
-                fontSize: 14,
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87,
+                fontSize: 14,
               ),
               textAlign: TextAlign.center,
             ),
             Text(
               subtitle,
-              style: GoogleFonts.inter(
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
                 fontSize: 12,
-                color: Colors.grey[600],
               ),
               textAlign: TextAlign.center,
             ),
@@ -735,17 +943,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
+                  style: AppTextStyles.heading4.copyWith(
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    fontSize: 16,
                   ),
                 ),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
                     fontSize: 14,
-                    color: Colors.grey[600],
                   ),
                 ),
               ],
@@ -829,15 +1037,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _navigateToMeasurements() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Measurements feature coming soon!')),
-    );
+    // Navigate to measurement list - shows all customer measurements
+    context.goNamed(RouteNames.measurementList);
   }
 
   void _navigateToAppointments() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Appointments feature coming soon!')),
-    );
+    // Navigate to orders screen - user can filter by today's appointments
+    context.goNamed(RouteNames.orderList);
   }
 
   void _navigateToAddCustomer() {
@@ -847,6 +1053,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _navigateToCreateOrder() {
     context.goNamed(RouteNames.addOrder);
   }
+  /// Get formatted last updated text
+  String _getLastUpdatedText() {
+    if (_lastUpdated == null) return '';
 
+    final now = DateTime.now();
+    final difference = now.difference(_lastUpdated!);
+
+    if (difference.inSeconds < 60) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
+  }
 
 }

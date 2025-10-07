@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/utils/transition_helper.dart';
 import 'package:tailer_app/features/auth/screens/otp_screen.dart';
@@ -22,6 +23,15 @@ import '../features/measurements/screens/measurement_category_screen.dart';
 import '../features/measurements/screens/add_measurement_screen.dart';
 import '../features/measurements/screens/edit_measurement_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
+import '../features/settings/screens/profile/edit_profile_screen.dart';
+import '../features/settings/screens/profile/change_password_screen.dart';
+import '../features/settings/screens/preferences/theme_selection_screen.dart';
+import '../features/settings/screens/preferences/notification_settings_screen.dart';
+import '../features/settings/screens/support/help_center_screen.dart';
+import '../features/settings/screens/support/feedback_screen.dart';
+import '../features/settings/screens/support/bug_report_screen.dart';
+import '../features/settings/screens/legal/terms_of_service_screen.dart';
+import '../features/settings/screens/privacy/privacy_security_screen.dart';
 import '../features/demo/simple_language_demo_screen.dart';
 import '../features/language/screens/language_selection_screen.dart';
 import '../features/orders/screens/add_order_screen.dart';
@@ -30,6 +40,7 @@ import '../features/orders/screens/order_detail_screen.dart';
 import '../features/orders/screens/orders_main_screen.dart';
 import '../features/payments/screens/payment_collection_screen.dart';
 import '../features/payments/screens/payment_history_screen.dart';
+import '../features/payments/screens/order_payment_history_screen.dart';
 import '../screens/payment_reports_screen.dart';
 import '../screens/refund_management_screen.dart';
 import '../screens/receipt_management_screen.dart';
@@ -42,6 +53,30 @@ export 'route_names.dart';
 class AppRoutes {
   static final router = GoRouter(
     initialLocation: '/splash', // Set splash as initial route
+    errorBuilder: (context, state) => Scaffold(
+      appBar: AppBar(
+        title: const Text('Page Not Found'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            const Text('Page Not Found', style: TextStyle(fontSize: 24)),
+            const SizedBox(height: 8),
+            Text('Path: ${state.matchedLocation}'),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.go('/home'),
+              child: const Text('Go to Home'),
+            ),
+          ],
+        ),
+      ),
+    ),
     routes: [
       // Splash Screen Route
       GoRoute(
@@ -231,6 +266,53 @@ class AppRoutes {
         pageBuilder: (context, state) => buildPage(const SettingsScreen(), state),
       ),
 
+      // Settings Sub-screens
+      GoRoute(
+        name: 'editProfile',
+        path: '/settings/edit-profile',
+        pageBuilder: (context, state) => buildPage(const EditProfileScreen(), state),
+      ),
+      GoRoute(
+        name: 'changePassword',
+        path: '/settings/change-password',
+        pageBuilder: (context, state) => buildPage(const ChangePasswordScreen(), state),
+      ),
+      GoRoute(
+        name: 'themeSelection',
+        path: '/settings/theme',
+        pageBuilder: (context, state) => buildPage(const ThemeSelectionScreen(), state),
+      ),
+      GoRoute(
+        name: 'notificationSettings',
+        path: '/settings/notifications',
+        pageBuilder: (context, state) => buildPage(const NotificationSettingsScreen(), state),
+      ),
+      GoRoute(
+        name: 'helpCenter',
+        path: '/settings/help',
+        pageBuilder: (context, state) => buildPage(const HelpCenterScreen(), state),
+      ),
+      GoRoute(
+        name: 'feedback',
+        path: '/settings/feedback',
+        pageBuilder: (context, state) => buildPage(const FeedbackScreen(), state),
+      ),
+      GoRoute(
+        name: 'bugReport',
+        path: '/settings/bug-report',
+        pageBuilder: (context, state) => buildPage(const BugReportScreen(), state),
+      ),
+      GoRoute(
+        name: 'termsOfService',
+        path: '/settings/terms',
+        pageBuilder: (context, state) => buildPage(const TermsOfServiceScreen(), state),
+      ),
+      GoRoute(
+        name: 'privacySecurity',
+        path: '/settings/privacy-security',
+        pageBuilder: (context, state) => buildPage(const PrivacySecurityScreen(), state),
+      ),
+
       // Language Demo Screen
       GoRoute(
         name: 'languageDemo',
@@ -307,6 +389,20 @@ class AppRoutes {
         name: 'paymentHistory',
         path: '/payments/history',
         pageBuilder: (context, state) => buildPage(const PaymentHistoryScreen(), state),
+      ),
+      GoRoute(
+        name: 'orderPaymentHistory',
+        path: '/payments/order-history',
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          if (extra != null && extra['orderId'] != null) {
+            final orderId = extra['orderId'] as String;
+            final order = extra['order'] as Order?;
+            return buildPage(OrderPaymentHistoryScreen(orderId: orderId, order: order), state);
+          }
+          // Fallback - redirect to payment collection if no order provided
+          return buildPage(const PaymentCollectionScreen(), state);
+        },
       ),
       GoRoute(
         name: 'paymentReports',

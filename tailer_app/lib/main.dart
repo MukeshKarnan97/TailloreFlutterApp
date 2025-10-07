@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'core/config/app_config.dart';
 import 'core/utils/logger.dart';
+import 'core/constants/app_colors.dart';
 
 void main() async {
   return Logger.traceAsyncMethod('Main', 'main', () async {
@@ -41,7 +42,7 @@ class TailorApp extends StatelessWidget {
       title: AppConfig.appName,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.indigo,
+        colorSchemeSeed: AppColors.primary,
         // Enable dark mode based on configuration
         brightness: AppConfig.enableDarkMode ? Brightness.dark : Brightness.light,
       ),

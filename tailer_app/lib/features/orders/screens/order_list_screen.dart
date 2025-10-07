@@ -9,6 +9,10 @@ import '../../../data/services/local_db_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../routes/route_names.dart';
 import '../widgets/order_card.dart';
+import '../widgets/sub_header.dart';
+import '../../../widgets/custom_bottom_navigation.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/mixins/navigation_mixin.dart';
 
 class OrderListScreen extends StatefulWidget {
   const OrderListScreen({super.key});
@@ -17,7 +21,7 @@ class OrderListScreen extends StatefulWidget {
   State<OrderListScreen> createState() => _OrderListScreenState();
 }
 
-class _OrderListScreenState extends State<OrderListScreen> {
+class _OrderListScreenState extends State<OrderListScreen> with NavigationMixin {
   final LocalDatabaseService _dbService = LocalDatabaseService();
   final SimpleLocaleProvider _localeProvider = SimpleLocaleProvider();
   final TextEditingController _searchController = TextEditingController();
@@ -26,6 +30,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
   List<Order> _filteredOrders = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  int _currentNavIndex = 2; // Orders tab
 
   @override
   void initState() {
@@ -107,9 +112,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         
         return Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: AppColors.background,
           appBar: AppBar(
-            backgroundColor: const Color(AppConstants.primaryTeal),
+            backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
             title: Text(
               locale.t('orderList'),
@@ -151,7 +156,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.white.withOpacity(0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -234,6 +239,13 @@ class _OrderListScreenState extends State<OrderListScreen> {
               locale.t('addOrder'),
               style: GoogleFonts.inter(fontWeight: FontWeight.w600),
             ),
+          ),
+          bottomNavigationBar: AnimatedBottomNavigation(
+            currentIndex: _currentNavIndex,
+            onTap: _onNavTap,
+            items: TailorAppBottomNavItems.defaultItems,
+            selectedItemColor: AppColors.primary,
+            backgroundColor: AppColors.background,
           ),
         );
       },
@@ -326,6 +338,15 @@ class _OrderListScreenState extends State<OrderListScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _onNavTap(int index) {
+    handleBottomNavigation(
+      context,
+      index,
+      _currentNavIndex,
+      (newIndex) => setState(() => _currentNavIndex = newIndex),
     );
   }
 }

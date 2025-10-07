@@ -21,6 +21,17 @@ class RouteNames {
   static const String dashboard = 'dashboard';
   static const String settings = 'settings';
   
+  // Settings Sub-screens
+  static const String editProfile = 'editProfile';
+  static const String changePassword = 'changePassword';
+  static const String themeSelection = 'themeSelection';
+  static const String notificationSettings = 'notificationSettings';
+  static const String helpCenter = 'helpCenter';
+  static const String feedback = 'feedback';
+  static const String bugReport = 'bugReport';
+  static const String termsOfService = 'termsOfService';
+  static const String privacySecurity = 'privacySecurity';
+  
   // Customers
   static const String customers = 'customers';
   static const String customerProfile = 'customerProfile';
@@ -46,6 +57,7 @@ class RouteNames {
   // Payments
   static const String paymentCollection = 'paymentCollection';
   static const String paymentHistory = 'paymentHistory';
+  static const String orderPaymentHistory = 'orderPaymentHistory';
   static const String paymentReports = 'paymentReports';
   static const String refundManagement = 'refundManagement';
   static const String receiptManagement = 'receiptManagement';

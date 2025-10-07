@@ -375,4 +375,31 @@ const Map<String, String> hiTranslations = {
   'searchOrdersHint': 'ID या सेवा प्रकार द्वारा ऑर्डर खोजें...',
   'noOrdersFoundMessage': 'आपकी खोज से मेल खाने वाला कोई ऑर्डर नहीं मिला।',
   'addFirstOrder': 'शुरुआत करने के लिए अपना पहला ऑर्डर जोड़ें!',
+  
+  // Missing Settings Translations
+  'profileUpdated': 'प्रोफ़ाइल अपडेट किया गया',
+  'updateFailed': 'अपडेट असफल',
+  'profileUpdateFailed': 'प्रोफ़ाइल अपडेट करने में असफल। कृपया पुनः प्रयास करें।',
+  'usernameRequired': 'उपयोगकर्ता नाम आवश्यक है',
+  'usernameMinLength': 'उपयोगकर्ता नाम कम से कम 3 अक्षर का होना चाहिए',
+  'emailRequired': 'ईमेल आवश्यक है',
+  'emailInvalid': 'कृपया एक वैध ईमेल पता दर्ज करें',
+  'phoneInvalid': 'कृपया एक वैध फोन नंबर दर्ज करें',
+  'passwordInformation': 'पासवर्ड जानकारी',
+  'currentPasswordRequired': 'वर्तमान पासवर्ड आवश्यक है',
+  'newPasswordRequired': 'नया पासवर्ड आवश्यक है',
+  'passwordMinLength': 'पासवर्ड कम से कम 6 अक्षर का होना चाहिए',
+  'currentPasswordIncorrect': 'वर्तमान पासवर्ड गलत है',
+  'passwordChangeFailed': 'पासवर्ड बदलने में असफल। कृपया पुनः प्रयास करें।',
+  'passwordChanged': 'पासवर्ड बदल दिया गया',
+  'changeFailed': 'परिवर्तन असफल',
+  'passwordTip1': 'अक्षरों, संख्याओं और प्रतीकों के मिश्रण के साथ कम से कम 8 अक्षर का उपयोग करें',
+  'passwordTip2': 'व्यक्तिगत जानकारी या सामान्य शब्दों का उपयोग न करें',
+  'passwordTip3': 'इस खाते के लिए एक अनूठा पासवर्ड बनाएं',
+  
+  // Profile Image
+  'chooseFromGallery': 'गैलरी से चुनें',
+  'takePhoto': 'फोटो लें',
+  'removePhoto': 'फोटो हटाएं',
+  'selectProfileImage': 'प्रोफाइल इमेज चुनें',
 };

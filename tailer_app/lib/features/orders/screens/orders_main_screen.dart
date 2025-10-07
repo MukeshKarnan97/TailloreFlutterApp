@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
+import '../widgets/sub_header.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
@@ -113,10 +115,10 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
         ];
 
         return Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: AppColors.background,
           appBar: DashboardHeader(
             title: locale.t('ordersManagement'),
-            backgroundColor: const Color(AppConstants.primaryTeal),
+            backgroundColor: AppColors.primary,
             notificationCount: 3,
             onBackPressed: () {
               context.goNamed(RouteNames.dashboard);
@@ -130,35 +132,38 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
             : SafeArea(
                 child: Column(
                   children: [
+                    // Sub-header
+                    _buildSubHeader(locale),
+                    
                     // Welcome Section
-                    Container(
-                      width: double.infinity,
-                      color: const Color(AppConstants.primaryTeal),
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            locale.t('manageYourOrders'),
-                            style: GoogleFonts.inter(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            locale.t('trackOrdersDeliveries'),
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              color: Colors.white.withValues(alpha: 0.9),
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Container(
+                    //   width: double.infinity,
+                    //   color: const Color(AppConstants.primaryTeal),
+                    //   padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+                    //   child: Column(
+                    //     crossAxisAlignment: CrossAxisAlignment.start,
+                    //     children: [
+                    //       Text(
+                    //         locale.t('manageYourOrders'),
+                    //         style: GoogleFonts.inter(
+                    //           fontSize: 28,
+                    //           fontWeight: FontWeight.w700,
+                    //           color: Colors.white,
+                    //           height: 1.2,
+                    //         ),
+                    //       ),
+                    //       const SizedBox(height: 8),
+                    //       Text(
+                    //         locale.t('trackOrdersDeliveries'),
+                    //         style: GoogleFonts.inter(
+                    //           fontSize: 16,
+                    //           color: Colors.white.withValues(alpha: 0.9),
+                    //           height: 1.4,
+                    //         ),
+                    //       ),
+                    //     ],
+                    //   ),
+                    // ),
 
                     // Main Content
                     Expanded(
@@ -214,7 +219,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                                     title: locale.t('collectPayments'),
                                     subtitle: locale.t('receivePendingPayments'),
                                     icon: Icons.payment,
-                                    color: Colors.green,
+                                    color: AppColors.success,
                                     onTap: () => _navigateToPayments(),
                                   ),
                                 ),
@@ -225,7 +230,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                                     title: locale.t('paymentHistory'),
                                     subtitle: locale.t('viewAllTransactions'),
                                     icon: Icons.history,
-                                    color: Colors.purple,
+                                    color: AppColors.secondary,
                                     onTap: () => _navigateToPaymentHistory(),
                                   ),
                                 ),
@@ -240,7 +245,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                               title: locale.t('pendingOrders'),
                               subtitle: locale.t('ordersAwaitingAction'),
                               icon: Icons.pending_actions,
-                              color: Colors.orange,
+                              color: AppColors.accent,
                               count: _pendingOrders.toString(),
                               paymentAmount: '₹${_pendingOrdersValue.toStringAsFixed(0)}',
                               priority: _pendingOrders > 5 ? 'High' : _pendingOrders > 2 ? 'Medium' : 'Low',
@@ -268,7 +273,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                               title: locale.t('readyOrders'),
                               subtitle: locale.t('ordersReadyForDelivery'),
                               icon: Icons.check_circle_outline,
-                              color: Colors.green,
+                              color: AppColors.success,
                               count: _readyOrders.toString(),
                               paymentAmount: '₹${_readyOrdersValue.toStringAsFixed(0)}',
                               priority: _readyOrders > 2 ? 'Medium' : 'Low',
@@ -282,7 +287,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                               title: locale.t('completedOrders'),
                               subtitle: locale.t('ordersDeliveredAndPaid'),
                               icon: Icons.done_all,
-                              color: Colors.purple,
+                              color: AppColors.secondary,
                               count: _completedOrders.toString(),
                               paymentAmount: '₹${_completedOrdersValue.toStringAsFixed(0)}',
                               priority: _completedOrders > 5 ? 'Low' : 'Low',
@@ -295,11 +300,11 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                             Container(
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: AppColors.background,
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.05),
+                                    color: AppColors.shadow,
                                     blurRadius: 10,
                                     offset: const Offset(0, 5),
                                   ),
@@ -313,7 +318,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                                     style: GoogleFonts.inter(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
+                                      color: AppColors.textPrimary,
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -352,7 +357,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
             children: [
               FloatingActionButton(
                 onPressed: _showDeletedOrders,
-                backgroundColor: Colors.grey.shade600,
+                backgroundColor: AppColors.textSecondary,
                 heroTag: "deletedOrders",
                 child: const Icon(Icons.delete_outline, color: Colors.white),
                 tooltip: 'View Deleted Orders',
@@ -637,6 +642,45 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+
+  Widget _buildSubHeader(AppLocalizations locale) {
+    return SubHeaderStyles.feature(
+      icon: Icons.shopping_bag_outlined,
+      title: locale.t('ordersManagement'),
+      subtitle: '${locale.t('trackOrders')} • ${locale.t('manageDeliveries')} • ${locale.t('orderStatus')}',
+      action: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.success.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.success.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.trending_up,
+              size: 12,
+              color: AppColors.success,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '$_totalOrders ${locale.t('orders')}',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: AppColors.success,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

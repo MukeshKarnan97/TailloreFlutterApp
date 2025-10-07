@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../data/models/payment_model.dart';
 import '../../../data/enums/payment_method.dart';
 import '../../../data/services/local_db_service.dart';
 import '../../../core/utils/logger.dart';
+import '../../../widgets/custom_header.dart';
 
 class PaymentHistoryScreen extends StatefulWidget {
   final String? orderId;
@@ -89,7 +91,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Loaded ${payments.length} payments'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success,
               duration: const Duration(seconds: 1),
             ),
           );
@@ -139,23 +141,12 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF21899C),
-        foregroundColor: Colors.white,
-        title: Text(
-          widget.orderId != null 
-              ? 'Order Payments'
-              : 'Payment History',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+      backgroundColor: AppColors.background,
+      appBar: CustomHeader(
+        title: widget.orderId != null 
+            ? 'Order Payments'
+            : 'Payment History',
+        showBackButton: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.bug_report),
@@ -259,7 +250,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search payments...',
-                    prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
+                    prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: Colors.grey.shade300),
@@ -273,7 +264,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                       borderSide: const BorderSide(color: Color(0xFF21899C)),
                     ),
                     filled: true,
-                    fillColor: Colors.grey.shade50,
+                    fillColor: AppColors.panel,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
@@ -306,7 +297,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: AppColors.shadow,
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -322,7 +313,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                           'Total Payments',
                           style: GoogleFonts.inter(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: AppColors.textSecondary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -332,7 +323,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                           style: GoogleFonts.inter(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.green.shade700,
+                            color: AppColors.success,
                           ),
                         ),
                       ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/core/utils/unit_converter.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 
 /// Widget for selecting measurement units (inches or centimeters)
 class UnitSelector extends StatelessWidget {
@@ -30,9 +31,9 @@ class UnitSelector extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: AppColors.panel,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+        border: Border.all(color: AppColors.border),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -41,7 +42,7 @@ class UnitSelector extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: const Color(AppConstants.primaryTeal),
+            color: AppColors.primary,
           ),
           items: UnitConverter.getAllUnits().map((String unit) {
             return DropdownMenuItem<String>(

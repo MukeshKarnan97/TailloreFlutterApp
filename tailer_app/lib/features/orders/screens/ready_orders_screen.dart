@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
@@ -114,7 +115,7 @@ class _ReadyOrdersScreenState extends State<ReadyOrdersScreen> {
   }
 
   Color _getStatusColor(String status) {
-    return Colors.orange.shade700; // Ready orders are orange
+    return AppColors.accent; // Ready orders are orange
   }
 
   @override
@@ -126,13 +127,13 @@ class _ReadyOrdersScreenState extends State<ReadyOrdersScreen> {
         
         return Scaffold(
           body: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFFFF8A65),
-                  Color(0xFFFF7043),
+                  AppColors.accent,
+                  AppColors.accentWarning,
                 ],
               ),
             ),
@@ -341,7 +342,7 @@ class _ReadyOrdersScreenState extends State<ReadyOrdersScreen> {
                             style: GoogleFonts.inter(
                               fontWeight: FontWeight.w600,
                               fontSize: 16,
-                              color: Colors.grey[800],
+                              color: AppColors.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -349,7 +350,7 @@ class _ReadyOrdersScreenState extends State<ReadyOrdersScreen> {
                             order.serviceType,
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ],

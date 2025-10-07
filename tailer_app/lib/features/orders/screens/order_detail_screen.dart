@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import '../../../data/services/local_db_service.dart';
 import '../../../data/models/order_model.dart';
 import '../../../data/models/payment_model.dart';
 import '../../../data/enums/payment_method.dart';
 import '../../../core/utils/logger.dart';
+import '../../../routes/route_names.dart';
 import '../widgets/order_cancellation_dialog.dart';
+import '../../../widgets/custom_header.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final Order order;
@@ -260,15 +264,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(
-          'Order Details',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: _getStatusColor(_currentOrder.status),
-        foregroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: AppColors.background,
+      appBar: CustomHeader(
+        title: 'Order Details',
+        showBackButton: true,
         actions: [
           if (_currentOrder.status.toLowerCase() != 'completed' && 
               _currentOrder.status.toLowerCase() != 'cancelled')
@@ -278,6 +277,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   _showStatusUpdateDialog();
                 } else if (value == 'update_payment') {
                   _showPaymentUpdateDialog();
+                } else if (value == 'view_payment_history') {
+                  _navigateToPaymentHistory();
                 } else if (value == 'cancel_order') {
                   _showCancelOrderDialog();
                 } else if (value == 'delete_order') {
@@ -306,6 +307,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       ],
                     ),
                   ),
+                PopupMenuItem(
+                  value: 'view_payment_history',
+                  child: Row(
+                    children: [
+                      Icon(Icons.history, size: 20, color: Colors.purple.shade600),
+                      const SizedBox(width: 8),
+                      Text('Payment History', style: GoogleFonts.inter()),
+                    ],
+                  ),
+                ),
                 if (_canCancelOrder())
                   PopupMenuItem(
                     value: 'cancel_order',
@@ -1541,6 +1552,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     } catch (e) {
       Logger.error('OrderDetailScreen', 'Failed to refresh order data', error: e);
     }
+  }
+
+  void _navigateToPaymentHistory() {
+    context.pushNamed(
+      RouteNames.orderPaymentHistory,
+      extra: {
+        'orderId': _currentOrder.uniqueId,
+        'order': _currentOrder,
+      },
+    );
   }
 
   void _showDataMigrationDialog() {

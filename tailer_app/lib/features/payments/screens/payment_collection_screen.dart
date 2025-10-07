@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import '../../../data/services/local_db_service.dart';
 import '../../../data/models/payment_model.dart';
 import '../../../data/enums/payment_method.dart';
 import '../../../core/utils/logger.dart';
-import '../../../core/constants/app_constants.dart';
+import '../../../routes/route_names.dart';
+import '../../../widgets/custom_header.dart';
 
 class PaymentCollectionScreen extends StatefulWidget {
   const PaymentCollectionScreen({Key? key}) : super(key: key);
@@ -153,22 +156,10 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(
-          'Payment Collection',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: const Color(AppConstants.primaryTeal),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+      backgroundColor: AppColors.background,
+      appBar: CustomHeader(
+        title: 'Payment Collection',
+        showBackButton: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
@@ -611,15 +602,15 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                   children: [
                     // Payment Button
                     Expanded(
-                      flex: 3,
+                      flex: 2,
                       child: pendingAmount > 0 
                         ? ElevatedButton.icon(
                             onPressed: () => _showPaymentDialog(orderMap),
                             icon: const Icon(Icons.payment, size: 16),
                             label: Text(
-                              'Collect Payment',
+                              'Collect',
                               style: GoogleFonts.inter(
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -657,6 +648,32 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                               ],
                             ),
                           ),
+                    ),
+                    
+                    const SizedBox(width: 8),
+                    
+                    // Payment History Button
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _navigateToPaymentHistory(orderMap),
+                        icon: const Icon(Icons.history, size: 16),
+                        label: Text(
+                          'History',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.purple.shade600,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
                     ),
                     
                     const SizedBox(width: 8),
@@ -1016,6 +1033,19 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
         );
       },
     );
+  }
+
+  void _navigateToPaymentHistory(Map<String, dynamic> orderMap) {
+    final orderId = orderMap['unique_id'] as String? ?? '';
+    if (orderId.isNotEmpty) {
+      context.pushNamed(
+        RouteNames.orderPaymentHistory,
+        extra: {
+          'orderId': orderId,
+          'order': null, // Order object not available in this context
+        },
+      );
+    }
   }
 
   Future<void> _processPayment(

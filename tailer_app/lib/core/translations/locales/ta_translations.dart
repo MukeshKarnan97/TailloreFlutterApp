@@ -193,6 +193,8 @@ const Map<String, String> taTranslations = {
   'selectLanguage': 'மொழியை தேர்ந்தெடு',
   'currentLanguage': 'தற்போதைய மொழி',
   'changeLanguage': 'மொழியை மாற்று',
+  'viewProfile': 'சுயவிவரம் பார்க்க',
+  'customerHistory': 'வாடிக்கையாளர் வரலாறு',
   'theme': 'தீம்',
   
   // Dashboard
@@ -360,6 +362,15 @@ const Map<String, String> taTranslations = {
   'storeMeasurements': 'அளவுகளை சேமிக்கவும்',
   'recordPreciseMeasurements': 'ஒவ்வொரு வாடிக்கையாளருக்கும் துல்லியமான அளவுகளை பதிவு செய்யவும்',
   'trackOrders': 'ஆர்டர்களை கண்காணிக்கவும்',
+    'manageDeliveries': 'டெலிவரிகளை நிர்வகிக்கவும்',
+  'awaitingAction': 'நடவடிக்கைக்காக காத்திருக்கிறது',
+  'review': 'மதிப்பாய்வு',
+  'process': 'செயலாக்கம்',
+  'updateStatus': 'நிலையை புதுப்பிக்கவும்',
+  'checkProgress': 'முன்னேற்றத்தை சரிபார்க்கவும்',
+  'readyForDelivery': 'டெலிவரிக்கு தயார்',
+  'addNewOrder': 'புதிய ஆர்டரைச் சேர்க்கவும்',
+
   'monitorOrderProgress': 'ஆர்டர் முன்னேற்றம் மற்றும் காலக்கெடுவை கண்காணிக்கவும்',
   'getStarted': 'தொடங்குங்கள்',
   'appVersion': 'ஆப் பதிப்பு',
@@ -475,4 +486,31 @@ const Map<String, String> taTranslations = {
   'readyOrders': 'தயார் ஆர்டர்கள்',
   'ordersReadyForDelivery': 'டெலிவரிக்கு தயாராக உள்ள ஆர்டர்கள்',
   'quickStats': 'விரைவு புள்ளிவிவரங்கள்',
+  
+  // Missing Settings Translations
+  'profileUpdated': 'சுயவிவரம் புதுப்பிக்கப்பட்டது',
+  'updateFailed': 'புதுப்பிப்பு தோல்வி',
+  'profileUpdateFailed': 'சுயவிவரத்தைப் புதுப்பிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.',
+  'usernameRequired': 'பயனர்பெயர் தேவை',
+  'usernameMinLength': 'பயனர்பெயர் குறைந்தது 3 எழுத்துகளாக இருக்க வேண்டும்',
+  'emailRequired': 'மின்னஞ்சல் தேவை',
+  'emailInvalid': 'தயவுசெய்து சரியான மின்னஞ்சல் முகவரியை உள்ளிடவும்',
+  'phoneInvalid': 'தயவுசெய்து சரியான தொலைபேசி எண்ணை உள்ளிடவும்',
+  'passwordInformation': 'கடவுச்சொல் தகவல்',
+  'currentPasswordRequired': 'தற்போதைய கடவுச்சொல் தேவை',
+  'newPasswordRequired': 'புதிய கடவுச்சொல் தேவை',
+  'passwordMinLength': 'கடவுச்சொல் குறைந்தது 6 எழுத்துகளாக இருக்க வேண்டும்',
+  'currentPasswordIncorrect': 'தற்போதைய கடவுச்சொல் தவறானது',
+  'passwordChangeFailed': 'கடவுச்சொல்லை மாற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.',
+  'passwordChanged': 'கடவுச்சொல் மாற்றப்பட்டது',
+  'changeFailed': 'மாற்றம் தோல்வி',
+  'passwordTip1': 'எழுத்துகள், எண்கள் மற்றும் குறியீடுகளுடன் குறைந்தது 8 எழுத்துகளைப் பயன்படுத்தவும்',
+  'passwordTip2': 'தனிப்பட்ட தகவல் அல்லது பொதுவான சொற்களைப் பயன்படுத்த வேண்டாம்',
+  'passwordTip3': 'இந்த கணக்கிற்கு தனிப்பட்ட கடவுச்சொல்லை உருவாக்கவும்',
+  
+  // Profile Image
+  'chooseFromGallery': 'கேலரியில் இருந்து தேர்வு செய்யவும்',
+  'takePhoto': 'புகைப்படம் எடுக்கவும்',
+  'removePhoto': 'புகைப்படத்தை அகற்றவும்',
+  'selectProfileImage': 'சுயவிவர படத்தைத் தேர்ந்தெடுக்கவும்',
 };

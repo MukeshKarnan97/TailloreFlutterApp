@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
@@ -7,6 +8,7 @@ import 'package:tailer_app/core/services/navigation_service.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
+import '../widgets/sub_header.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
@@ -53,6 +55,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> with Navi
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Sub Header
+                  _buildSubHeader(locale),
+                  const SizedBox(height: AppConstants.spacingM),
+                  
                   _buildHeaderSection(locale),
                   const SizedBox(height: AppConstants.spacingL),
                   _buildActionCards(locale),
@@ -70,6 +76,33 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> with Navi
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSubHeader(AppLocalizations locale) {
+    return SubHeaderStyles.info(
+      title: locale.translate('customerProfile'),
+      subtitle: '${locale.translate('viewProfile')} • ${locale.translate('editProfile')} • ${locale.translate('customerHistory')}',
+      action: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(AppConstants.primaryTeal).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(AppConstants.primaryTeal).withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          locale.translate('profile'),
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: const Color(AppConstants.primaryTeal),
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
     );
   }
 

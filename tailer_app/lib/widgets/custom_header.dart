@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tailer_app/widgets/profile_dropdown.dart';
 import 'package:tailer_app/data/services/user_service.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 
 class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -33,7 +34,7 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
-      backgroundColor: backgroundColor ?? Theme.of(context).primaryColor,
+      backgroundColor: backgroundColor ?? AppColors.primary,
       elevation: elevation ?? 2.0,
       centerTitle: true,
       leading: showBackButton
@@ -78,7 +79,7 @@ class CustomHeaderWithProfile extends StatelessWidget implements PreferredSizeWi
           fontWeight: FontWeight.w600,
         ),
       ),
-      backgroundColor: backgroundColor ?? Theme.of(context).primaryColor,
+      backgroundColor: backgroundColor ?? AppColors.primary,
       elevation: 2.0,
       centerTitle: true,
       leading: GestureDetector(
@@ -95,17 +96,17 @@ class CustomHeaderWithProfile extends StatelessWidget implements PreferredSizeWi
                       height: 32,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
+                        return Icon(
                           Icons.person,
-                          color: Colors.grey,
+                          color: AppColors.textSecondary,
                           size: 20,
                         );
                       },
                     ),
                   )
-                : const Icon(
+                : Icon(
                     Icons.person,
-                    color: Colors.grey,
+                    color: AppColors.textSecondary,
                     size: 20,
                   ),
           ),
@@ -158,9 +159,9 @@ class _DashboardHeaderState extends State<DashboardHeader> {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: widget.backgroundColor ?? Theme.of(context).primaryColor,
+      backgroundColor: widget.backgroundColor ?? AppColors.primary,
       elevation: 3.0,
-      shadowColor: Colors.black26,
+      shadowColor: AppColors.shadow,
       leading: Padding(
         padding: const EdgeInsets.only(left: 4.0),
         child: Row(
@@ -178,17 +179,17 @@ class _DashboardHeaderState extends State<DashboardHeader> {
               height: 32,
               margin: const EdgeInsets.only(left: 2, right: 8),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.background,
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: AppColors.shadow,
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
                 ],
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
+                  color: AppColors.border.withOpacity(0.3),
                   width: 0.5,
                 ),
               ),
@@ -207,8 +208,8 @@ class _DashboardHeaderState extends State<DashboardHeader> {
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  const Color(0xFF00695C),
-                                  const Color(0xFF004D40),
+                                  AppColors.primary,
+                                  AppColors.primaryLight,
                                 ],
                               ),
                             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import '../../core/config/app_config.dart';
@@ -8,6 +9,7 @@ import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import '../../data/services/notification_service.dart';
 import '../notifications/widgets/notification_list_widget.dart';
+import '../../core/constants/app_colors.dart';
 
 
 
@@ -126,12 +128,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         // Show exit confirmation for home screen
         final shouldExit = await _showExitConfirmation(context);
         if (shouldExit) {
-          // Actually exit the app from home screen
-          if (context.mounted) {
-            // You can use SystemNavigator.pop() to exit the app
-            // or handle it as needed
-            Navigator.of(context).pop();
-          }
+          // Exit the app properly
+          SystemNavigator.pop();
         }
       },
       child: AnimatedBuilder(
@@ -143,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           appBar: AppBar(
             title: Text(AppConfig.appName),
             elevation: 0,
-            backgroundColor: Colors.indigo.shade600,
+            backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
             centerTitle: true,
             actions: [
@@ -167,9 +165,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.indigo.shade600,
-                    Colors.indigo.shade400,
-                    Colors.blue.shade300,
+                    AppColors.primary,
+                    AppColors.primaryLight,
+                    AppColors.secondary,
                   ],
                 ),
               ),

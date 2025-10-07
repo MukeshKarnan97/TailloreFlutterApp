@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
+import '../widgets/sub_header.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import '../../../data/services/local_db_service.dart';
@@ -135,6 +136,9 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
             : SafeArea(
                 child: Column(
                   children: [
+                    // Sub-header
+                    _buildSubHeader(locale),
+                    
                     // Welcome Section with Stats
                     Container(
                       width: double.infinity,
@@ -508,6 +512,30 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildSubHeader(AppLocalizations locale) {
+    return SubHeaderStyles.pending(
+      title: '${locale.t('pendingOrders')} (${_filteredOrders.length})',
+      subtitle: '${locale.t('awaitingAction')} • ${locale.t('review')} • ${locale.t('process')}',
+      action: _filteredOrders.length > 5 
+        ? Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.red.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'High Priority',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Colors.red.shade700,
+              ),
+            ),
+          )
+        : null,
     );
   }
 }
