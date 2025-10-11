@@ -7,6 +7,13 @@ import '../../../data/enums/payment_method.dart';
 import '../../../data/services/local_db_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../widgets/custom_header.dart';
+import '../../../widgets/custom_bottom_navigation.dart';
+import '../../../core/mixins/navigation_mixin.dart';
+import '../../../core/translations/app_localizations.dart';
+import '../../../core/providers/simple_locale_provider.dart';
+import '../../orders/widgets/sub_header.dart';
+import '../../../routes/route_names.dart';
+import 'package:tailer_app/core/constants/app_constants.dart';
 
 class PaymentHistoryScreen extends StatefulWidget {
   final String? orderId;
@@ -17,7 +24,9 @@ class PaymentHistoryScreen extends StatefulWidget {
   State<PaymentHistoryScreen> createState() => _PaymentHistoryScreenState();
 }
 
-class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
+class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> with NavigationMixin {
+  int _currentNavIndex = 2; // Orders section
+  late SimpleLocaleProvider _localeProvider;
   final LocalDatabaseService _dbService = LocalDatabaseService();
   final TextEditingController _searchController = TextEditingController();
   List<Payment> _allPayments = [];
@@ -28,6 +37,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   @override
   void initState() {
     super.initState();
+    _localeProvider = SimpleLocaleProvider();
     _loadPayments();
     _searchController.addListener(_onSearchChanged);
   }
@@ -47,6 +57,29 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onNavTap(int index) {
+    if (index == _currentNavIndex) return;
+
+    setState(() {
+      _currentNavIndex = index;
+    });
+
+    switch (index) {
+      case 0:
+        context.goNamed(RouteNames.dashboard);
+        break;
+      case 1:
+        context.goNamed(RouteNames.customers);
+        break;
+      case 2:
+        context.goNamed(RouteNames.orders);
+        break;
+      case 3:
+        context.goNamed(RouteNames.settings);
+        break;
+    }
   }
 
   Future<void> _loadPayments() async {
@@ -140,122 +173,127 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: CustomHeader(
-        title: widget.orderId != null 
-            ? 'Order Payments'
-            : 'Payment History',
-        showBackButton: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            onPressed: () async {
-              // Debug: Check database directly
-              try {
-                final db = await _dbService.database;
-                
-                // Query all payments (including deleted ones for debugging)
-                final allResult = await db.query('payment');
-                final activeResult = await db.query('payment', where: 'is_deleted = 0');
-                
-                Logger.info('PaymentHistoryScreen', 'Direct DB Query - Found ${allResult.length} total records, ${activeResult.length} active records in payment table');
-                
-                for (final row in activeResult.take(5)) { // Show only first 5 for brevity
-                  Logger.debug('PaymentHistoryScreen', 'Payment Row: $row');
-                }
-                
-                // Check if there are any database connection issues
-                final ordersResult = await db.query('orders', limit: 1);
-                Logger.info('PaymentHistoryScreen', 'Database connectivity test - Orders table accessible: ${ordersResult.isNotEmpty}');
-                
-                // Show debug info to user
-                if (mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Debug Information'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Total payments in DB: ${allResult.length}'),
-                          Text('Active payments: ${activeResult.length}'),
-                          Text('Loaded in app: ${_allPayments.length}'),
-                          Text('Filtered payments: ${_filteredPayments.length}'),
-                          const SizedBox(height: 8),
-                          Text('Current filter: ${_selectedMethodFilter?.displayName ?? 'All'}'),
-                          Text('Search query: "${_searchController.text}"'),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Close'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _loadPayments(); // Force refresh
-                          },
-                          child: const Text('Force Refresh'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              } catch (e) {
-                Logger.error('PaymentHistoryScreen', 'Debug query failed: $e');
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Debug failed: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, child) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        
+        final navItems = [
+          BottomNavItem(
+            icon: Icons.dashboard_outlined,
+            activeIcon: Icons.dashboard,
+            label: locale.t('dashboard'),
+          ),
+          BottomNavItem(
+            icon: Icons.people_outline,
+            activeIcon: Icons.people,
+            label: locale.t('customers'),
+          ),
+          BottomNavItem(
+            icon: Icons.shopping_bag_outlined,
+            activeIcon: Icons.shopping_bag,
+            label: locale.t('orders'),
+          ),
+          BottomNavItem(
+            icon: Icons.settings_outlined,
+            activeIcon: Icons.settings,
+            label: locale.t('settings'),
+          ),
+        ];
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: DashboardHeader(
+            title: widget.orderId != null ? 'Order Payments' : 'Payment History',
+            backgroundColor: AppColors.primary,
+            notificationCount: 0,
+            onBackPressed: () {
+              if (widget.orderId != null) {
+                Navigator.of(context).pop();
+              } else {
+                context.goNamed(RouteNames.orders);
               }
             },
-            tooltip: 'Debug Database',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              Logger.info('PaymentHistoryScreen', 'Manual refresh triggered');
-              _loadPayments();
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.t('notifications'));
             },
-            tooltip: 'Refresh Payments',
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search and Filter Bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
+          body: SafeArea(
             child: Column(
               children: [
-                // Search Bar
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search payments...',
-                    prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                const SizedBox(height: 15),
+                // Sub-header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: SubHeaderStyles.feature(
+                    icon: Icons.receipt_long,
+                    title: 'Payment Records',
+                    subtitle: 'All Transactions • Payment Methods • History',
+                    action: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.primary.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.payments,
+                            size: 12,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${_filteredPayments.length}',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    enabledBorder: OutlineInputBorder(
+                  ),
+                ),
+                const SizedBox(height: 15),
+
+                // Main Content
+                Expanded(
+                  child: Column(
+                    children: [
+                      // Search and Filter Bar
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // Search Bar
+                            TextField(
+                              controller: _searchController,
+                              decoration: InputDecoration(
+                                hintText: 'Search payments...',
+                                prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
@@ -345,25 +383,39 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
               ),
             ),
 
-          // Payments List
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredPayments.isEmpty
-                    ? _buildEmptyState()
-                    : RefreshIndicator(
-                        onRefresh: _loadPayments,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _filteredPayments.length,
-                          itemBuilder: (context, index) {
-                            return _buildPaymentCard(_filteredPayments[index]);
-                          },
+            // Payments List
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filteredPayments.isEmpty
+                      ? _buildEmptyState()
+                      : RefreshIndicator(
+                          onRefresh: _loadPayments,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: _filteredPayments.length,
+                            itemBuilder: (context, index) {
+                              return _buildPaymentCard(_filteredPayments[index]);
+                            },
+                          ),
                         ),
-                      ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
+    ],
+  ),
+),
+          bottomNavigationBar: AnimatedBottomNavigation(
+            currentIndex: _currentNavIndex,
+            onTap: _onNavTap,
+            items: navItems,
+            backgroundColor: Colors.white,
+            selectedItemColor: const Color(AppConstants.primaryTeal),
+            unselectedItemColor: Colors.grey.shade600,
+          ),
+        );
+      },
     );
   }
 

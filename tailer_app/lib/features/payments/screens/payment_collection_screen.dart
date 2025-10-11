@@ -8,6 +8,12 @@ import '../../../data/enums/payment_method.dart';
 import '../../../core/utils/logger.dart';
 import '../../../routes/route_names.dart';
 import '../../../widgets/custom_header.dart';
+import '../../../widgets/custom_bottom_navigation.dart';
+import '../../../core/mixins/navigation_mixin.dart';
+import '../../../core/translations/app_localizations.dart';
+import '../../../core/providers/simple_locale_provider.dart';
+import '../../orders/widgets/sub_header.dart';
+import 'package:tailer_app/core/constants/app_constants.dart';
 
 class PaymentCollectionScreen extends StatefulWidget {
   const PaymentCollectionScreen({Key? key}) : super(key: key);
@@ -16,7 +22,9 @@ class PaymentCollectionScreen extends StatefulWidget {
   State<PaymentCollectionScreen> createState() => _PaymentCollectionScreenState();
 }
 
-class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
+class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> with NavigationMixin {
+  int _currentNavIndex = 2; // Orders section
+  late SimpleLocaleProvider _localeProvider;
   final LocalDatabaseService _dbService = LocalDatabaseService();
   final TextEditingController _searchController = TextEditingController();
   
@@ -32,6 +40,7 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
   @override
   void initState() {
     super.initState();
+    _localeProvider = SimpleLocaleProvider();
     _loadOrdersWithPendingPayments();
     _searchController.addListener(_onSearchChanged);
   }
@@ -40,6 +49,29 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onNavTap(int index) {
+    if (index == _currentNavIndex) return;
+
+    setState(() {
+      _currentNavIndex = index;
+    });
+
+    switch (index) {
+      case 0:
+        context.goNamed(RouteNames.dashboard);
+        break;
+      case 1:
+        context.goNamed(RouteNames.customers);
+        break;
+      case 2:
+        context.goNamed(RouteNames.orders);
+        break;
+      case 3:
+        context.goNamed(RouteNames.settings);
+        break;
+    }
   }
 
   Future<void> _loadOrdersWithPendingPayments() async {
@@ -155,170 +187,264 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: CustomHeader(
-        title: 'Payment Collection',
-        showBackButton: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _loadOrdersWithPendingPayments,
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, child) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        
+        final navItems = [
+          BottomNavItem(
+            icon: Icons.dashboard_outlined,
+            activeIcon: Icons.dashboard,
+            label: locale.t('dashboard'),
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Header with totals
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.green.shade600,
-                  Colors.green.shade400,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            padding: const EdgeInsets.all(20),
+          BottomNavItem(
+            icon: Icons.people_outline,
+            activeIcon: Icons.people,
+            label: locale.t('customers'),
+          ),
+          BottomNavItem(
+            icon: Icons.shopping_bag_outlined,
+            activeIcon: Icons.shopping_bag,
+            label: locale.t('orders'),
+          ),
+          BottomNavItem(
+            icon: Icons.settings_outlined,
+            activeIcon: Icons.settings,
+            label: locale.t('settings'),
+          ),
+        ];
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: DashboardHeader(
+            title: 'Payment Collection',
+            backgroundColor: AppColors.success,
+            notificationCount: 0,
+            onBackPressed: () => context.goNamed(RouteNames.orders),
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.t('notifications'));
+            },
+          ),
+          body: SafeArea(
             child: Column(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        title: _showPaymentPendingOnly ? 'Unpaid Orders' : 'Active Orders',
-                        value: _pendingOrdersCount.toString(),
-                        icon: Icons.receipt_long,
+                const SizedBox(height: 15),
+                // Sub-header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: SubHeaderStyles.feature(
+                    icon: Icons.payment,
+                    title: 'Collect Payments',
+                    subtitle: 'Track & Collect • Pending Payments • Order Status',
+                    action: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.success.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.account_balance_wallet,
+                            size: 12,
+                            color: AppColors.success,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '₹${_totalPendingAmount.toStringAsFixed(0)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.success,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        title: 'Amount Due',
-                        value: '₹${_totalPendingAmount.toStringAsFixed(0)}',
-                        icon: Icons.account_balance_wallet,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-                
-                // Toggle buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _showPaymentPendingOnly ? null : () {
-                          setState(() {
-                            _showPaymentPendingOnly = true;
-                          });
-                          _loadOrdersWithPendingPayments();
-                        },
-                        icon: Icon(
-                          Icons.payment_outlined,
-                          size: 16,
-                          color: _showPaymentPendingOnly ? Colors.white : Colors.green.shade600,
+                const SizedBox(height: 15),
+
+                // Main Content - Scrollable
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : CustomScrollView(
+                          slivers: [
+                            // Header with totals
+                            SliverToBoxAdapter(
+                              child: Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.green.shade600,
+                                      Colors.green.shade400,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                ),
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildSummaryCard(
+                                            title: _showPaymentPendingOnly ? 'Unpaid Orders' : 'Active Orders',
+                                            value: _pendingOrdersCount.toString(),
+                                            icon: Icons.receipt_long,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: _buildSummaryCard(
+                                            title: 'Amount Due',
+                                            value: '₹${_totalPendingAmount.toStringAsFixed(0)}',
+                                            icon: Icons.account_balance_wallet,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    
+                                    // Toggle buttons
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed: _showPaymentPendingOnly ? null : () {
+                                              setState(() {
+                                                _showPaymentPendingOnly = true;
+                                              });
+                                              _loadOrdersWithPendingPayments();
+                                            },
+                                            icon: Icon(
+                                              Icons.payment_outlined,
+                                              size: 16,
+                                              color: _showPaymentPendingOnly ? Colors.white : Colors.green.shade600,
+                                            ),
+                                            label: Text(
+                                              'Payment Due',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: _showPaymentPendingOnly ? Colors.white : Colors.green.shade600,
+                                              ),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: _showPaymentPendingOnly 
+                                                  ? Colors.white.withValues(alpha: 0.9)
+                                                  : Colors.white.withValues(alpha: 0.2),
+                                              foregroundColor: _showPaymentPendingOnly ? Colors.green.shade600 : Colors.white,
+                                              elevation: _showPaymentPendingOnly ? 2 : 0,
+                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed: !_showPaymentPendingOnly ? null : () {
+                                              setState(() {
+                                                _showPaymentPendingOnly = false;
+                                              });
+                                              _loadOrdersWithPendingPayments();
+                                            },
+                                            icon: Icon(
+                                              Icons.list_alt_outlined,
+                                              size: 16,
+                                              color: !_showPaymentPendingOnly ? Colors.white : Colors.green.shade600,
+                                            ),
+                                            label: Text(
+                                              'All Active',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: !_showPaymentPendingOnly ? Colors.white : Colors.green.shade600,
+                                              ),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: !_showPaymentPendingOnly 
+                                                  ? Colors.white.withValues(alpha: 0.9)
+                                                  : Colors.white.withValues(alpha: 0.2),
+                                              foregroundColor: !_showPaymentPendingOnly ? Colors.green.shade600 : Colors.white,
+                                              elevation: !_showPaymentPendingOnly ? 2 : 0,
+                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            // Search Bar
+                            SliverToBoxAdapter(
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                child: TextField(
+                                  controller: _searchController,
+                                  decoration: InputDecoration(
+                                    hintText: _showPaymentPendingOnly 
+                                        ? 'Search unpaid orders, customers...'
+                                        : 'Search active orders, customers...',
+                                    prefixIcon: const Icon(Icons.search),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Orders List
+                            _ordersWithPendingPayments.isEmpty
+                                ? SliverFillRemaining(
+                                    child: _buildEmptyState(),
+                                  )
+                                : SliverPadding(
+                                    padding: const EdgeInsets.all(16),
+                                    sliver: SliverList(
+                                      delegate: SliverChildBuilderDelegate(
+                                        (context, index) {
+                                          final orderMap = _ordersWithPendingPayments[index];
+                                          return _buildOrderCard(orderMap);
+                                        },
+                                        childCount: _ordersWithPendingPayments.length,
+                                      ),
+                                    ),
+                                  ),
+                          ],
                         ),
-                        label: Text(
-                          'Payment Due',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _showPaymentPendingOnly ? Colors.white : Colors.green.shade600,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _showPaymentPendingOnly 
-                              ? Colors.white.withValues(alpha: 0.9)
-                              : Colors.white.withValues(alpha: 0.2),
-                          foregroundColor: _showPaymentPendingOnly ? Colors.green.shade600 : Colors.white,
-                          elevation: _showPaymentPendingOnly ? 2 : 0,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: !_showPaymentPendingOnly ? null : () {
-                          setState(() {
-                            _showPaymentPendingOnly = false;
-                          });
-                          _loadOrdersWithPendingPayments();
-                        },
-                        icon: Icon(
-                          Icons.list_alt_outlined,
-                          size: 16,
-                          color: !_showPaymentPendingOnly ? Colors.white : Colors.green.shade600,
-                        ),
-                        label: Text(
-                          'All Active',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: !_showPaymentPendingOnly ? Colors.white : Colors.green.shade600,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: !_showPaymentPendingOnly 
-                              ? Colors.white.withValues(alpha: 0.9)
-                              : Colors.white.withValues(alpha: 0.2),
-                          foregroundColor: !_showPaymentPendingOnly ? Colors.green.shade600 : Colors.white,
-                          elevation: !_showPaymentPendingOnly ? 2 : 0,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
           ),
-
-          // Search Bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: _showPaymentPendingOnly 
-                    ? 'Search unpaid orders, customers...'
-                    : 'Search active orders, customers...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-            ),
+          bottomNavigationBar: AnimatedBottomNavigation(
+            currentIndex: _currentNavIndex,
+            onTap: _onNavTap,
+            items: navItems,
+            backgroundColor: Colors.white,
+            selectedItemColor: const Color(AppConstants.primaryTeal),
+            unselectedItemColor: Colors.grey.shade600,
           ),
-
-          // Orders List
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _ordersWithPendingPayments.isEmpty
-                    ? _buildEmptyState()
-                    : RefreshIndicator(
-                        onRefresh: _loadOrdersWithPendingPayments,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _ordersWithPendingPayments.length,
-                          itemBuilder: (context, index) {
-                            final orderMap = _ordersWithPendingPayments[index];
-                            return _buildOrderCard(orderMap);
-                          },
-                        ),
-                      ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -798,6 +924,11 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
             }
             
             return AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: Row(
                 children: [
                   Icon(Icons.payment, color: Colors.green.shade600),
@@ -807,6 +938,7 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ],
@@ -820,8 +952,9 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
+                        color: AppColors.panel,
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -831,11 +964,15 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
                             ),
                           ),
                           Text(
                             'Customer: $customerName',
-                            style: GoogleFonts.inter(fontSize: 12),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -843,26 +980,26 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Colors.red.shade600,
+                              color: AppColors.error,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
+                              color: AppColors.info.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.blue.shade200),
+                              border: Border.all(color: AppColors.info.withOpacity(0.3)),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.info_outline, size: 12, color: Colors.blue.shade600),
+                                Icon(Icons.info_outline, size: 12, color: AppColors.info),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Max payment: ₹${pendingAmount.toStringAsFixed(0)}',
                                   style: GoogleFonts.inter(
                                     fontSize: 10,
-                                    color: Colors.blue.shade600,
+                                    color: AppColors.info,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -880,21 +1017,23 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
+                        color: Colors.white,
+                        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<PaymentMethod>(
                           value: selectedMethod,
                           isExpanded: true,
-                          icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                          icon: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          dropdownColor: Colors.white,
                           items: PaymentMethod.values.map((PaymentMethod method) {
                             return DropdownMenuItem<PaymentMethod>(
                               value: method,
@@ -908,7 +1047,10 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                                   const SizedBox(width: 12),
                                   Text(
                                     method.displayName,
-                                    style: GoogleFonts.inter(fontSize: 14),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: AppColors.textPrimary,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -934,22 +1076,41 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                           controller: amountController,
                           keyboardType: TextInputType.number,
                           onChanged: validateAmount,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
                           decoration: InputDecoration(
                             labelText: 'Payment Amount',
+                            labelStyle: GoogleFonts.inter(
+                              color: AppColors.textSecondary,
+                            ),
                             hintText: 'Max: ₹${pendingAmount.toStringAsFixed(0)}',
-                            prefixIcon: Icon(Icons.currency_rupee, color: Colors.green.shade600),
+                            hintStyle: GoogleFonts.inter(
+                              color: AppColors.textSecondary,
+                            ),
+                            prefixIcon: Icon(Icons.currency_rupee, color: AppColors.success),
+                            filled: true,
+                            fillColor: Colors.white,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.primary.withOpacity(0.3)),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(
-                                color: isAmountValid ? Colors.green.shade600 : Colors.red.shade600,
+                                color: isAmountValid ? AppColors.success : AppColors.error,
+                                width: 2,
                               ),
                             ),
                             errorBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.red.shade600),
+                              borderSide: BorderSide(color: AppColors.error),
                             ),
                           ),
                         ),
@@ -960,7 +1121,7 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                               errorMessage!,
                               style: GoogleFonts.inter(
                                 fontSize: 12,
-                                color: Colors.red.shade600,
+                                color: AppColors.error,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -973,16 +1134,33 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                     TextField(
                       controller: notesController,
                       maxLines: 2,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Notes (Optional)',
+                        labelStyle: GoogleFonts.inter(
+                          color: AppColors.textSecondary,
+                        ),
                         hintText: 'Transaction reference, etc.',
-                        prefixIcon: Icon(Icons.note, color: Colors.grey.shade600),
+                        hintStyle: GoogleFonts.inter(
+                          color: AppColors.textSecondary,
+                        ),
+                        prefixIcon: Icon(Icons.note, color: AppColors.textSecondary),
+                        filled: true,
+                        fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.3)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.green.shade600),
+                          borderSide: BorderSide(color: AppColors.success, width: 2),
                         ),
                       ),
                     ),
@@ -995,8 +1173,8 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                   child: Text(
                     'Cancel',
                     style: GoogleFonts.inter(
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -1019,12 +1197,18 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> {
                     Navigator.of(context).pop();
                   } : null, // Disable button if amount is invalid
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isAmountValid ? Colors.green.shade600 : Colors.grey.shade400,
+                    backgroundColor: isAmountValid ? AppColors.success : Colors.grey.shade400,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   child: Text(
                     'Collect Payment',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],

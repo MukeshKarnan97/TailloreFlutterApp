@@ -41,9 +41,9 @@ import '../features/orders/screens/orders_main_screen.dart';
 import '../features/payments/screens/payment_collection_screen.dart';
 import '../features/payments/screens/payment_history_screen.dart';
 import '../features/payments/screens/order_payment_history_screen.dart';
-import '../screens/payment_reports_screen.dart';
-import '../screens/refund_management_screen.dart';
-import '../screens/receipt_management_screen.dart';
+import '../features/settings/screens/payment_report/payment_reports_screen.dart';
+import '../features/settings/screens/payment_report/refund_management_screen.dart';
+import '../features/settings/screens/payment_report/receipt_management_screen.dart';
 import '../data/models/order_model.dart';
 import 'package:flutter/foundation.dart';
 

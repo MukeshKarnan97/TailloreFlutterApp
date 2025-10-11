@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import '../widgets/sub_header.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
@@ -120,16 +121,18 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
         
         return Scaffold(
           backgroundColor: Colors.grey.shade50,
-          appBar: CustomHeader(
+          appBar: DashboardHeader(
             title: '${locale.t('pendingOrders')} (${_filteredOrders.length})',
             backgroundColor: Colors.orange,
-            showBackButton: true,
-            actions: [
-              IconButton(
-                onPressed: _loadPendingOrders,
-                icon: const Icon(Icons.refresh, color: Colors.white),
-              ),
-            ],
+            notificationCount: 3,
+            onBackPressed: () {
+              context.pop();
+            },
+            onNotificationTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(locale.t('notifications'))),
+              );
+            },
           ),
           body: _isLoading 
             ? const Center(child: CircularProgressIndicator())

@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/data/services/local_db_service.dart';
 import 'package:tailer_app/core/utils/logger.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
+import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 
@@ -126,39 +128,45 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with Naviga
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         
         return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
-            title: Text(
-              locale.translate('changePassword'),
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+          backgroundColor: AppColors.background,
+          appBar: DashboardHeader(
+            title: locale.translate('changePassword'),
+            backgroundColor: AppColors.secondary,
+            notificationCount: 0,
+            onBackPressed: () => context.pop(),
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.translate('notifications'));
+            },
+          ),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.secondary.withOpacity(0.03),
+                  AppColors.background,
+                ],
               ),
             ),
-            backgroundColor: const Color(AppConstants.primaryTeal),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
-            ),
-          ),
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppConstants.spacingM),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSecurityHeader(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildPasswordSection(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildSecurityTips(),
-                    const SizedBox(height: AppConstants.spacingXL),
-                    _buildChangeButton(),
-                  ],
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSecurityHeader(locale),
+                      const SizedBox(height: 24),
+                      _buildPasswordSection(locale),
+                      const SizedBox(height: 20),
+                      _buildSecurityTips(locale),
+                      const SizedBox(height: 30),
+                      _buildChangeButton(locale),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -168,8 +176,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with Naviga
     );
   }
 
-  Widget _buildSecurityHeader() {
-    final locale = AppLocalizations.of(_localeProvider.languageCode);
+  Widget _buildSecurityHeader(AppLocalizations locale) {
     
     return Container(
       padding: const EdgeInsets.all(24),
@@ -229,8 +236,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with Naviga
     );
   }
 
-  Widget _buildPasswordSection() {
-    final locale = AppLocalizations.of(_localeProvider.languageCode);
+  Widget _buildPasswordSection(AppLocalizations locale) {
     
     return Container(
       padding: const EdgeInsets.all(24),
@@ -380,8 +386,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with Naviga
     );
   }
 
-  Widget _buildSecurityTips() {
-    final locale = AppLocalizations.of(_localeProvider.languageCode);
+  Widget _buildSecurityTips(AppLocalizations locale) {
     
     return Container(
       padding: const EdgeInsets.all(20),
@@ -448,38 +453,49 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with Naviga
     );
   }
 
-  Widget _buildChangeButton() {
-    final locale = AppLocalizations.of(_localeProvider.languageCode);
-    
-    return SizedBox(
+  Widget _buildChangeButton(AppLocalizations locale) {
+    return Container(
       width: double.infinity,
       height: 56,
-      child: ElevatedButton(
-        onPressed: _isChanging ? null : _changePassword,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.orange,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 2,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.secondary, AppColors.secondary.withOpacity(0.8)],
         ),
-        child: _isChanging
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : Text(
-                locale.translate('changePassword'),
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.secondary.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: _isChanging ? null : _changePassword,
+          child: Center(
+            child: _isChanging
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Text(
+                    locale.translate('changePassword'),
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.background,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+          ),
+        ),
       ),
     );
   }

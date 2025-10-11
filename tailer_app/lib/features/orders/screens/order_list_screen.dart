@@ -8,10 +8,11 @@ import '../../../data/models/order_model.dart';
 import '../../../data/services/local_db_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../routes/route_names.dart';
+import '../../../widgets/custom_header.dart';
+import '../../../core/constants/app_colors.dart';
 import '../widgets/order_card.dart';
 import '../widgets/sub_header.dart';
 import '../../../widgets/custom_bottom_navigation.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/mixins/navigation_mixin.dart';
 
 class OrderListScreen extends StatefulWidget {
@@ -113,93 +114,59 @@ class _OrderListScreenState extends State<OrderListScreen> with NavigationMixin 
         
         return Scaffold(
           backgroundColor: AppColors.background,
-          appBar: AppBar(
+          appBar: DashboardHeader(
+            title: locale.t('orderList'),
             backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            title: Text(
-              locale.t('orderList'),
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                fontSize: 20,
-              ),
-            ),
-            elevation: 0,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _loadOrders,
-              ),
-            ],
+            notificationCount: 3,
+            onBackPressed: () {
+              context.pop();
+            },
+            onNotificationTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(locale.t('notifications'))),
+              );
+            },
           ),
           body: Column(
             children: [
-              // Header Section
-              Container(
-                color: const Color(AppConstants.primaryTeal),
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 15),
+              // Sub-header
+              _buildSubHeader(locale),
+              
+              const SizedBox(height: 20),
+              
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _buildSearchBar(locale),
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Stats Row
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
                   children: [
+                    Icon(
+                      Icons.assignment,
+                      color: AppColors.primary,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
                     Text(
-                      locale.t('manageAllYourOrders'),
+                      '${locale.t('totalOrdersCount')}: ${_orders.length}',
                       style: GoogleFonts.inter(
-                        color: Colors.white.withOpacity(0.9),
+                        color: AppColors.textPrimary,
                         fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // Search Bar
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: _filterOrders,
-                        decoration: InputDecoration(
-                          hintText: locale.t('searchOrdersHint'),
-                          prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 12),
-                    
-                    // Stats Row
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.assignment,
-                          color: Colors.white.withOpacity(0.8),
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${locale.t('totalOrdersCount')}: ${_orders.length}',
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),
               ),
+              
+              const SizedBox(height: 20),
               
               // Orders List
               Expanded(
@@ -249,6 +216,83 @@ class _OrderListScreenState extends State<OrderListScreen> with NavigationMixin 
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSubHeader(AppLocalizations locale) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: SubHeaderStyles.feature(
+        icon: Icons.list_alt,
+        title: locale.t('orderList'),
+        subtitle: '${locale.t('viewAllOrders')} • ${locale.t('trackOrders')} • ${locale.t('searchOrders')}',
+        action: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.inventory_2,
+                  size: 12,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${_orders.length} ${locale.t('orders')}',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(AppLocalizations locale) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: locale.t('searchOrders'),
+          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          border: InputBorder.none,
+          hintStyle: GoogleFonts.inter(
+            color: Colors.grey.shade600,
+            fontSize: 14,
+          ),
+        ),
+        onChanged: (value) {
+          _filterOrders(value);
+        },
+      ),
     );
   }
 

@@ -265,85 +265,26 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: CustomHeader(
+      appBar: DashboardHeader(
         title: 'Order Details',
-        showBackButton: true,
-        actions: [
-          if (_currentOrder.status.toLowerCase() != 'completed' && 
-              _currentOrder.status.toLowerCase() != 'cancelled')
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'update_status') {
-                  _showStatusUpdateDialog();
-                } else if (value == 'update_payment') {
-                  _showPaymentUpdateDialog();
-                } else if (value == 'view_payment_history') {
-                  _navigateToPaymentHistory();
-                } else if (value == 'cancel_order') {
-                  _showCancelOrderDialog();
-                } else if (value == 'delete_order') {
-                  _showDeleteConfirmation();
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'update_status',
-                  child: Row(
-                    children: [
-                      Icon(Icons.update, size: 20, color: Colors.blue.shade600),
-                      const SizedBox(width: 8),
-                      Text('Update Status', style: GoogleFonts.inter()),
-                    ],
-                  ),
-                ),
-                if (_currentOrder.balanceAmount > 0)
-                  PopupMenuItem(
-                    value: 'update_payment',
-                    child: Row(
-                      children: [
-                        Icon(Icons.payment, size: 20, color: Colors.green.shade600),
-                        const SizedBox(width: 8),
-                        Text('Add Payment', style: GoogleFonts.inter()),
-                      ],
-                    ),
-                  ),
-                PopupMenuItem(
-                  value: 'view_payment_history',
-                  child: Row(
-                    children: [
-                      Icon(Icons.history, size: 20, color: Colors.purple.shade600),
-                      const SizedBox(width: 8),
-                      Text('Payment History', style: GoogleFonts.inter()),
-                    ],
-                  ),
-                ),
-                if (_canCancelOrder())
-                  PopupMenuItem(
-                    value: 'cancel_order',
-                    child: Row(
-                      children: [
-                        Icon(Icons.cancel_outlined, size: 20, color: Colors.red.shade600),
-                        const SizedBox(width: 8),
-                        Text('Cancel Order', style: GoogleFonts.inter()),
-                      ],
-                    ),
-                  ),
-                PopupMenuItem(
-                  value: 'delete_order',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 20, color: Colors.red.shade600),
-                      const SizedBox(width: 8),
-                      Text('Delete Order', style: GoogleFonts.inter()),
-                    ],
-                  ),
-                ),
-              ],
-              icon: const Icon(Icons.more_vert, color: Colors.white),
-            ),
-        ],
+        backgroundColor: AppColors.primary,
+        notificationCount: 3,
+        onBackPressed: () {
+          context.pop();
+        },
+        onNotificationTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notifications')),
+          );
+        },
       ),
-      body: _isLoading
+      body: _buildBody(),
+      floatingActionButton: _buildFloatingActionButtons(),
+    );
+  }
+
+  Widget _buildBody() {
+    return _isLoading
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -380,13 +321,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 _buildActionButtons(),
               ],
             ),
-          ),
-      floatingActionButton: FloatingActionButton(
+          );
+  }
+
+  Widget _buildFloatingActionButtons() {
+    return FloatingActionButton(
         onPressed: _showDataMigrationDialog,
         backgroundColor: Colors.orange.shade600,
         child: const Icon(Icons.sync_alt, color: Colors.white),
-      ),
-    );
+      );
   }
 
   Widget _buildOrderHeader() {

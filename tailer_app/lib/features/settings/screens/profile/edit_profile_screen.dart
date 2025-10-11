@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/data/services/local_db_service.dart';
 import 'package:tailer_app/core/utils/logger.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
+import 'package:tailer_app/widgets/custom_header.dart';
 import 'dart:io';
 
 class EditProfileScreen extends StatefulWidget {
@@ -241,61 +243,73 @@ class _EditProfileScreenState extends State<EditProfileScreen> with NavigationMi
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         
         return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
-            title: Text(
-              locale.translate('editProfile'),
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+          backgroundColor: AppColors.background,
+          appBar: DashboardHeader(
+            title: locale.translate('editProfile'),
+            backgroundColor: AppColors.primary,
+            notificationCount: 0,
+            onBackPressed: () => context.pop(),
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.translate('notifications'));
+            },
+          ),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.primary.withOpacity(0.03),
+                  AppColors.background,
+                ],
               ),
             ),
-            backgroundColor: const Color(AppConstants.primaryTeal),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
-            ),
-          ),
-          body: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SafeArea(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(AppConstants.spacingM),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildProfileHeader(),
-                          const SizedBox(height: AppConstants.spacingL),
-                          _buildPersonalInfoSection(),
-                          const SizedBox(height: AppConstants.spacingXL),
-                          _buildSaveButton(),
-                        ],
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : SafeArea(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildProfileImageSection(locale),
+                            const SizedBox(height: 30),
+                            _buildPersonalInfoSection(locale),
+                            const SizedBox(height: 20),
+                            _buildContactSection(locale),
+                            const SizedBox(height: 20),
+                            _buildBusinessSection(locale),
+                            const SizedBox(height: 30),
+                            _buildSaveButton(locale),
+                            const SizedBox(height: 30),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildProfileHeader() {
-    final locale = AppLocalizations.of(_localeProvider.languageCode);
-    
+  Widget _buildProfileImageSection(AppLocalizations locale) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -382,36 +396,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> with NavigationMi
     );
   }
 
-  Widget _buildPersonalInfoSection() {
-    final locale = AppLocalizations.of(_localeProvider.languageCode);
-    
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+  Widget _buildPersonalInfoSection(AppLocalizations locale) {
+    return _buildSection(
+      title: locale.translate('personalInformation'),
+      icon: Icons.person_outline_rounded,
+      color: AppColors.primary,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            locale.translate('personalInformation'),
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // Username field (read-only)
           _buildInputField(
             controller: _usernameController,
             label: locale.translate('username'),
@@ -427,10 +418,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> with NavigationMi
               return null;
             },
           ),
-          
-          const SizedBox(height: 20),
-          
-          // Email field (read-only)
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactSection(AppLocalizations locale) {
+    return _buildSection(
+      title: locale.translate('contactInformation'),
+      icon: Icons.contact_mail_rounded,
+      color: AppColors.secondary,
+      child: Column(
+        children: [
           _buildInputField(
             controller: _emailController,
             label: locale.translate('email'),
@@ -447,25 +446,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with NavigationMi
               return null;
             },
           ),
-          
-          const SizedBox(height: 20),
-          
-          // Shop Name field
-          _buildInputField(
-            controller: _shopNameController,
-            label: locale.translate('shopName'),
-            icon: Icons.store_outlined,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return locale.translate('pleaseEnterShopName');
-              }
-              return null;
-            },
-          ),
-          
-          const SizedBox(height: 20),
-          
-          // Phone field (optional)
+          const SizedBox(height: 16),
           _buildInputField(
             controller: _phoneController,
             label: '${locale.translate('phone')} (${locale.translate('optional')})',
@@ -485,100 +466,209 @@ class _EditProfileScreenState extends State<EditProfileScreen> with NavigationMi
     );
   }
 
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-    bool isReadOnly = false,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      validator: validator,
-      readOnly: isReadOnly,
-      style: GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        color: isReadOnly ? Colors.grey[600] : null,
+  Widget _buildBusinessSection(AppLocalizations locale) {
+    return _buildSection(
+      title: locale.translate('businessInformation'),
+      icon: Icons.business_rounded,
+      color: AppColors.accent,
+      child: _buildInputField(
+        controller: _shopNameController,
+        label: locale.translate('shopName'),
+        icon: Icons.store_outlined,
+        validator: (value) {
+          if (value == null || value.trim().isEmpty) {
+            return locale.translate('pleaseEnterShopName');
+          }
+          return null;
+        },
       ),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(
-          icon,
-          color: isReadOnly ? Colors.grey[500] : const Color(AppConstants.primaryTeal),
+    );
+  }
+
+  Widget _buildSection({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Widget child,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.15),
+          width: 1,
         ),
-        suffixIcon: isReadOnly ? Icon(
-          Icons.lock_outline,
-          color: Colors.grey[500],
-          size: 20,
-        ) : null,
-        labelStyle: GoogleFonts.inter(
-          color: Colors.grey[600],
-          fontWeight: FontWeight.w500,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: isReadOnly ? Colors.grey[300]! : Colors.grey[300]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(AppConstants.primaryTeal),
-            width: 2,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  color.withOpacity(0.08),
+                  color.withOpacity(0.03),
+                ],
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    icon,
+                    color: AppColors.background,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Section content
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSaveButton(AppLocalizations locale) {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: isReadOnly ? Colors.grey[200]! : Colors.grey[300]!),
-        ),
-        filled: isReadOnly,
-        fillColor: isReadOnly ? Colors.grey[50] : null,
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: _isSaving ? null : _saveProfile,
+          child: Center(
+            child: _isSaving
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Text(
+                    locale.translate('saveChanges'),
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.background,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSaveButton() {
-    final locale = AppLocalizations.of(_localeProvider.languageCode);
-    
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _isSaving ? null : _saveProfile,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(AppConstants.primaryTeal),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 2,
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    bool isReadOnly = false,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      readOnly: isReadOnly,
+      validator: validator,
+      style: GoogleFonts.inter(
+        fontSize: 15,
+        color: isReadOnly ? AppColors.textSecondary : AppColors.textPrimary,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.inter(
+          fontSize: 14,
+          color: AppColors.textSecondary,
         ),
-        child: _isSaving
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : Text(
-                locale.translate('saveChanges'),
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
+        prefixIcon: Icon(
+          icon,
+          color: AppColors.primary,
+          size: 20,
+        ),
+        filled: true,
+        fillColor: isReadOnly ? AppColors.panel.withOpacity(0.5) : AppColors.background,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppColors.primary,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.error),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
     );
   }

@@ -132,6 +132,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
             : SafeArea(
                 child: Column(
                   children: [
+                    const SizedBox(height: 15),
                     // Sub-header
                     _buildSubHeader(locale),
                     
@@ -172,7 +173,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                         child: Column(
                           children: [
                             // Search Bar
-                            _buildSearchBar(locale),
+                            
 
                             const SizedBox(height: 20),
 
@@ -180,6 +181,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                             _buildPaymentOverview(locale),
 
                             const SizedBox(height: 20),
+                            _buildSearchBar(locale),
 
                             // Quick Actions Row
                             Row(
@@ -645,44 +647,91 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
     );
   }
 
+  // Widget _buildSubHeader(AppLocalizations locale) {
+  //   return SubHeaderStyles.feature(
+  //     icon: Icons.shopping_bag_outlined,
+  //     title: locale.t('ordersManagement'),
+  //     subtitle: '${locale.t('trackOrders')} • ${locale.t('manageDeliveries')} • ${locale.t('orderStatus')}',
+  //     action: Container(
+  //       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  //       decoration: BoxDecoration(
+  //         color: AppColors.success.withOpacity(0.1),
+  //         borderRadius: BorderRadius.circular(12),
+  //         border: Border.all(
+  //           color: AppColors.success.withOpacity(0.3),
+  //           width: 1,
+  //         ),
+  //       ),
+  //       child: Row(
+  //         mainAxisSize: MainAxisSize.min,
+  //         children: [
+  //           Icon(
+  //             Icons.trending_up,
+  //             size: 12,
+  //             color: AppColors.success,
+  //           ),
+  //           const SizedBox(width: 4),
+  //           Text(
+  //             '$_totalOrders ${locale.t('orders')}',
+  //             style: GoogleFonts.inter(
+  //               fontSize: 10,
+  //               fontWeight: FontWeight.w600,
+  //               color: AppColors.success,
+  //               letterSpacing: 0.5,
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+
   Widget _buildSubHeader(AppLocalizations locale) {
-    return SubHeaderStyles.feature(
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+    child: SubHeaderStyles.feature(
       icon: Icons.shopping_bag_outlined,
       title: locale.t('ordersManagement'),
-      subtitle: '${locale.t('trackOrders')} • ${locale.t('manageDeliveries')} • ${locale.t('orderStatus')}',
-      action: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppColors.success.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.success.withOpacity(0.3),
-            width: 1,
+      subtitle:
+          '${locale.t('trackOrders')} • ${locale.t('manageDeliveries')} • ${locale.t('orderStatus')}',
+      action: FittedBox(
+        fit: BoxFit.scaleDown, // Ensures it shrinks to fit available width
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.success.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.success.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.trending_up,
+                size: 12,
+                color: AppColors.success,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '$_totalOrders ${locale.t('orders')}',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.success,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.trending_up,
-              size: 12,
-              color: AppColors.success,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '$_totalOrders ${locale.t('orders')}',
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: AppColors.success,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildSearchBar(AppLocalizations locale) {
     return Container(

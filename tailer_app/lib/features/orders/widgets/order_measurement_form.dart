@@ -243,8 +243,10 @@ class _OrderMeasurementFormState extends State<OrderMeasurementForm> {
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
+        
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -253,7 +255,7 @@ class _OrderMeasurementFormState extends State<OrderMeasurementForm> {
                 Text(
                   'Measurements',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.bold, color: Colors.black
                   ),
                 ),
                 const Spacer(),
@@ -324,9 +326,16 @@ class _OrderMeasurementFormState extends State<OrderMeasurementForm> {
                         controller: entry.value,
                         enabled: widget.enabled,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        style: const TextStyle(
+            color: Colors.black, // <-- main text color while typing
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
                         decoration: InputDecoration(
                           labelText: _formatMeasurementName(entry.key),
+                          floatingLabelStyle: const TextStyle(color: Colors.black),
                           suffixText: UnitConverter.getUnitSymbol(_currentUnit),
+                          suffixStyle: const TextStyle(color: Colors.black87),
                           border: const OutlineInputBorder(),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         ),
@@ -357,6 +366,7 @@ class _OrderMeasurementFormState extends State<OrderMeasurementForm> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
+        color: Colors.white, 
         border: Border.all(color: Theme.of(context).primaryColor),
         borderRadius: BorderRadius.circular(20),
       ),
@@ -364,6 +374,11 @@ class _OrderMeasurementFormState extends State<OrderMeasurementForm> {
         child: DropdownButton<String>(
           value: _currentUnit,
           isDense: true,
+          icon: Icon(
+          Icons.arrow_drop_down, // 👈 Make dropdown icon visible
+          color: Theme.of(context).primaryColor,
+        ),
+        dropdownColor: Colors.white,
           items: UnitConverter.getAllUnits().map((String unit) {
             return DropdownMenuItem<String>(
               value: unit,

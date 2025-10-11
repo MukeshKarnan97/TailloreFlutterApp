@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../data/services/local_db_service.dart';
-import '../data/services/receipt_pdf_service.dart';
-import '../data/models/payment_model.dart';
-import '../data/enums/payment_method.dart';
-import '../core/services/back_button_handler.dart';
-import '../core/utils/logger.dart';
-import '../routes/route_names.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../../data/services/local_db_service.dart';
+import '../../../../data/services/receipt_pdf_service.dart';
+import '../../../../data/models/payment_model.dart';
+import '../../../../data/enums/payment_method.dart';
+import '../../../../core/services/back_button_handler.dart';
+import '../../../../core/utils/logger.dart';
+import '../../../../routes/route_names.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/mixins/navigation_mixin.dart';
+import '../../../../widgets/custom_header.dart';
 
 class ReceiptManagementScreen extends StatefulWidget {
   const ReceiptManagementScreen({super.key});
@@ -15,7 +19,7 @@ class ReceiptManagementScreen extends StatefulWidget {
   State<ReceiptManagementScreen> createState() => _ReceiptManagementScreenState();
 }
 
-class _ReceiptManagementScreenState extends State<ReceiptManagementScreen> {
+class _ReceiptManagementScreenState extends State<ReceiptManagementScreen> with NavigationMixin {
   final LocalDatabaseService _databaseService = LocalDatabaseService();
   List<Map<String, dynamic>> _receipts = [];
   List<Map<String, dynamic>> _orders = [];
@@ -68,43 +72,159 @@ class _ReceiptManagementScreenState extends State<ReceiptManagementScreen> {
       type: BackHandlerType.detail,
       context: context,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_showPayments ? 'Payment Receipts' : 'Order Receipts'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              context.goNamed(RouteNames.settings);
-            },
-          ),
-          actions: [
-            IconButton(
-              icon: Icon(_showPayments ? Icons.receipt : Icons.receipt_long),
-              onPressed: () {
-                setState(() {
-                  _showPayments = !_showPayments;
-                });
-              },
-              tooltip: _showPayments ? 'Show Order Receipts' : 'Show Payment Receipts',
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _loadData,
-            ),
-          ],
+        backgroundColor: AppColors.background,
+        appBar: DashboardHeader(
+          title: _showPayments ? 'Payment Receipts' : 'Order Receipts',
+          backgroundColor: AppColors.accent,
+          notificationCount: 0,
+          onBackPressed: () => context.goNamed(RouteNames.settings),
+          onNotificationTap: () {
+            showNavigationMessage(context, 'Notifications');
+          },
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _showPayments
-                ? _buildPaymentReceiptsList()
-                : _buildOrderReceiptsList(),
-        floatingActionButton: FloatingActionButton(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.accent.withOpacity(0.03),
+                AppColors.background,
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // View Toggle Section
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.panel,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.accent.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.receipt_long,
+                        color: AppColors.accent,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Receipt Type',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.accent.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            _buildToggleButton(
+                              'Payments',
+                              _showPayments,
+                              () {
+                                setState(() {
+                                  _showPayments = true;
+                                });
+                              },
+                            ),
+                            _buildToggleButton(
+                              'Orders',
+                              !_showPayments,
+                              () {
+                                setState(() {
+                                  _showPayments = false;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        icon: Icon(Icons.refresh, color: AppColors.accent),
+                        onPressed: _loadData,
+                        tooltip: 'Refresh',
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Content
+                Expanded(
+                  child: _isLoading
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.accent,
+                          ),
+                        )
+                      : _showPayments
+                          ? _buildPaymentReceiptsList()
+                          : _buildOrderReceiptsList(),
+                ),
+              ],
+            ),
+          ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
           onPressed: () {
-            // Navigate to create receipt screen
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Create receipt feature coming soon')),
+              SnackBar(
+                content: Text(
+                  'Create receipt feature coming soon',
+                  style: GoogleFonts.inter(),
+                ),
+                backgroundColor: AppColors.accent,
+              ),
             );
           },
-          child: const Icon(Icons.add),
+          backgroundColor: AppColors.accent,
+          icon: Icon(Icons.add, color: Colors.white),
+          label: Text(
+            'New Receipt',
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggleButton(String label, bool isActive, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isActive ? Colors.white : AppColors.textSecondary,
+          ),
         ),
       ),
     );
@@ -112,13 +232,19 @@ class _ReceiptManagementScreenState extends State<ReceiptManagementScreen> {
 
   Widget _buildPaymentReceiptsList() {
     if (_receipts.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.receipt, size: 64, color: Colors.grey),
             SizedBox(height: 16),
-            Text('No payment receipts found'),
+            Text(
+              'No payment receipts found',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                color: Colors.grey,
+              ),
+            ),
           ],
         ),
       );
@@ -138,22 +264,47 @@ class _ReceiptManagementScreenState extends State<ReceiptManagementScreen> {
             ),
             title: Text(
               'Payment #${payment['id']}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Amount: ₹${payment['amount']?.toString() ?? '0'}'),
-                Text('Method: ${payment['method'] ?? 'Unknown'}'),
-                Text('Date: ${_formatDate(payment['paid_on'] ?? '')}'),
+                Text(
+                  'Amount: ₹${payment['amount']?.toString() ?? '0'}',
+                  style: GoogleFonts.inter(color: AppColors.textSecondary),
+                ),
+                Text(
+                  'Method: ${payment['method'] ?? 'Unknown'}',
+                  style: GoogleFonts.inter(color: AppColors.textSecondary),
+                ),
+                Text(
+                  'Date: ${_formatDate(payment['paid_on'] ?? '')}',
+                  style: GoogleFonts.inter(color: AppColors.textSecondary),
+                ),
                 if (payment['order_id'] != null)
-                  Text('Order: ${payment['order_id']?.toString() ?? 'N/A'}', 
-                       style: TextStyle(color: Colors.blue.shade600, fontSize: 12)),
+                  Text(
+                    'Order: ${payment['order_id']?.toString() ?? 'N/A'}',
+                    style: GoogleFonts.inter(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                    ),
+                  ),
               ],
             ),
             trailing: ElevatedButton(
               onPressed: () => _generatePaymentReceipt(payment),
-              child: const Text('PDF'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: Text(
+                'PDF',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
             ),
             onTap: () => _showPaymentReceiptDetails(payment),
           ),
@@ -164,13 +315,19 @@ class _ReceiptManagementScreenState extends State<ReceiptManagementScreen> {
 
   Widget _buildOrderReceiptsList() {
     if (_orders.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.receipt_long, size: 64, color: Colors.grey),
             SizedBox(height: 16),
-            Text('No order receipts found'),
+            Text(
+              'No order receipts found',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                color: Colors.grey,
+              ),
+            ),
           ],
         ),
       );
@@ -183,29 +340,62 @@ class _ReceiptManagementScreenState extends State<ReceiptManagementScreen> {
         final order = _orders[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
+          color: AppColors.panel,
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: AppColors.accent.withOpacity(0.2),
+            ),
+          ),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.orange,
+              backgroundColor: AppColors.accent,
               child: const Icon(Icons.receipt_long, color: Colors.white),
             ),
             title: Text(
               'Order #${order['id']}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Total: ₹${order['total_amount']?.toString() ?? '0'}'),
-                Text('Status: ${order['status'] ?? 'Unknown'}'),
-                Text('Date: ${_formatDate(order['created_at'] ?? '')}'),
+                Text(
+                  'Total: ₹${order['total_amount']?.toString() ?? '0'}',
+                  style: GoogleFonts.inter(color: AppColors.textSecondary),
+                ),
+                Text(
+                  'Status: ${order['status'] ?? 'Unknown'}',
+                  style: GoogleFonts.inter(color: AppColors.textSecondary),
+                ),
+                Text(
+                  'Date: ${_formatDate(order['created_at'] ?? '')}',
+                  style: GoogleFonts.inter(color: AppColors.textSecondary),
+                ),
                 if (order['service_type'] != null)
-                  Text('Service: ${order['service_type']?.toString() ?? 'N/A'}', 
-                       style: TextStyle(color: Colors.green.shade600, fontSize: 12)),
+                  Text(
+                    'Service: ${order['service_type']?.toString() ?? 'N/A'}',
+                    style: GoogleFonts.inter(
+                      color: AppColors.success,
+                      fontSize: 12,
+                    ),
+                  ),
               ],
             ),
             trailing: ElevatedButton(
               onPressed: () => _generateOrderReceipt(order),
-              child: const Text('PDF'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: Text(
+                'PDF',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
             ),
             onTap: () => _showOrderReceiptDetails(order),
           ),

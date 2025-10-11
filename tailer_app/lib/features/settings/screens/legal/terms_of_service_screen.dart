@@ -49,9 +49,8 @@ class _TermsOfServiceScreenState extends State<TermsOfServiceScreen> with Naviga
         
         return Scaffold(
           backgroundColor: AppColors.background,
-          appBar: CustomHeader(
+          appBar: CustomHeaderWithProfile(
             title: locale.translate('termsOfService'),
-            showBackButton: true,
           ),
           body: Stack(
             children: [

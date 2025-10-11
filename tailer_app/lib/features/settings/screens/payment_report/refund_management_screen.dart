@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../data/services/local_db_service.dart';
-import '../core/services/back_button_handler.dart';
-import '../routes/route_names.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/mixins/navigation_mixin.dart';
+import '../../../../widgets/custom_header.dart';
+import '../../../../data/services/local_db_service.dart';
+import '../../../../core/services/back_button_handler.dart';
+import '../../../../routes/route_names.dart';
 
 class RefundManagementScreen extends StatefulWidget {
   const RefundManagementScreen({super.key});
@@ -11,7 +15,7 @@ class RefundManagementScreen extends StatefulWidget {
   State<RefundManagementScreen> createState() => _RefundManagementScreenState();
 }
 
-class _RefundManagementScreenState extends State<RefundManagementScreen> {
+class _RefundManagementScreenState extends State<RefundManagementScreen> with NavigationMixin {
   final LocalDatabaseService _databaseService = LocalDatabaseService();
   List<Map<String, dynamic>> _refunds = [];
   bool _isLoading = true;
@@ -84,54 +88,79 @@ class _RefundManagementScreenState extends State<RefundManagementScreen> {
       type: BackHandlerType.detail,
       context: context,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Refund Management'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              context.goNamed(RouteNames.settings);
-            },
-          ),
+        backgroundColor: AppColors.background,
+        appBar: DashboardHeader(
+          title: 'Refund Management',
+          backgroundColor: AppColors.warning,
+          notificationCount: 0,
+          onBackPressed: () => context.goNamed(RouteNames.settings),
+          onNotificationTap: () {
+            showNavigationMessage(context, 'Notifications');
+          },
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _refunds.isEmpty
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.money_off,
-                          size: 64,
-                          color: Colors.grey,
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          'No refunds found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.warning.withOpacity(0.03),
+                AppColors.background,
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: _isLoading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.warning,
                     ),
                   )
-                : RefreshIndicator(
-                    onRefresh: _loadRefunds,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _refunds.length,
-                      itemBuilder: (context, index) {
-                        final refund = _refunds[index];
-                        return _buildRefundCard(refund);
-                      },
-                    ),
-                  ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            _showCreateRefundDialog();
-          },
-          child: const Icon(Icons.add),
+                : _refunds.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.money_off,
+                              size: 64,
+                              color: Colors.grey,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'No refunds found',
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadRefunds,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _refunds.length,
+                          itemBuilder: (context, index) {
+                            final refund = _refunds[index];
+                            return _buildRefundCard(refund);
+                          },
+                        ),
+                      ),
+          ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _showCreateRefundDialog,
+          backgroundColor: AppColors.warning,
+          icon: Icon(Icons.add, color: Colors.white),
+          label: Text(
+            'Add Refund',
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ),
     );

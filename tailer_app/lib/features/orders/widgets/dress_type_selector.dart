@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import '../../../core/constants/measurement_constants.dart';
 
 class DressTypeSelector extends StatelessWidget {
@@ -16,6 +17,7 @@ class DressTypeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white,
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -25,47 +27,45 @@ class DressTypeSelector extends StatelessWidget {
             Text(
               'Dress Type',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
             ),
             const SizedBox(height: 16),
-            
-            DropdownButtonFormField<String>(
-              value: selectedDressType,
-              decoration: const InputDecoration(
-                hintText: 'Select dress type',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
+            // Custom dropdown with icon in input box
+            InkWell(
+              onTap: enabled ? () => _showDropdown(context) : null,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.black),
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.white,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.checkroom, color: Colors.black),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        selectedDressType != null
+                            ? _formatDressTypeName(selectedDressType!)
+                            : 'Select dress type',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: selectedDressType != null
+                              ? AppColors.textPrimary
+                              : Colors.black26,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.arrow_drop_down, color: Colors.black),
+                  ],
+                ),
               ),
-              isExpanded: true,
-              items: MeasurementConstants.getAllDressTypes().map((String dressType) {
-                return DropdownMenuItem<String>(
-                  value: dressType,
-                  child: Row(
-                    children: [
-                      Icon(
-                        _getDressTypeIcon(dressType),
-                        size: 20,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        _formatDressTypeName(dressType),
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: enabled ? onDressTypeSelected : null,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select a dress type';
-                }
-                return null;
-              },
             ),
-            
+
             if (selectedDressType != null) ...[
               const SizedBox(height: 12),
               Container(
@@ -88,13 +88,16 @@ class DressTypeSelector extends StatelessWidget {
                     Wrap(
                       spacing: 8,
                       runSpacing: 4,
-                      children: MeasurementConstants.getMeasurementsForDressType(selectedDressType!)
+                      children: MeasurementConstants
+                          .getMeasurementsForDressType(selectedDressType!)
                           .map((measurement) => Chip(
                                 label: Text(
                                   _formatMeasurementName(measurement),
                                   style: const TextStyle(fontSize: 12),
                                 ),
-                                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+                                backgroundColor: Theme.of(context)
+                                    .primaryColor
+                                    .withOpacity(0.2),
                               ))
                           .toList(),
                     ),
@@ -106,6 +109,39 @@ class DressTypeSelector extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showDropdown(BuildContext context) async {
+    // Show modal bottom sheet with all dress types
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      barrierColor: Colors.black.withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+  ),
+      builder: (context) {
+        return ListView(
+          children: MeasurementConstants.getAllDressTypes()
+              .map((type) => ListTile(
+                    leading: Icon(_getDressTypeIcon(type), color: Colors.black),
+                    title: Text(
+                  _formatDressTypeName(type),
+                  style: const TextStyle(
+                    color: Colors.black, // 👈 text is black
+                    fontSize: 16,
+                  ),
+                ),
+                    onTap: () => Navigator.of(context).pop(type),
+                  ))
+              .toList(),
+        );
+      },
+    );
+
+    if (selected != null) {
+      onDressTypeSelected(selected);
+    }
   }
 
   IconData _getDressTypeIcon(String dressType) {
@@ -138,12 +174,16 @@ class DressTypeSelector extends StatelessWidget {
   }
 
   String _formatDressTypeName(String dressType) {
-    return dressType.split('_').map((word) => 
-        word[0].toUpperCase() + word.substring(1)).join(' ');
+    return dressType
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
   }
 
   String _formatMeasurementName(String measurement) {
-    return measurement.split('_').map((word) => 
-        word[0].toUpperCase() + word.substring(1)).join(' ');
+    return measurement
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
   }
 }

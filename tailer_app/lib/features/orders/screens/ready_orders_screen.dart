@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tailer_app/core/mixins/navigation_mixin.dart';
+import 'package:tailer_app/widgets/custom_header.dart';
+import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
+import '../widgets/sub_header.dart';
+import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import '../../../data/services/local_db_service.dart';
@@ -126,6 +132,20 @@ class _ReadyOrdersScreenState extends State<ReadyOrdersScreen> {
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         
         return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: DashboardHeader(
+            title: locale.t('readyOrders'),
+            backgroundColor: AppColors.accent,
+            notificationCount: 3,
+            onBackPressed: () {
+              Navigator.pop(context);
+            },
+            onNotificationTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(locale.t('notifications'))),
+              );
+            },
+          ),
           body: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -140,36 +160,9 @@ class _ReadyOrdersScreenState extends State<ReadyOrdersScreen> {
             child: SafeArea(
               child: Column(
                 children: [
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          locale.t('readyOrders'),
-                          style: GoogleFonts.inter(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          onPressed: _loadReadyOrders,
-                          icon: const Icon(Icons.refresh, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
                   // Statistics Cards
                   Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     child: Row(
                       children: [
                         _buildStatCard(

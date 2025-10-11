@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/core/constants/app_colors.dart';
-import 'package:tailer_app/core/constants/app_strings.dart';
 import 'package:tailer_app/core/theme/text_styles.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
@@ -46,24 +46,35 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
               showNavigationMessage(context, locale.translate('notifications'));
             },
           ),
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppConstants.spacingM),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeaderSection(),
-                  const SizedBox(height: AppConstants.spacingL),
-                  _buildUserAccountSection(),
-                  const SizedBox(height: AppConstants.spacingL),
-                  _buildPaymentManagementSection(),
-                  const SizedBox(height: AppConstants.spacingL),
-                  // _buildAppPreferencesSection(),
-                  // const SizedBox(height: AppConstants.spacingL),
-                  _buildSupportSection(),
-                  const SizedBox(height: AppConstants.spacingL),
-                  _buildAboutSection(),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.primary.withOpacity(0.03),
+                  AppColors.background,
                 ],
+              ),
+            ),
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeaderSection(),
+                    const SizedBox(height: 24),
+                    _buildUserAccountSection(),
+                    const SizedBox(height: 20),
+                    _buildPaymentManagementSection(),
+                    const SizedBox(height: 20),
+                    _buildSupportSection(),
+                    const SizedBox(height: 20),
+                    _buildAboutSection(),
+                    const SizedBox(height: 100), // Space for bottom nav
+                  ],
+                ),
               ),
             ),
           ),
@@ -189,11 +200,14 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
     return _buildSection(
       title: locale.translate('account'),
       icon: Icons.person_outline_rounded,
+      color: AppColors.primary,
       children: [
         _buildSettingsItem(
           icon: Icons.edit_rounded,
           title: locale.translate('editProfile'),
           subtitle: locale.translate('updatePersonalInformation'),
+          iconBgColor: AppColors.primary.withOpacity(0.1),
+          iconColor: AppColors.primary,
           onTap: () {
             context.pushNamed(RouteNames.editProfile);
           },
@@ -202,23 +216,20 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
           icon: Icons.lock_outline_rounded,
           title: locale.translate('changePassword'),
           subtitle: locale.translate('updateAccountPassword'),
+          iconBgColor: AppColors.secondary.withOpacity(0.1),
+          iconColor: AppColors.secondary,
           onTap: () {
             context.pushNamed(RouteNames.changePassword);
           },
         ),
-        // _buildSettingsItem(
-        //   icon: Icons.security_rounded,
-        //   title: locale.translate('privacyAndSecurity'),
-        //   subtitle: locale.translate('managePrivacySettings'),
-        //   onTap: () {
-        //     context.pushNamed(RouteNames.privacySecurity);
-        //   },
-        // ),
+        const SizedBox(height: 12),
         _buildDivider(),
+        const SizedBox(height: 12),
         _buildSettingsItem(
           icon: Icons.logout_rounded,
           title: locale.translate('logout'),
           subtitle: locale.translate('signOutOfAccount'),
+          iconBgColor: Colors.red.withOpacity(0.1),
           iconColor: Colors.red,
           titleColor: Colors.red,
           showTrailing: false,
@@ -232,11 +243,14 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
     return _buildSection(
       title: 'Payment Management',
       icon: Icons.payment_rounded,
+      color: AppColors.secondary,
       children: [
         _buildSettingsItem(
           icon: Icons.analytics_outlined,
           title: 'Payment Reports',
           subtitle: 'View payment analytics and reports',
+          iconBgColor: AppColors.secondary.withOpacity(0.1),
+          iconColor: AppColors.secondary,
           onTap: () {
             context.goNamed(RouteNames.paymentReports);
           },
@@ -245,6 +259,8 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
           icon: Icons.money_off_outlined,
           title: 'Refund Management',
           subtitle: 'Manage refunds and cancellations',
+          iconBgColor: AppColors.warning.withOpacity(0.1),
+          iconColor: AppColors.warning,
           onTap: () {
             context.goNamed(RouteNames.refundManagement);
           },
@@ -253,6 +269,8 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
           icon: Icons.receipt_long_outlined,
           title: 'Receipt Management',
           subtitle: 'Generate and manage receipts',
+          iconBgColor: AppColors.accent.withOpacity(0.1),
+          iconColor: AppColors.accent,
           onTap: () {
             context.goNamed(RouteNames.receiptManagement);
           },
@@ -312,11 +330,14 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
     return _buildSection(
       title: locale.translate('support'),
       icon: Icons.help_outline_rounded,
+      color: AppColors.accent,
       children: [
         _buildSettingsItem(
           icon: Icons.help_center_rounded,
           title: locale.translate('helpCenter'),
           subtitle: locale.translate('faqsAndUserGuides'),
+          iconBgColor: AppColors.accent.withOpacity(0.1),
+          iconColor: AppColors.accent,
           onTap: () {
             context.pushNamed(RouteNames.helpCenter);
           },
@@ -325,6 +346,8 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
           icon: Icons.feedback_rounded,
           title: locale.translate('sendFeedback'),
           subtitle: locale.translate('shareThoughtsWithUs'),
+          iconBgColor: AppColors.info.withOpacity(0.1),
+          iconColor: AppColors.info,
           onTap: () {
             context.pushNamed(RouteNames.feedback);
           },
@@ -333,6 +356,8 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
           icon: Icons.bug_report_rounded,
           title: locale.translate('reportABug'),
           subtitle: locale.translate('letUsKnowAboutIssues'),
+          iconBgColor: AppColors.error.withOpacity(0.1),
+          iconColor: AppColors.error,
           onTap: () {
             context.pushNamed(RouteNames.bugReport);
           },
@@ -346,11 +371,14 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
     return _buildSection(
       title: locale.translate('about'),
       icon: Icons.info_outline_rounded,
+      color: AppColors.info,
       children: [
         _buildSettingsItem(
           icon: Icons.privacy_tip_rounded,
           title: locale.translate('privacyPolicy'),
           subtitle: locale.translate('readOurPrivacyPolicy'),
+          iconBgColor: AppColors.info.withOpacity(0.1),
+          iconColor: AppColors.info,
           onTap: () {
             context.goNamed(RouteNames.privacyPolicy);
           },
@@ -359,6 +387,8 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
           icon: Icons.description_rounded,
           title: locale.translate('termsOfService'),
           subtitle: locale.translate('readOurTermsOfService'),
+          iconBgColor: AppColors.secondary.withOpacity(0.1),
+          iconColor: AppColors.secondary,
           onTap: () {
             context.pushNamed(RouteNames.termsOfService);
           },
@@ -367,10 +397,25 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
           icon: Icons.info_rounded,
           title: locale.translate('appVersion'),
           subtitle: locale.translate('currentVersionInformation'),
-          trailing: Text(
-            'v1.0.0',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
+          iconBgColor: AppColors.primary.withOpacity(0.1),
+          iconColor: AppColors.primary,
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              'v1.0.0',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
             ),
           ),
           showTrailing: false,
@@ -384,27 +429,37 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
     required String title,
     required IconData icon,
     required List<Widget> children,
+    Color? color,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.panel,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: (color ?? AppColors.primary).withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section header
+          // Modern Section header
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: AppColors.secondaryPanel,
+              gradient: LinearGradient(
+                colors: [
+                  (color ?? AppColors.primary).withOpacity(0.08),
+                  (color ?? AppColors.primary).withOpacity(0.03),
+                ],
+              ),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -412,17 +467,33 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
             ),
             child: Row(
               children: [
-                Icon(
-                  icon,
-                  color: AppColors.primary,
-                  size: 20,
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color ?? AppColors.primary,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (color ?? AppColors.primary).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    icon,
+                    color: AppColors.background,
+                    size: 20,
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Text(
                   title,
-                  style: AppTextStyles.heading4.copyWith(
+                  style: GoogleFonts.inter(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
-                    fontSize: 16,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ],
@@ -441,6 +512,7 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
     required String subtitle,
     required VoidCallback onTap,
     Color? iconColor,
+    Color? iconBgColor,
     Color? titleColor,
     Widget? trailing,
     bool showTrailing = true,
@@ -451,19 +523,19 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
         onTap: onTap,
         borderRadius: BorderRadius.circular(0),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: (iconColor ?? const Color(AppConstants.primaryTeal)).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: iconBgColor ?? (iconColor ?? AppColors.primary).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   icon,
-                  size: 20,
-                  color: iconColor ?? const Color(AppConstants.primaryTeal),
+                  size: 22,
+                  color: iconColor ?? AppColors.primary,
                 ),
               ),
               const SizedBox(width: 16),
@@ -473,15 +545,20 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
                   children: [
                       Text(
                         title,
-                        style: AppTextStyles.bodyLarge.copyWith(
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
                           color: titleColor ?? AppColors.textPrimary,
+                          letterSpacing: 0.2,
                         ),
                       ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: AppTextStyles.bodySmall.copyWith(
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
                           color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                   ],
@@ -489,10 +566,17 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
               ),
               if (showTrailing)
                 trailing ?? 
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.grey[400],
-                  size: 20,
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.border.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: AppColors.textSecondary,
+                    size: 14,
+                  ),
                 ),
             ],
           ),
@@ -663,21 +747,4 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
     );
   }
 
-  String _getCurrentLanguageName() {
-    final locale = AppLocalizations.of(_localeProvider.languageCode);
-    switch (_localeProvider.languageCode) {
-      case 'ta':
-        return locale.translate('tamil');
-      case 'hi':
-        return locale.translate('hindi');
-      case 'en':
-      default:
-        return locale.translate('english');
-    }
-  }
-
-  void _showLanguageSelection(BuildContext context) {
-    // Navigate to the existing language selection screen
-    context.pushNamed(RouteNames.languageSelection);
-  }
 }

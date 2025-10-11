@@ -15,7 +15,7 @@ import '../widgets/customer_selector.dart';
 import '../widgets/dress_type_selector.dart';
 import '../widgets/order_measurement_form.dart';
 import '../../../widgets/custom_header.dart';
-import '../widgets/sub_header.dart';
+
 
 class AddOrderScreen extends StatefulWidget {
   final Map<String, dynamic>? extra;
@@ -260,134 +260,164 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
         
         return Scaffold(
           backgroundColor: AppColors.background,
-          appBar: CustomHeader(
+          appBar: DashboardHeader(
             title: locale.t('createNewOrder'),
-            showBackButton: true,
-            elevation: 0,
-            actions: [
-              if (_isFormValid)
-                Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.check_circle,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                ),
+            backgroundColor: AppColors.primary,
+            notificationCount: 3,
+            onBackPressed: () {
+              context.pop();
+            },
+            onNotificationTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(locale.t('notifications'))),
+              );
+            },
+          ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.primary.withOpacity(0.05),
+              AppColors.background,
             ],
           ),
-      body: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Customer Selection
-                    CustomerSelector(
-                      selectedCustomer: _selectedCustomer,
-                      onCustomerSelected: _onCustomerSelected,
-                      enabled: !_isLoading,
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Dress Type Selection
-                    DressTypeSelector(
-                      selectedDressType: _selectedDressType,
-                      onDressTypeSelected: _onDressTypeSelected,
-                      enabled: !_isLoading,
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Measurements Form
-                    if (_selectedCustomer != null && _selectedDressType != null)
-                      OrderMeasurementForm(
-                        customerId: _selectedCustomer!.uniqueId,
-                        dressType: _selectedDressType,
-                        initialMeasurements: _measurements,
-                        onMeasurementsChanged: _onMeasurementsChanged,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Section
+                      // _buildSectionHeader(
+                      //   icon: Icons.person_outline,
+                      //   title: AppLocalizations.of(_localeProvider.languageCode).t('customerInformation'),
+                      //   color: AppColors.primary,
+                      // ),
+                      const SizedBox(height: 12),
+                      
+                      // Customer Selection
+                      CustomerSelector(
+                        selectedCustomer: _selectedCustomer,
+                        onCustomerSelected: _onCustomerSelected,
                         enabled: !_isLoading,
                       ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Order Details Section
-                    if (_selectedCustomer != null && _selectedDressType != null)
-                      _buildOrderDetailsSection(),
-                  ],
-                ),
-              ),
-            ),
-            
-            // Create Order Button
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLoading || !_isFormValid ? null : _createOrder,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(AppConstants.primaryTeal),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Service Section
+                      _buildSectionHeader(
+                        icon: Icons.checkroom,
+                        title: AppLocalizations.of(_localeProvider.languageCode).t('serviceDetails'),
+                        color: AppColors.secondary,
                       ),
-                      elevation: 2,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.add_shopping_cart, size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                locale.t('createOrder'),
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
+                      const SizedBox(height: 12),
+                      
+                      // Dress Type Selection
+                      DressTypeSelector(
+                        selectedDressType: _selectedDressType,
+                        onDressTypeSelected: _onDressTypeSelected,
+                        enabled: !_isLoading,
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Measurements Section
+                      if (_selectedCustomer != null && _selectedDressType != null) ...[
+                        _buildSectionHeader(
+                          icon: Icons.straighten,
+                          title: AppLocalizations.of(_localeProvider.languageCode).t('measurements'),
+                          color: AppColors.accent,
+                        ),
+                        const SizedBox(height: 12),
+                        OrderMeasurementForm(
+                          customerId: _selectedCustomer!.uniqueId,
+                          dressType: _selectedDressType,
+                          initialMeasurements: _measurements,
+                          onMeasurementsChanged: _onMeasurementsChanged,
+                          enabled: !_isLoading,
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                      
+                      // Order Details Section
+                      if (_selectedCustomer != null && _selectedDressType != null)
+                        _buildOrderDetailsSection(),
+                      
+                      const SizedBox(height: 100), // Space for button
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
+              
+              // Create Order Button
+              Container(
+                padding: const EdgeInsets.all(20.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadow.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: SafeArea(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isLoading || !_isFormValid ? null : _createOrder,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppColors.textHint,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: _isFormValid ? 4 : 0,
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.add_shopping_cart, size: 22),
+                                const SizedBox(width: 10),
+                                Text(
+                                  locale.t('createOrder'),
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 17,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
         );
@@ -395,237 +425,403 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
     );
   }
 
+  Widget _buildSectionHeader({
+    required IconData icon,
+    required String title,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.1),
+            color.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildOrderDetailsSection() {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              locale.t('orderDetails'),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Delivery Date
-            InkWell(
-              onTap: _isLoading ? null : _selectDate,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          icon: Icons.receipt_long,
+          title: locale.t('orderDetails'),
+          color: AppColors.success,
+        ),
+        const SizedBox(height: 12),
+        Card(
+          color: Colors.white,
+          elevation: 2,
+          shadowColor: AppColors.shadow.withOpacity(0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Delivery Date
+                InkWell(
+                  onTap: _isLoading ? null : _selectDate,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.05),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.calendar_today,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                locale.t('deliveryDate'),
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${_deliveryDate.day}/${_deliveryDate.month}/${_deliveryDate.year}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, color: AppColors.textHint),
+                      ],
+                    ),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_today, color: Color(AppConstants.primaryTeal)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            locale.t('deliveryDate'),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
+                
+                const SizedBox(height: 20),
+                
+                // Total Amount
+                TextFormField(
+                  controller: _totalAmountController,
+                  enabled: !_isLoading,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: locale.t('totalAmount'),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
+                    labelStyle: GoogleFonts.inter(color: AppColors.textSecondary),
+                    prefixIcon: Icon(Icons.currency_rupee, color: AppColors.secondary),
+                    suffixStyle: const TextStyle(color: Colors.black87),
+                    filled: true,
+                    fillColor: AppColors.secondary.withOpacity(0.05),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.secondary.withOpacity(0.3)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.secondary, width: 2),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return locale.t('pleaseEnterTotalAmount');
+                    }
+                    final amount = double.tryParse(value);
+                    if (amount == null || amount <= 0) {
+                      return locale.t('pleaseEnterValidAmount');
+                    }
+                    return null;
+                  },
+                  onChanged: (value) {
+                    // Defer setState to avoid calling during build
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      setState(() {}); // Refresh balance calculation
+                    });
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Advance Amount
+                TextFormField(
+                  controller: _advanceController,
+                  enabled: !_isLoading,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black
+                  ),
+                  decoration: InputDecoration(
+                    labelText: locale.t('advanceAmount'),
+                    labelStyle: GoogleFonts.inter(color: AppColors.textSecondary),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
+                    prefixIcon: Icon(Icons.payment, color: AppColors.accent),
+                    suffixStyle: const TextStyle(color: Colors.black),
+                    filled: true,
+                    fillColor: AppColors.accent.withOpacity(0.05),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.accent.withOpacity(0.3)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.accent, width: 2),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      final amount = double.tryParse(value);
+                      if (amount == null || amount < 0) {
+                        return locale.t('pleaseEnterValidAdvanceAmount');
+                      }
+                      final total = double.tryParse(_totalAmountController.text) ?? 0.0;
+                      if (amount > total) {
+                        return locale.t('advanceCannotBeMoreThanTotal');
+                      }
+                    }
+                    return null;
+                  },
+                  onChanged: (value) {
+                    // Defer setState to avoid calling during build
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      setState(() {}); // Refresh balance calculation
+                    });
+                  },
+                ),
+                
+                // Payment Method Selection (only show if advance amount is entered)
+                if (_advanceController.text.isNotEmpty && 
+                    double.tryParse(_advanceController.text) != null && 
+                    double.parse(_advanceController.text) > 0) ...[
+                  const SizedBox(height: 20),
+                  
+                  Text(
+                    'Advance Payment Method',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.05),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<PaymentMethod>(
+                        value: _advancePaymentMethod,
+                        isExpanded: true,
+                        icon: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        dropdownColor: Colors.white,
+                        items: PaymentMethod.values.map((PaymentMethod method) {
+                          return DropdownMenuItem<PaymentMethod>(
+                            value: method,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _getPaymentMethodIcon(method),
+                                  size: 20,
+                                  color: _getPaymentMethodColor(method),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  method.displayName,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          Text(
-                            '${_deliveryDate.day}/${_deliveryDate.month}/${_deliveryDate.year}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                          );
+                        }).toList(),
+                        onChanged: _isLoading ? null : (PaymentMethod? newValue) {
+                          if (newValue != null) {
+                            setState(() {
+                              _advancePaymentMethod = newValue;
+                            });
+                          }
+                        },
                       ),
                     ),
-                    const Icon(Icons.chevron_right),
-                  ],
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Total Amount
-            TextFormField(
-              controller: _totalAmountController,
-              enabled: !_isLoading,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: locale.t('totalAmount'),
-                prefixIcon: const Icon(Icons.currency_rupee),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return locale.t('pleaseEnterTotalAmount');
-                }
-                final amount = double.tryParse(value);
-                if (amount == null || amount <= 0) {
-                  return locale.t('pleaseEnterValidAmount');
-                }
-                return null;
-              },
-              onChanged: (value) {
-                // Defer setState to avoid calling during build
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  setState(() {}); // Refresh balance calculation
-                });
-              },
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Advance Amount
-            TextFormField(
-              controller: _advanceController,
-              enabled: !_isLoading,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: locale.t('advanceAmount'),
-                prefixIcon: const Icon(Icons.payment),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  final amount = double.tryParse(value);
-                  if (amount == null || amount < 0) {
-                    return locale.t('pleaseEnterValidAdvanceAmount');
-                  }
-                  final total = double.tryParse(_totalAmountController.text) ?? 0.0;
-                  if (amount > total) {
-                    return locale.t('advanceCannotBeMoreThanTotal');
-                  }
-                }
-                return null;
-              },
-              onChanged: (value) {
-                // Defer setState to avoid calling during build
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  setState(() {}); // Refresh balance calculation
-                });
-              },
-            ),
-            
-            // Payment Method Selection (only show if advance amount is entered)
-            if (_advanceController.text.isNotEmpty && 
-                double.tryParse(_advanceController.text) != null && 
-                double.parse(_advanceController.text) > 0) ...[
-              const SizedBox(height: 16),
-              
-              Text(
-                'Advance Payment Method',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<PaymentMethod>(
-                    value: _advancePaymentMethod,
-                    isExpanded: true,
-                    icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    items: PaymentMethod.values.map((PaymentMethod method) {
-                      return DropdownMenuItem<PaymentMethod>(
-                        value: method,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _getPaymentMethodIcon(method),
-                              size: 20,
-                              color: _getPaymentMethodColor(method),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              method.displayName,
-                              style: GoogleFonts.inter(fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: _isLoading ? null : (PaymentMethod? newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          _advancePaymentMethod = newValue;
-                        });
-                      }
-                    },
                   ),
-                ),
-              ),
+                ],
+                
+                // Balance Amount Display
+               if (_totalAmountController.text.isNotEmpty)
+  Padding(
+    padding: const EdgeInsets.only(top: 20),
+    child: SizedBox(
+      width: double.infinity, // 👈 makes it full width
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.success.withOpacity(0.1),
+              AppColors.success.withOpacity(0.05),
             ],
-            
-            // Balance Amount Display
-            if (_totalAmountController.text.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${locale.t('balanceAmount')}:',
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      Text(
-                        '₹${_balanceAmount.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(AppConstants.primaryTeal),
-                        ),
-                      ),
-                    ],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.success.withOpacity(0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          runSpacing: 8,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.account_balance_wallet,
+                  color: AppColors.success,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${locale.t('balanceAmount')}:',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-              ),
-            
-            const SizedBox(height: 16),
-            
-            // Notes
-            TextFormField(
-              controller: _notesController,
-              enabled: !_isLoading,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: locale.t('notesOptional'),
-                hintText: locale.t('specialInstructions'),
-                prefixIcon: const Icon(Icons.note_alt),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                alignLabelWithHint: true,
+              ],
+            ),
+            Text(
+              '₹${_balanceAmount.toStringAsFixed(2)}',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.success,
               ),
             ),
           ],
         ),
       ),
+    ),
+  ),
+
+                const SizedBox(height: 20),
+                
+                // Notes
+                TextFormField(
+                  controller: _notesController,
+                  enabled: !_isLoading,
+                  maxLines: 4,
+                  
+                  style: GoogleFonts.inter(
+    fontSize: 15,
+    color: Colors.black, // 👈 text color while typing
+  ),
+  cursorColor: Colors.black,
+                  decoration: InputDecoration(
+                    labelText: locale.t('notesOptional'),
+                    labelStyle: GoogleFonts.inter(color: AppColors.textSecondary),
+                    hintText: locale.t('specialInstructions'),
+                    hintStyle: GoogleFonts.inter(color: AppColors.textHint),
+                    prefixIcon: Icon(Icons.note_alt, color: AppColors.textSecondary),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
+                    filled: true,
+                    fillColor: AppColors.background,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.textHint.withOpacity(0.3)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.textHint.withOpacity(0.3)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    ),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

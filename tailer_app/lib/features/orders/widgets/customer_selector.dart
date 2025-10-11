@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import '../../../data/models/customer_model.dart';
 import '../../../data/services/local_db_service.dart';
 import '../../../core/utils/logger.dart';
@@ -18,6 +19,7 @@ class CustomerSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white,
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -27,7 +29,7 @@ class CustomerSelector extends StatelessWidget {
             Text(
               'Customer Information',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.bold, color: AppColors.textPrimary
               ),
             ),
             const SizedBox(height: 16),
@@ -181,92 +183,131 @@ class _CustomerSelectionDialogState extends State<CustomerSelectionDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.7,
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Header
-            Row(
-              children: [
-                Text(
-                  'Select Customer',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            // Search Field
-            TextField(
-              decoration: const InputDecoration(
-                hintText: 'Search by name, phone, or ID...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+  @override
+Widget build(BuildContext context) {
+  return Dialog(
+    backgroundColor: Colors.white, // 👈 Makes the dialog itself white
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Container(
+      width: MediaQuery.of(context).size.width * 0.9,
+      height: MediaQuery.of(context).size.height * 0.7,
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white, // 👈 Ensures inner background is also white
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Row(
+            children: [
+              Text(
+                'Select Customer',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary, // or Colors.black87
+                    ),
               ),
-              onChanged: _filterCustomers,
+              const Spacer(),
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close, color: Colors.black54),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Search Field
+          TextField(
+            decoration: InputDecoration(
+              hintText: 'Search by name, phone, or ID...',
+              hintStyle: const TextStyle(color: Colors.black54),
+              prefixIcon: const Icon(Icons.search, color: Colors.black54),
+              filled: true,
+              fillColor: Colors.grey[100], // 👈 Light search bar background
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Colors.black26),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Colors.black26),
+              ),
             ),
-            const SizedBox(height: 16),
-            
-            // Customer List
-            Expanded(
-              child: _filteredCustomers.isEmpty
-                  ? Center(
-                      child: Text(
-                        _searchQuery.isEmpty
-                            ? 'No customers available'
-                            : 'No customers found matching "$_searchQuery"',
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _filteredCustomers.length,
-                      itemBuilder: (context, index) {
-                        final customer = _filteredCustomers[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Theme.of(context).primaryColor,
-                              child: Text(
-                                customer.name.isNotEmpty ? customer.name[0].toUpperCase() : 'C',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
+            onChanged: _filterCustomers,
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
+          const SizedBox(height: 16),
+
+          // Customer List
+          Expanded(
+            child: _filteredCustomers.isEmpty
+                ? Center(
+                    child: Text(
+                      _searchQuery.isEmpty
+                          ? 'No customers available'
+                          : 'No customers found matching "$_searchQuery"',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _filteredCustomers.length,
+                    itemBuilder: (context, index) {
+                      final customer = _filteredCustomers[index];
+                      return Card(
+                        color: Colors.white, // 👈 Light card background
+                        elevation: 1,
+                        margin: const EdgeInsets.symmetric(vertical: 4.0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor:
+                                AppColors.primary, // or any color you prefer
+                            child: Text(
+                              customer.name.isNotEmpty
+                                  ? customer.name[0].toUpperCase()
+                                  : 'C',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            title: Text(
-                              customer.name,
-                              style: const TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('ID: ${customer.uniqueId}'),
-                                if (customer.phone.isNotEmpty)
-                                  Text('Phone: ${customer.phone}'),
-                              ],
-                            ),
-                            onTap: () => Navigator.of(context).pop(customer),
                           ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
+                          title: Text(
+                            customer.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ID: ${customer.uniqueId}',
+                                style: const TextStyle(color: Colors.black54),
+                              ),
+                              if (customer.phone.isNotEmpty)
+                                Text(
+                                  'Phone: ${customer.phone}',
+                                  style: const TextStyle(color: Colors.black54),
+                                ),
+                            ],
+                          ),
+                          onTap: () => Navigator.of(context).pop(customer),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -9,7 +10,14 @@ import '../../../data/models/order_model.dart';
 import '../../../data/enums/payment_method.dart';
 import '../../../data/services/local_db_service.dart';
 import '../../../widgets/custom_header.dart';
+import '../../../widgets/custom_bottom_navigation.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/mixins/navigation_mixin.dart';
+import '../../../core/translations/app_localizations.dart';
+import '../../../core/providers/simple_locale_provider.dart';
+import '../../orders/widgets/sub_header.dart';
+import '../../../routes/route_names.dart';
+import 'package:tailer_app/core/constants/app_constants.dart';
 
 
 class OrderPaymentHistoryScreen extends StatefulWidget {
@@ -26,7 +34,9 @@ class OrderPaymentHistoryScreen extends StatefulWidget {
   State<OrderPaymentHistoryScreen> createState() => _OrderPaymentHistoryScreenState();
 }
 
-class _OrderPaymentHistoryScreenState extends State<OrderPaymentHistoryScreen> {
+class _OrderPaymentHistoryScreenState extends State<OrderPaymentHistoryScreen> with NavigationMixin {
+  int _currentNavIndex = 2; // Orders section
+  late SimpleLocaleProvider _localeProvider;
   final LocalDatabaseService _dbService = LocalDatabaseService();
   
   List<Payment> _payments = [];
@@ -40,7 +50,31 @@ class _OrderPaymentHistoryScreenState extends State<OrderPaymentHistoryScreen> {
   @override
   void initState() {
     super.initState();
+    _localeProvider = SimpleLocaleProvider();
     _loadPaymentHistory();
+  }
+
+  void _onNavTap(int index) {
+    if (index == _currentNavIndex) return;
+
+    setState(() {
+      _currentNavIndex = index;
+    });
+
+    switch (index) {
+      case 0:
+        context.goNamed(RouteNames.dashboard);
+        break;
+      case 1:
+        context.goNamed(RouteNames.customers);
+        break;
+      case 2:
+        context.goNamed(RouteNames.orders);
+        break;
+      case 3:
+        context.goNamed(RouteNames.settings);
+        break;
+    }
   }
 
   Future<void> _loadPaymentHistory() async {
@@ -533,37 +567,95 @@ class _OrderPaymentHistoryScreenState extends State<OrderPaymentHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: CustomHeader(
-        title: 'Payment History',
-        showBackButton: true,
-        actions: [
-          if (!_isLoading && _payments.isNotEmpty)
-            IconButton(
-              onPressed: _isGeneratingPdf ? null : _generateAndSharePdf,
-              icon: _isGeneratingPdf 
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Icon(Icons.picture_as_pdf),
-              tooltip: 'Generate PDF',
-            ),
-          IconButton(
-            onPressed: _loadPaymentHistory,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+    return AnimatedBuilder(
+      animation: _localeProvider,
+      builder: (context, child) {
+        final locale = AppLocalizations.of(_localeProvider.languageCode);
+        
+        final navItems = [
+          BottomNavItem(
+            icon: Icons.dashboard_outlined,
+            activeIcon: Icons.dashboard,
+            label: locale.t('dashboard'),
           ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _buildBody(),
+          BottomNavItem(
+            icon: Icons.people_outline,
+            activeIcon: Icons.people,
+            label: locale.t('customers'),
+          ),
+          BottomNavItem(
+            icon: Icons.shopping_bag_outlined,
+            activeIcon: Icons.shopping_bag,
+            label: locale.t('orders'),
+          ),
+          BottomNavItem(
+            icon: Icons.settings_outlined,
+            activeIcon: Icons.settings,
+            label: locale.t('settings'),
+          ),
+        ];
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: DashboardHeader(
+            title: 'Payment History',
+            backgroundColor: AppColors.secondary,
+            notificationCount: 0,
+            onBackPressed: () => Navigator.of(context).pop(),
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.t('notifications'));
+            },
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 15),
+                // Sub-header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: SubHeaderStyles.feature(
+                    icon: Icons.history,
+                    title: 'Order Payment History',
+                    subtitle: 'View Payments • Order #${widget.orderId} • Transaction Details',
+                    action: !_isLoading && _payments.isNotEmpty
+                        ? IconButton(
+                            onPressed: _isGeneratingPdf ? null : _generateAndSharePdf,
+                            icon: _isGeneratingPdf 
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                                    ),
+                                  )
+                                : Icon(Icons.picture_as_pdf, color: AppColors.secondary, size: 20),
+                            tooltip: 'Generate PDF',
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 15),
+                
+                // Main Content
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _buildBody(),
+                ),
+              ],
+            ),
+          ),
+          bottomNavigationBar: AnimatedBottomNavigation(
+            currentIndex: _currentNavIndex,
+            onTap: _onNavTap,
+            items: navItems,
+            backgroundColor: Colors.white,
+            selectedItemColor: const Color(AppConstants.primaryTeal),
+            unselectedItemColor: Colors.grey.shade600,
+          ),
+        );
+      },
     );
   }
 

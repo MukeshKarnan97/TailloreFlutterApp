@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../data/models/payment_analytics.dart';
-import '../data/services/payment_analytics_service.dart';
-import '../data/services/local_db_service.dart';
-import '../core/utils/logger.dart';
-import '../routes/route_names.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/mixins/navigation_mixin.dart';
+import '../../../../widgets/custom_header.dart';
+import '../../../../data/models/payment_analytics.dart';
+import '../../../../data/services/payment_analytics_service.dart';
+import '../../../../data/services/local_db_service.dart';
+import '../../../../core/utils/logger.dart';
+import '../../../../routes/route_names.dart';
 
 /// Screen for displaying payment reports and analytics
 class PaymentReportsScreen extends StatefulWidget {
@@ -14,7 +18,7 @@ class PaymentReportsScreen extends StatefulWidget {
   State<PaymentReportsScreen> createState() => _PaymentReportsScreenState();
 }
 
-class _PaymentReportsScreenState extends State<PaymentReportsScreen> {
+class _PaymentReportsScreenState extends State<PaymentReportsScreen> with NavigationMixin {
   final PaymentAnalyticsService _analyticsService = PaymentAnalyticsService();
   final LocalDatabaseService _dbService = LocalDatabaseService();
   PaymentAnalytics? _currentAnalytics;
@@ -132,38 +136,123 @@ class _PaymentReportsScreenState extends State<PaymentReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Payment Reports'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            context.goNamed(RouteNames.settings);
+      backgroundColor: AppColors.background,
+      appBar: DashboardHeader(
+        title: 'Payment Reports',
+        backgroundColor: AppColors.secondary,
+        notificationCount: 0,
+        onBackPressed: () => context.goNamed(RouteNames.settings),
+        onNotificationTap: () {
+          showNavigationMessage(context, 'Notifications');
+        },
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.secondary.withOpacity(0.03),
+              AppColors.background,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Period Selector Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadow.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(child: _buildPeriodSelector()),
+                    const SizedBox(width: 12),
+                    _buildViewToggle(),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.secondary,
+                        ),
+                      )
+                    : _showOrdersList
+                        ? _buildOrdersList()
+                        : _buildAnalyticsView(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPeriodSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.panel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedPeriod,
+          isDense: true,
+          icon: Icon(Icons.arrow_drop_down, color: AppColors.secondary),
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary,
+          ),
+          dropdownColor: AppColors.background,
+          items: [
+            DropdownMenuItem(value: 'day', child: Text('Today')),
+            DropdownMenuItem(value: 'week', child: Text('This Week')),
+            DropdownMenuItem(value: 'month', child: Text('This Month')),
+            DropdownMenuItem(value: 'year', child: Text('This Year')),
+          ],
+          onChanged: (value) {
+            if (value != null) {
+              setState(() => _selectedPeriod = value);
+              _loadAnalytics();
+            }
           },
         ),
-        actions: [
-          IconButton(
-            icon: Icon(_showOrdersList ? Icons.analytics : Icons.list),
-            onPressed: () {
-              setState(() {
-                _showOrdersList = !_showOrdersList;
-              });
-            },
-            tooltip: _showOrdersList ? 'Show Analytics' : 'Show Orders',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              _loadAnalytics();
-              _loadOrdersWithPayments();
-            },
-          ),
-        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _showOrdersList
-              ? _buildOrdersList()
-              : _buildAnalyticsView(),
+    );
+  }
+
+  Widget _buildViewToggle() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.secondary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: IconButton(
+        icon: Icon(
+          _showOrdersList ? Icons.analytics : Icons.list,
+          color: AppColors.secondary,
+        ),
+        onPressed: () {
+          setState(() {
+            _showOrdersList = !_showOrdersList;
+          });
+        },
+        tooltip: _showOrdersList ? 'Show Analytics' : 'Show Orders List',
+      ),
     );
   }
 
