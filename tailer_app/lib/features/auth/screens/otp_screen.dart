@@ -534,7 +534,7 @@ class LogoWithTitle extends StatelessWidget {
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Color.fromRGBO(33, 137, 156, 0.15),
+                    Color.fromRGBO(33, 137, 156, 0.5),
                     Colors.white,
                   ],
                   begin: Alignment.topCenter,

@@ -175,91 +175,34 @@ class _DashboardHeaderState extends State<DashboardHeader> {
             ),
             // App Icon (right next to back button)
             Container(
-              width: 32,
-              height: 32,
+              width: 40,
+              height: 40,
               margin: const EdgeInsets.only(left: 2, right: 8),
               decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadow,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: AppColors.border.withOpacity(0.3),
-                  width: 0.5,
+                  color: Colors.white,
+                  width: 2,
                 ),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: widget.appIconPath != null
-                    ? Image.asset(
-                        widget.appIconPath!,
-                        width: 32,
-                        height: 32,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  AppColors.primary,
-                                  AppColors.primaryLight,
-                                ],
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: Image.asset(
-                                'assets/icon/app_icon.png',
-                                width: 24,
-                                height: 24,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.content_cut_rounded,
-                                    color: Colors.white,
-                                    size: 18,
-                                  );
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                      )
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: Image.asset(
-                          'assets/icon/app_icon.png',
-                          width: 24,
-                          height: 24,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    const Color(0xFF00695C),
-                                    const Color(0xFF004D40),
-                                  ],
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.content_cut_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                child: Padding(
+                  padding: const EdgeInsets.all(5.0),
+                  child: Image.asset(
+                    'assets/icon/app_icon.png',
+                    width: 30,
+                    height: 30,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.content_cut_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           ],
