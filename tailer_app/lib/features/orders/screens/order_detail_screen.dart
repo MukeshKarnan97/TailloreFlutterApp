@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
@@ -29,6 +30,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   void initState() {
     super.initState();
     _currentOrder = widget.order;
+    
+    // DEBUG: Log order data immediately when screen opens
+    Logger.info('OrderDetailScreen', '========== ORDER DETAIL SCREEN OPENED ==========');
+    Logger.info('OrderDetailScreen', 'Order ID: ${_currentOrder.uniqueId}');
+    Logger.info('OrderDetailScreen', 'Image Path 1: ${_currentOrder.imagePath1}');
+    Logger.info('OrderDetailScreen', 'Image Path 2: ${_currentOrder.imagePath2}');
+    Logger.info('OrderDetailScreen', '================================================');
   }
 
   Color _getStatusColor(String status) {
@@ -97,6 +105,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         createdAt: _currentOrder.createdAt,
         updatedAt: DateTime.now(),
         isDeleted: _currentOrder.isDeleted,
+        imagePath1: _currentOrder.imagePath1, // CRITICAL: Preserve image paths
+        imagePath2: _currentOrder.imagePath2, // CRITICAL: Preserve image paths
       );
 
       setState(() {
@@ -279,7 +289,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         },
       ),
       body: _buildBody(),
-      floatingActionButton: _buildFloatingActionButtons(),
+      // floatingActionButton: _buildFloatingActionButtons(),r
     );
   }
 
@@ -310,6 +320,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 // Measurements
                 if (_currentOrder.measurements.isNotEmpty)
                   _buildMeasurements(),
+                
+                const SizedBox(height: 20),
+                
+                // Garment Images
+                _buildGarmentImages(), // ALWAYS show for debugging
                 
                 const SizedBox(height: 20),
                 
@@ -473,7 +488,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
+              Flexible(
                 child: _buildFinancialCard(
                   'Total Amount',
                   '₹${_currentOrder.totalAmount.toStringAsFixed(0)}',
@@ -482,7 +497,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
+              Flexible(
                 child: _buildFinancialCard(
                   'Advance Paid',
                   '₹${_currentOrder.advancePaid.toStringAsFixed(0)}',
@@ -668,6 +683,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
+                          color: Colors.black38,
                         ),
                       ),
                       Text(
@@ -686,6 +702,226 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGarmentImages() {
+    // Helper function to check if file exists
+    bool _imageExists(String? path) {
+      if (path == null || path.isEmpty) return false;
+      try {
+        return File(path).existsSync();
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // Debug logging
+    Logger.info('OrderDetailScreen', 'Image Path 1: ${_currentOrder.imagePath1}');
+    Logger.info('OrderDetailScreen', 'Image Path 2: ${_currentOrder.imagePath2}');
+
+    final hasImage1 = _imageExists(_currentOrder.imagePath1);
+    final hasImage2 = _imageExists(_currentOrder.imagePath2);
+
+    Logger.info('OrderDetailScreen', 'Has Image 1: $hasImage1');
+    Logger.info('OrderDetailScreen', 'Has Image 2: $hasImage2');
+
+    // Show debug message if no images
+    if (!hasImage1 && !hasImage2) {
+      Logger.info('OrderDetailScreen', 'No images to display - showing debug message');
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.orange.shade200, width: 2),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange.shade700, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Garment Photos - Debug Info',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildDebugRow('Image Path 1:', _currentOrder.imagePath1 ?? 'NULL - No path saved'),
+            _buildDebugRow('Image Path 2:', _currentOrder.imagePath2 ?? 'NULL - No path saved'),
+            _buildDebugRow('File 1 Exists:', hasImage1 ? 'YES' : 'NO'),
+            _buildDebugRow('File 2 Exists:', hasImage2 ? 'YES' : 'NO'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '⚠️ No Images Found',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange.shade900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _currentOrder.imagePath1 == null && _currentOrder.imagePath2 == null
+                        ? 'Images were not saved when creating this order.\nTry creating a new order with photos.'
+                        : 'Image paths exist but files are missing.\nFiles may have been deleted.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.orange.shade800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Logger.info('OrderDetailScreen', 'Displaying garment images section');
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.photo_library, color: AppColors.accent, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                'Garment Photos',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              // Image 1
+              if (hasImage1)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _showImageDialog(_currentOrder.imagePath1!),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        File(_currentOrder.imagePath1!),
+                        height: 150,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 150,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              if (hasImage1 && hasImage2)
+                const SizedBox(width: 12),
+              // Image 2
+              if (hasImage2)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _showImageDialog(_currentOrder.imagePath2!),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        File(_currentOrder.imagePath2!),
+                        height: 150,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 150,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImageDialog(String imagePath) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(10),
+          child: Stack(
+            children: [
+              InteractiveViewer(
+                child: Center(
+                  child: Image.file(
+                    File(imagePath),
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -815,45 +1051,130 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  Widget _buildFinancialCard(String label, String amount, Color color, IconData icon, {bool isFullWidth = false}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: isFullWidth ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+  Widget _buildDebugRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: isFullWidth ? MainAxisAlignment.center : MainAxisAlignment.start,
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.orange.shade900,
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            amount,
-            style: GoogleFonts.inter(
-              fontSize: isFullWidth ? 20 : 18,
-              fontWeight: FontWeight.w700,
-              color: color,
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.orange.shade800,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
     );
   }
+
+  // Widget _buildFinancialCard(String label, String amount, Color color, IconData icon, {bool isFullWidth = false}) {
+  //   return Container(
+  //     padding: const EdgeInsets.all(16),
+  //     decoration: BoxDecoration(
+  //       color: color.withValues(alpha: 0.1),
+  //       borderRadius: BorderRadius.circular(12),
+  //       border: Border.all(color: color.withValues(alpha: 0.3)),
+  //     ),
+  //     child: Column(
+  //       crossAxisAlignment: isFullWidth ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+  //       children: [
+  //         Row(
+  //           mainAxisAlignment: isFullWidth ? MainAxisAlignment.center : MainAxisAlignment.start,
+  //           children: [
+  //             Icon(icon, color: color, size: 20),
+  //             const SizedBox(width: 8),
+  //             Text(
+  //               label,
+  //               style: GoogleFonts.inter(
+  //                 fontSize: 12,
+  //                 color: color,
+  //                 fontWeight: FontWeight.w600,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         const SizedBox(height: 8),
+  //         Text(
+  //           amount,
+  //           style: GoogleFonts.inter(
+  //             fontSize: isFullWidth ? 20 : 18,
+  //             fontWeight: FontWeight.w700,
+  //             color: color,
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
+  Widget _buildFinancialCard(
+    String title,
+    String value,
+    Color color,
+    IconData icon, {
+    bool isFullWidth = false,
+  }) {
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(width: 12),
+        // Wrap text inside Expanded to use available space
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+                softWrap: true,  // 👈 allow wrapping
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+                softWrap: true,  // 👈 allow wrapping
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 
   Widget _buildTimelineItem(String title, String date, IconData icon, Color color, {required bool isCompleted}) {
     return Padding(
@@ -1382,6 +1703,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         createdAt: _currentOrder.createdAt,
         updatedAt: DateTime.now(),
         isDeleted: _currentOrder.isDeleted,
+        imagePath1: _currentOrder.imagePath1, // CRITICAL: Preserve image paths
+        imagePath2: _currentOrder.imagePath2, // CRITICAL: Preserve image paths
       );
 
       setState(() {

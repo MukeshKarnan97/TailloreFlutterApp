@@ -3,6 +3,7 @@ import 'package:tailer_app/routes/app_routes.dart';
 import 'core/config/app_config.dart';
 import 'core/utils/logger.dart';
 import 'core/constants/app_colors.dart';
+import 'force_db_migration.dart';
 
 void main() async {
   return Logger.traceAsyncMethod('Main', 'main', () async {
@@ -11,6 +12,9 @@ void main() async {
     
     // Initialize application configuration
     await AppConfig.initialize();
+    
+    // FORCE DATABASE MIGRATION - Remove after first successful run
+    await forceDatabaseMigration();
     
     // Set up logger based on configuration
     Logger.setLogLevel(AppConfig.logLevel);

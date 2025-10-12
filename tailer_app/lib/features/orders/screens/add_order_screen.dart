@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +14,7 @@ import '../../../data/models/customer_model.dart';
 import '../../../data/models/payment_model.dart';
 import '../../../data/enums/payment_method.dart';
 import '../../../data/services/local_db_service.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../core/utils/logger.dart';
 import '../widgets/customer_selector.dart';
 import '../widgets/dress_type_selector.dart';
@@ -28,6 +33,7 @@ class AddOrderScreen extends StatefulWidget {
 
 class _AddOrderScreenState extends State<AddOrderScreen> {
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  final AuthService _authService = AuthService();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _totalAmountController = TextEditingController();
@@ -40,6 +46,10 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
   DateTime _deliveryDate = DateTime.now().add(const Duration(days: 7));
   PaymentMethod _advancePaymentMethod = PaymentMethod.cash; // Default to cash
   bool _isLoading = false;
+  
+  // Image paths for garment photos
+  String? _imagePath1;
+  String? _imagePath2;
 
   @override
   void initState() {
@@ -143,6 +153,190 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
            double.tryParse(_totalAmountController.text)! > 0;
   }
 
+  // Image picker methods
+  Future<void> _pickImage(int imageNumber) async {
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
+    
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: Text(locale.translate('camera')),
+                onTap: () {
+                  Navigator.pop(context);
+                  _getImage(ImageSource.camera, imageNumber);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: Text(locale.translate('gallery')),
+                onTap: () {
+                  Navigator.pop(context);
+                  _getImage(ImageSource.gallery, imageNumber);
+                },
+              ),
+              if ((imageNumber == 1 && _imagePath1 != null) || (imageNumber == 2 && _imagePath2 != null))
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: Text(locale.translate('removePhoto')),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _removeImage(imageNumber);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _getImage(ImageSource source, int imageNumber) async {
+    try {
+      Logger.info('AddOrderScreen', '========== GETTING IMAGE ==========');
+      Logger.info('AddOrderScreen', 'Image Number: $imageNumber');
+      Logger.info('AddOrderScreen', 'Source: ${source == ImageSource.camera ? "Camera" : "Gallery"}');
+      
+      // Request appropriate permission based on source
+      PermissionStatus permissionStatus;
+      if (source == ImageSource.camera) {
+        permissionStatus = await Permission.camera.request();
+      } else {
+        // For gallery, request storage/photos permission
+        if (Platform.isAndroid) {
+          // Android 13+ uses READ_MEDIA_IMAGES, older uses READ_EXTERNAL_STORAGE
+          if (await Permission.photos.isGranted || await Permission.storage.isGranted) {
+            permissionStatus = PermissionStatus.granted;
+          } else {
+            permissionStatus = await Permission.photos.request();
+            if (permissionStatus.isDenied) {
+              permissionStatus = await Permission.storage.request();
+            }
+          }
+        } else {
+          // iOS
+          permissionStatus = await Permission.photos.request();
+        }
+      }
+      
+      // Check if permission was denied
+      if (permissionStatus.isDenied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                source == ImageSource.camera 
+                    ? 'Camera permission is required to take photos'
+                    : 'Storage permission is required to select photos',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+      
+      if (permissionStatus.isPermanentlyDenied) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text('Permission Required'),
+              content: Text(
+                source == ImageSource.camera
+                    ? 'Camera permission is required. Please enable it in app settings.'
+                    : 'Storage permission is required. Please enable it in app settings.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    openAppSettings();
+                  },
+                  child: Text('Open Settings'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+      
+      // Permission granted, pick image
+      Logger.info('AddOrderScreen', 'Permission granted, picking image...');
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      Logger.info('AddOrderScreen', 'Image picked: ${image != null ? image.path : "NULL"}');
+
+      if (image != null) {
+        Logger.info('AddOrderScreen', 'Saving image to local storage...');
+        final savedPath = await _saveImageToLocal(File(image.path));
+        Logger.info('AddOrderScreen', 'Image saved to: $savedPath');
+        setState(() {
+          if (imageNumber == 1) {
+            _imagePath1 = savedPath;
+            Logger.info('AddOrderScreen', 'Set _imagePath1 = $savedPath');
+          } else {
+            _imagePath2 = savedPath;
+            Logger.info('AddOrderScreen', 'Set _imagePath2 = $savedPath');
+          }
+        });
+        Logger.info('AddOrderScreen', 'Image saved successfully!');
+      } else {
+        Logger.warning('AddOrderScreen', 'No image selected by user');
+      }
+    } catch (e) {
+      Logger.error('AddOrderScreen', 'Failed to pick image', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<String> _saveImageToLocal(File imageFile) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final orderImagesDir = Directory('${directory.path}/order_images');
+    
+    if (!await orderImagesDir.exists()) {
+      await orderImagesDir.create(recursive: true);
+    }
+    
+    final fileName = 'order_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final savedImage = await imageFile.copy('${orderImagesDir.path}/$fileName');
+    
+    return savedImage.path;
+  }
+
+  void _removeImage(int imageNumber) {
+    setState(() {
+      if (imageNumber == 1) {
+        _imagePath1 = null;
+      } else {
+        _imagePath2 = null;
+      }
+    });
+  }
+
   Future<void> _createOrder() async {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
@@ -174,11 +368,32 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
       final totalAmount = double.parse(_totalAmountController.text);
       final advancePaid = double.tryParse(_advanceController.text) ?? 0.0;
       
-      Logger.debug('AddOrderScreen', 'Order details - Customer: ${_selectedCustomer!.uniqueId}, DressType: $_selectedDressType, Amount: $totalAmount');
+      // Get current user's email as tailorId
+      await _authService.initialize();
+      final tailorId = _authService.currentUser?.email;
+      if (tailorId == null) {
+        throw Exception('User not authenticated. Please sign in again.');
+      }
+      
+      Logger.debug('AddOrderScreen', 'Order details - Customer: ${_selectedCustomer!.uniqueId}, DressType: $_selectedDressType, Amount: $totalAmount, TailorId: $tailorId');
+      
+      // DEBUG: Log image paths before creating order
+      Logger.info('AddOrderScreen', '========== IMAGE PATHS DEBUG ==========');
+      Logger.info('AddOrderScreen', 'Image Path 1: $_imagePath1');
+      Logger.info('AddOrderScreen', 'Image Path 2: $_imagePath2');
+      if (_imagePath1 != null) {
+        final file1Exists = File(_imagePath1!).existsSync();
+        Logger.info('AddOrderScreen', 'Image 1 file exists: $file1Exists');
+      }
+      if (_imagePath2 != null) {
+        final file2Exists = File(_imagePath2!).existsSync();
+        Logger.info('AddOrderScreen', 'Image 2 file exists: $file2Exists');
+      }
+      Logger.info('AddOrderScreen', '=======================================');
       
       final order = Order.create(
         customerId: _selectedCustomer!.uniqueId,
-        tailorId: 'tailor_001', // Default tailor ID for now
+        tailorId: tailorId, // Use current user's email as tailorId
         serviceType: _selectedDressType!,
         status: 'pending', // Default status
         deliveryDate: _deliveryDate,
@@ -187,7 +402,19 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
         advancePaid: advancePaid,
         balanceAmount: totalAmount - advancePaid,
         measurements: _measurements,
+        imagePath1: _imagePath1, // Add garment image 1
+        imagePath2: _imagePath2, // Add garment image 2
       );
+
+      // DEBUG: Verify order object has image paths
+      Logger.info('AddOrderScreen', 'Order object created');
+      Logger.info('AddOrderScreen', 'Order.imagePath1: ${order.imagePath1}');
+      Logger.info('AddOrderScreen', 'Order.imagePath2: ${order.imagePath2}');
+      
+      // DEBUG: Check what toMap() produces
+      final orderMap = order.toMap();
+      Logger.info('AddOrderScreen', 'Order toMap() - image_path_1: ${orderMap['image_path_1']}');
+      Logger.info('AddOrderScreen', 'Order toMap() - image_path_2: ${orderMap['image_path_2']}');
 
       final result = await _dbService.insertOrderWithoutTailorForeignKeyCheck(order);
       
@@ -215,8 +442,8 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
             ),
           );
           
-          // Navigate back to customer details or dashboard
-          context.pop();
+          // Navigate to orders main screen
+          context.goNamed('orders');
         }
       } else {
         throw Exception('Failed to save order to database');
@@ -780,6 +1007,163 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
     ),
   ),
 
+                const SizedBox(height: 20),
+                
+                // Garment Images Section
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      locale.t('garmentPhotos'),
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      locale.t('addUpTo2Photos'),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        // Image 1
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _pickImage(1),
+                            child: Container(
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: _imagePath1 != null ? Colors.transparent : AppColors.background,
+                                border: Border.all(
+                                  color: _imagePath1 != null ? AppColors.primary : AppColors.textHint.withOpacity(0.3),
+                                  width: _imagePath1 != null ? 2 : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: _imagePath1 != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          Image.file(
+                                            File(_imagePath1!),
+                                            fit: BoxFit.cover,
+                                          ),
+                                          Positioned(
+                                            top: 4,
+                                            right: 4,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.black54,
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: IconButton(
+                                                icon: const Icon(Icons.close, color: Colors.white, size: 18),
+                                                onPressed: () => _removeImage(1),
+                                                padding: EdgeInsets.zero,
+                                                constraints: const BoxConstraints(
+                                                  minWidth: 32,
+                                                  minHeight: 32,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.add_a_photo, color: AppColors.textHint, size: 32),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          locale.t('photo1'),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Image 2
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _pickImage(2),
+                            child: Container(
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: _imagePath2 != null ? Colors.transparent : AppColors.background,
+                                border: Border.all(
+                                  color: _imagePath2 != null ? AppColors.primary : AppColors.textHint.withOpacity(0.3),
+                                  width: _imagePath2 != null ? 2 : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: _imagePath2 != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          Image.file(
+                                            File(_imagePath2!),
+                                            fit: BoxFit.cover,
+                                          ),
+                                          Positioned(
+                                            top: 4,
+                                            right: 4,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.black54,
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: IconButton(
+                                                icon: const Icon(Icons.close, color: Colors.white, size: 18),
+                                                onPressed: () => _removeImage(2),
+                                                padding: EdgeInsets.zero,
+                                                constraints: const BoxConstraints(
+                                                  minWidth: 32,
+                                                  minHeight: 32,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.add_a_photo, color: AppColors.textHint, size: 32),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          locale.t('photo2'),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                
                 const SizedBox(height: 20),
                 
                 // Notes

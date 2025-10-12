@@ -5,7 +5,9 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/mixins/navigation_mixin.dart';
 import '../../../../widgets/custom_header.dart';
 import '../../../../data/services/local_db_service.dart';
+import '../../../../data/services/auth_service.dart';
 import '../../../../core/services/back_button_handler.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../routes/route_names.dart';
 
 class RefundManagementScreen extends StatefulWidget {
@@ -17,6 +19,7 @@ class RefundManagementScreen extends StatefulWidget {
 
 class _RefundManagementScreenState extends State<RefundManagementScreen> with NavigationMixin {
   final LocalDatabaseService _databaseService = LocalDatabaseService();
+  final AuthService _authService = AuthService();
   List<Map<String, dynamic>> _refunds = [];
   bool _isLoading = true;
 
@@ -36,6 +39,7 @@ class _RefundManagementScreenState extends State<RefundManagementScreen> with Na
           payment_id INTEGER,
           order_id INTEGER,
           customer_id INTEGER,
+          tailor_id TEXT,
           refund_amount REAL NOT NULL,
           refund_reason TEXT,
           refund_method TEXT NOT NULL,
@@ -50,7 +54,7 @@ class _RefundManagementScreenState extends State<RefundManagementScreen> with Na
         )
       ''');
     } catch (e) {
-      print('Error creating refund table: $e');
+      Logger.error('RefundManagementScreen', 'Error creating refund table', error: e);
     }
   }
 
@@ -60,9 +64,25 @@ class _RefundManagementScreenState extends State<RefundManagementScreen> with Na
         _isLoading = true;
       });
 
-      // Load refunds from database
+      // Get current tailor
+      final currentTailor = _authService.currentUser;
+      if (currentTailor == null) {
+        Logger.warning('RefundManagementScreen', 'No tailor logged in');
+        setState(() {
+          _refunds = [];
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      final tailorId = currentTailor.email;
+      Logger.info('RefundManagementScreen', 'Loading refunds for tailor: $tailorId');
+
+      // Load refunds filtered by tailor
       final refunds = await _databaseService.select(
         'refund_transactions',
+        where: 'tailor_id = ?',
+        whereArgs: [tailorId],
         orderBy: 'created_at DESC',
       );
 
@@ -71,6 +91,7 @@ class _RefundManagementScreenState extends State<RefundManagementScreen> with Na
         _isLoading = false;
       });
     } catch (e) {
+      Logger.error('RefundManagementScreen', 'Failed to load refunds', error: e);
       setState(() {
         _isLoading = false;
       });

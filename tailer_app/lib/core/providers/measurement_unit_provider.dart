@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:tailer_app/data/services/local_db_service.dart';
+// import 'package:tailer_app/data/services/local_db_service.dart'; // TODO: Re-enable after preferences table migration
 import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/core/utils/unit_converter.dart';
 import 'package:tailer_app/core/utils/logger.dart';
@@ -10,7 +10,7 @@ class MeasurementUnitProvider extends ChangeNotifier {
   factory MeasurementUnitProvider() => _instance;
   MeasurementUnitProvider._internal();
 
-  final LocalDatabaseService _dbService = LocalDatabaseService();
+  // final LocalDatabaseService _dbService = LocalDatabaseService(); // TODO: Re-enable after preferences table migration
   final AuthService _authService = AuthService();
   
   String _currentUnit = 'inches';
@@ -35,11 +35,12 @@ class MeasurementUnitProvider extends ChangeNotifier {
       notifyListeners();
 
       final user = _authService.currentUser;
-      if (user != null && user.id != null) {
-        final preferences = await _dbService.getOrCreateUserPreferences(user.id!);
-        _currentUnit = preferences['measurement_unit'] as String? ?? 'inches';
+      if (user != null) {
+        // TODO: Update user_preferences table to use tailor_id (String) instead of user_id (int)
+        // For now, use default inches - preferences will be re-enabled after table migration
+        _currentUnit = 'inches';
         
-        Logger.info('MeasurementUnitProvider', 'Initialized with unit: $_currentUnit');
+        Logger.info('MeasurementUnitProvider', 'Initialized with default unit: $_currentUnit');
       }
     } catch (e, stackTrace) {
       Logger.error('MeasurementUnitProvider', 'Failed to initialize', error: e, stackTrace: stackTrace);
@@ -62,11 +63,12 @@ class MeasurementUnitProvider extends ChangeNotifier {
       notifyListeners();
 
       final user = _authService.currentUser;
-      if (user != null && user.id != null) {
-        await _dbService.updateMeasurementUnit(user.id!, newUnit);
+      if (user != null) {
+        // TODO: Update user_preferences table to use tailor_id (String) instead of user_id (int)
+        // For now, just update in memory - preferences will be re-enabled after table migration
         _currentUnit = newUnit;
         
-        Logger.info('MeasurementUnitProvider', 'Updated unit to: $newUnit');
+        Logger.info('MeasurementUnitProvider', 'Updated unit to: $newUnit (in-memory only)');
         
         _isLoading = false;
         notifyListeners();

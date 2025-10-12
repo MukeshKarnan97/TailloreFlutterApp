@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tailer_app/widgets/profile_dropdown.dart';
-import 'package:tailer_app/data/services/user_service.dart';
+import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/core/constants/app_colors.dart';
 
 class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -148,12 +148,12 @@ class DashboardHeader extends StatefulWidget implements PreferredSizeWidget {
 }
 
 class _DashboardHeaderState extends State<DashboardHeader> {
-  final UserService _userService = UserService();
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
-    _userService.initialize(); // Initialize user service
+    _authService.initialize(); // Initialize auth service
   }
 
   @override
@@ -213,29 +213,51 @@ class _DashboardHeaderState extends State<DashboardHeader> {
                                 ],
                               ),
                             ),
-                            child: const Icon(
-                              Icons.content_cut_rounded,
-                              color: Colors.white,
-                              size: 18,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: Image.asset(
+                                'assets/icon/app_icon.png',
+                                width: 24,
+                                height: 24,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(
+                                    Icons.content_cut_rounded,
+                                    color: Colors.white,
+                                    size: 18,
+                                  );
+                                },
+                              ),
                             ),
                           );
                         },
                       )
-                    : Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              const Color(0xFF00695C),
-                              const Color(0xFF004D40),
-                            ],
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.content_cut_rounded,
-                          color: Colors.white,
-                          size: 18,
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: Image.asset(
+                          'assets/icon/app_icon.png',
+                          width: 24,
+                          height: 24,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    const Color(0xFF00695C),
+                                    const Color(0xFF004D40),
+                                  ],
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.content_cut_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            );
+                          },
                         ),
                       ),
               ),
@@ -260,9 +282,9 @@ class _DashboardHeaderState extends State<DashboardHeader> {
           padding: const EdgeInsets.only(right: 12.0),
           child: ProfileDropdown(
             notificationCount: widget.notificationCount,
-            userName: _userService.getUserDisplayName(),
-            userEmail: _userService.getUserEmail(),
-            userAvatarUrl: _userService.getUserProfilePicture(),
+            userName: _authService.currentUser?.name ?? 'User',
+            userEmail: _authService.currentUser?.email ?? '',
+            userAvatarUrl: _authService.currentUser?.profileImagePath,
             onNotificationsTap: widget.onNotificationTap,
           ),
         ),

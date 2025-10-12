@@ -2,11 +2,13 @@ import '../models/payment_analytics.dart';
 import '../models/payment_model.dart';
 import '../models/refund_transaction.dart';
 import 'local_db_service.dart';
+import 'auth_service.dart';
 import '../../core/utils/logger.dart';
 
 /// Service for generating payment analytics and reports
 class PaymentAnalyticsService {
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  final AuthService _authService = AuthService();
 
   /// Generate analytics for a specific period
   Future<PaymentAnalytics> generateAnalytics({
@@ -283,47 +285,82 @@ class PaymentAnalyticsService {
 
   Future<List<Payment>> _getPaymentsInPeriod(DateTime start, DateTime end) async {
     try {
-      final paymentMaps = await _dbService.select(
-        'payment',
-        where: 'paid_on BETWEEN ? AND ? AND is_deleted = 0',
-        whereArgs: [start.toIso8601String(), end.toIso8601String()],
-        orderBy: 'paid_on ASC',
+      // Get current tailor for filtering
+      final currentTailor = _authService.currentUser;
+      if (currentTailor == null) {
+        Logger.warning('PaymentAnalyticsService', 'No tailor logged in');
+        return [];
+      }
+      
+      final tailorId = currentTailor.email;
+      
+      // Get payments filtered by tailor and date range
+      final db = await _dbService.database;
+      final paymentMaps = await db.rawQuery(
+        '''
+        SELECT p.* FROM payment p
+        INNER JOIN orders o ON p.order_id = o.unique_id
+        WHERE o.tailor_id = ? 
+          AND p.paid_on BETWEEN ? AND ? 
+          AND p.is_deleted = 0
+        ORDER BY p.paid_on ASC
+        ''',
+        [tailorId, start.toIso8601String(), end.toIso8601String()],
       );
 
       return paymentMaps.map((map) => Payment.fromMap(map)).toList();
     } catch (e) {
+      Logger.error('PaymentAnalyticsService', 'Failed to get payments in period', error: e);
       return [];
     }
   }
 
   Future<List<RefundTransaction>> _getRefundsInPeriod(DateTime start, DateTime end) async {
     try {
+      // Get current tailor for filtering
+      final currentTailor = _authService.currentUser;
+      if (currentTailor == null) {
+        Logger.warning('PaymentAnalyticsService', 'No tailor logged in');
+        return [];
+      }
+      
+      final tailorId = currentTailor.email;
+      
       final refundMaps = await _dbService.select(
         'refund_transactions',
-        where: 'processed_at BETWEEN ? AND ?',
-        whereArgs: [start.toIso8601String(), end.toIso8601String()],
+        where: 'tailor_id = ? AND processed_at BETWEEN ? AND ?',
+        whereArgs: [tailorId, start.toIso8601String(), end.toIso8601String()],
         orderBy: 'processed_at ASC',
       );
 
       return refundMaps.map((map) => RefundTransaction.fromMap(map)).toList();
     } catch (e) {
+      Logger.error('PaymentAnalyticsService', 'Failed to get refunds in period', error: e);
       return [];
     }
   }
 
   Future<double> _calculateOutstandingAmount() async {
     try {
-      // This is a simplified calculation
-      // In reality, you'd calculate based on order amounts vs payments received
+      // Get current tailor for filtering
+      final currentTailor = _authService.currentUser;
+      if (currentTailor == null) {
+        Logger.warning('PaymentAnalyticsService', 'No tailor logged in');
+        return 0.0;
+      }
+      
+      final tailorId = currentTailor.email;
+      
+      // Get orders filtered by tailor
       final orderMaps = await _dbService.select(
         'orders',
-        where: 'status NOT IN (?, ?, ?)',
-        whereArgs: ['completed', 'delivered', 'cancelled'],
+        where: 'tailor_id = ? AND status NOT IN (?, ?, ?) AND is_deleted = 0',
+        whereArgs: [tailorId, 'completed', 'delivered', 'cancelled'],
       );
 
       double outstanding = 0.0;
       for (final orderMap in orderMaps) {
-        final orderAmount = (orderMap['amount'] as num?)?.toDouble() ?? 0.0;
+        final orderAmount = (orderMap['total_amount'] as num?)?.toDouble() ?? 0.0;
         
         // Get payments for this order
         final paymentMaps = await _dbService.select(
@@ -338,17 +375,33 @@ class PaymentAnalyticsService {
 
       return outstanding;
     } catch (e) {
+      Logger.error('PaymentAnalyticsService', 'Failed to calculate outstanding amount', error: e);
       return 0.0;
     }
   }
 
   Future<List<TopCustomer>> _getTopCustomers(DateTime start, DateTime end, {int limit = 10}) async {
     try {
-      // This is a simplified approach - you'd want to optimize this query
-      final paymentMaps = await _dbService.select(
-        'payment',
-        where: 'paid_on BETWEEN ? AND ? AND is_deleted = 0',
-        whereArgs: [start.toIso8601String(), end.toIso8601String()],
+      // Get current tailor for filtering
+      final currentTailor = _authService.currentUser;
+      if (currentTailor == null) {
+        Logger.warning('PaymentAnalyticsService', 'No tailor logged in');
+        return [];
+      }
+      
+      final tailorId = currentTailor.email;
+      
+      // Get payments filtered by tailor
+      final db = await _dbService.database;
+      final paymentMaps = await db.rawQuery(
+        '''
+        SELECT p.* FROM payment p
+        INNER JOIN orders o ON p.order_id = o.unique_id
+        WHERE o.tailor_id = ?
+          AND p.paid_on BETWEEN ? AND ? 
+          AND p.is_deleted = 0
+        ''',
+        [tailorId, start.toIso8601String(), end.toIso8601String()],
       );
 
       final customerSpending = <String, Map<String, dynamic>>{};
@@ -356,13 +409,13 @@ class PaymentAnalyticsService {
       for (final paymentMap in paymentMaps) {
         final orderId = paymentMap['order_id'] as String;
         final amount = (paymentMap['amount'] as num?)?.toDouble() ?? 0.0;
-        final paidOn = DateTime.parse(paymentMap['paid_on']);
+        final paidOn = DateTime.parse(paymentMap['paid_on'] as String);
 
         // Get order to find customer
         final orderMaps = await _dbService.select(
           'orders',
-          where: 'unique_id = ?',
-          whereArgs: [orderId],
+          where: 'unique_id = ? AND tailor_id = ?',
+          whereArgs: [orderId, tailorId],
           limit: 1,
         );
 

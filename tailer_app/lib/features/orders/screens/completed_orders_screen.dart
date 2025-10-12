@@ -5,6 +5,7 @@ import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import '../../../data/services/local_db_service.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../data/models/order_model.dart';
 import '../../../core/utils/logger.dart';
 import 'order_detail_screen.dart';
@@ -19,12 +20,14 @@ class CompletedOrdersScreen extends StatefulWidget {
 class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
   late SimpleLocaleProvider _localeProvider;
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  final AuthService _authService = AuthService();
   final TextEditingController _searchController = TextEditingController();
   
   List<Order> _allCompletedOrders = [];
   List<Order> _filteredOrders = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  String? _tailorId;
   
   // Statistics
   int _totalCompletedOrders = 0;
@@ -36,7 +39,17 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
   void initState() {
     super.initState();
     _localeProvider = SimpleLocaleProvider();
-    _loadCompletedOrders();
+    _initializeAuth();
+  }
+  
+  Future<void> _initializeAuth() async {
+    await _authService.initialize();
+    if (_authService.currentUser != null) {
+      setState(() {
+        _tailorId = _authService.currentUser!.email;
+      });
+      _loadCompletedOrders();
+    }
   }
 
   @override
@@ -46,12 +59,14 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
   }
 
   Future<void> _loadCompletedOrders() async {
+    if (_tailorId == null) return;
+    
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final allOrders = await _dbService.getOrders();
+      final allOrders = await _dbService.getOrders(tailorId: _tailorId);
       _allCompletedOrders = allOrders.where((order) => 
         !order.isDeleted && 
         (order.status.toLowerCase() == 'completed' || 

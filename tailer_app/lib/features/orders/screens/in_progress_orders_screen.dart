@@ -10,6 +10,7 @@ import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import '../../../data/services/local_db_service.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../data/models/order_model.dart';
 import '../../../core/utils/logger.dart';
 import 'order_detail_screen.dart';
@@ -25,12 +26,14 @@ class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> with Na
   int _currentNavIndex = 2; // Orders is index 2
   late SimpleLocaleProvider _localeProvider;
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  final AuthService _authService = AuthService();
   final TextEditingController _searchController = TextEditingController();
   
   List<Order> _allInProgressOrders = [];
   List<Order> _filteredOrders = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  String? _tailorId;
   
   // Statistics
   int _cuttingOrders = 0;
@@ -42,7 +45,17 @@ class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> with Na
   void initState() {
     super.initState();
     _localeProvider = SimpleLocaleProvider();
-    _loadInProgressOrders();
+    _initializeAuth();
+  }
+  
+  Future<void> _initializeAuth() async {
+    await _authService.initialize();
+    if (_authService.currentUser != null) {
+      setState(() {
+        _tailorId = _authService.currentUser!.email;
+      });
+      _loadInProgressOrders();
+    }
   }
 
   @override
@@ -52,12 +65,14 @@ class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> with Na
   }
 
   Future<void> _loadInProgressOrders() async {
+    if (_tailorId == null) return;
+    
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final allOrders = await _dbService.getOrders();
+      final allOrders = await _dbService.getOrders(tailorId: _tailorId);
       _allInProgressOrders = allOrders.where((order) => 
         !order.isDeleted && 
         (order.status.toLowerCase() == 'in_progress' || 

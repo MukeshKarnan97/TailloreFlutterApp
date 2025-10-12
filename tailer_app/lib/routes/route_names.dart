@@ -5,6 +5,7 @@ class RouteNames {
   static const String splash = 'splash';
   static const String onBoarding = 'onBoarding';
   static const String getStarted = 'getStarted';
+  static const String userAgreement = 'userAgreement';
   
   // Auth Routes
   static const String signIn = 'signIn';

@@ -46,8 +46,15 @@
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>UIStatusBarHidden</key>
-		<false/>
+		<true/>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
+		<!-- Camera and Photo Library Permissions -->
+		<key>NSCameraUsageDescription</key>
+		<string>This app needs access to your camera to take photos of garments and update your profile picture.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>This app needs access to your photo library to select photos of garments and update your profile picture.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>This app needs access to save photos to your photo library.</string>
 	</dict>
 </plist>

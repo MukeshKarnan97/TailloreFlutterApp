@@ -157,7 +157,7 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  currentUser?.username ?? 'User',
+                  currentUser?.name ?? 'User',
                   style: AppTextStyles.heading4.copyWith(
                     color: AppColors.textPrimary,
                   ),

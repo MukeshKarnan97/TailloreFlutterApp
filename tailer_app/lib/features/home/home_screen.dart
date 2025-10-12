@@ -172,25 +172,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
               child: SafeArea(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Welcome section
                       _buildWelcomeSection(locale),
                       
-                      const SizedBox(height: 40),
-                      
                       // Feature cards
                       _buildFeatureCards(locale),
                       
-                      const SizedBox(height: 40),
-                      
                       // Action buttons
                       _buildActionButtons(locale),
-                      
-                      const SizedBox(height: 20),
                       
                       // App info
                       _buildAppInfo(locale),
@@ -230,49 +224,112 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildWelcomeSection(AppLocalizations locale) {
     return Column(
       children: [
+        // App Icon with gradient background to showcase white icon
         Container(
-          width: 120,
-          height: 120,
+          width: 90,
+          height: 90,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.primary,
+                AppColors.primaryDark,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                spreadRadius: 2,
-                offset: const Offset(0, 5),
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 15,
+                spreadRadius: 1,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.3),
+                blurRadius: 20,
+                spreadRadius: -3,
+                offset: const Offset(0, 10),
               ),
             ],
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 2,
+            ),
           ),
-          child: const Icon(
-            Icons.content_cut,
-            size: 60,
-            color: Colors.indigo,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.1),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.content_cut,
+                    size: 50,
+                    color: Colors.white,
+                  );
+                },
+              ),
+            ),
           ),
         ),
         
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         
+        // App Title with enhanced styling
         Text(
           locale.translate('welcomeToTailorApp'),
           style: const TextStyle(
-            fontSize: 28,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            letterSpacing: 0.3,
+            shadows: [
+              Shadow(
+                color: Colors.black26,
+                offset: Offset(0, 2),
+                blurRadius: 4,
+              ),
+            ],
           ),
           textAlign: TextAlign.center,
         ),
         
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         
-        Text(
-          locale.translate('digitalAssistantForTailoring'),
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.white.withOpacity(0.9),
+        // Tagline with better visibility
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+              width: 1,
+            ),
           ),
-          textAlign: TextAlign.center,
+          child: Text(
+            locale.translate('digitalAssistantForTailoring'),
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
     );
@@ -281,61 +338,91 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildFeatureCards(AppLocalizations locale) {
     final features = [
       {
-        'icon': Icons.people,
+        'icon': Icons.people_rounded,
         'title': locale.translate('manageCustomers'),
         'description': locale.translate('trackAllCustomers'),
+        'color': const Color(0xFFFF6B35), // Coral
       },
       {
-        'icon': Icons.straighten,
+        'icon': Icons.straighten_rounded,
         'title': locale.translate('storeMeasurements'),
         'description': locale.translate('recordPreciseMeasurements'),
+        'color': const Color(0xFFFDB44B), // Gold
       },
       {
-        'icon': Icons.assignment,
+        'icon': Icons.assignment_rounded,
         'title': locale.translate('trackOrders'),
         'description': locale.translate('monitorOrderProgress'),
+        'color': const Color(0xFF14FFEC), // Bright Teal
       },
     ];
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: features.map((feature) {
         return Expanded(
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(15),
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
+                color: Colors.white.withOpacity(0.3),
+                width: 1.5,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  feature['icon'] as IconData,
-                  size: 30,
-                  color: Colors.white,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: (feature['color'] as Color).withOpacity(0.2),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: feature['color'] as Color,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Icon(
+                    feature['icon'] as IconData,
+                    size: 24,
+                    color: Colors.white,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Text(
                   feature['title'] as String,
                   style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
                     color: Colors.white,
+                    letterSpacing: 0.2,
+                    height: 1.3,
                   ),
                   textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.visible,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   feature['description'] as String,
                   style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 9.5,
+                    color: Colors.white.withOpacity(0.9),
+                    height: 1.4,
                   ),
                   textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.visible,
                 ),
               ],
             ),
@@ -346,43 +433,76 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildActionButtons(AppLocalizations locale) {
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () {
-              Logger.info(_className, 'Get Started button pressed - navigating to sign-in');
-              _navigateToSignIn();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.indigo.shade600,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-              elevation: 5,
-            ),
-            child: Text(
-              locale.translate('getStarted'),
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 15,
+            spreadRadius: 1,
+            offset: const Offset(0, 6),
           ),
+          BoxShadow(
+            color: Colors.white.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: -3,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: () {
+          Logger.info(_className, 'Get Started button pressed - navigating to sign-in');
+          _navigateToSignIn();
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.primary,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          elevation: 0,
         ),
-      ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              locale.translate('getStarted'),
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+                letterSpacing: 0.3,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                size: 20,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildAppInfo(AppLocalizations locale) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: Colors.white.withOpacity(0.2),
           width: 1,
@@ -390,61 +510,77 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       child: Column(
         children: [
-          Text(
-            '${locale.translate('appVersion')}: ${AppConfig.appVersion}',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${locale.translate('environment')}: ${AppConfig.environment}',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
-              fontSize: 12,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '${locale.translate('appVersion')}: ${AppConfig.appVersion}',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 10,
+                ),
+              ),
+              Text(
+                '  •  ',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.5),
+                  fontSize: 10,
+                ),
+              ),
+              Text(
+                '${locale.translate('environment')}: ${AppConfig.environment}',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 10,
+                ),
+              ),
+            ],
           ),
           if (AppConfig.isDevelopment) ...[
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: _showDebugInfo,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.orange, width: 1),
-                ),
-                child: Text(
-                  locale.translate('debugModeTapForInfo'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: _showDebugInfo,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withOpacity(0.5), width: 1),
+                    ),
+                    child: Text(
+                      locale.translate('debugModeTapForInfo'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: _openDebugResetScreen,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.red, width: 1),
-                ),
-                child: Text(
-                  locale.translate('resetOnboardingFlow'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: _openDebugResetScreen,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.withOpacity(0.5), width: 1),
+                    ),
+                    child: Text(
+                      locale.translate('resetOnboardingFlow'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ],
@@ -454,18 +590,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _navigateToSignIn() async {
     try {
-      Logger.info(_className, 'Get Started button pressed - marking onboarding step completed');
+      Logger.info(_className, 'Get Started button pressed - navigating to user agreement');
       
       // Mark Get Started as completed
       await OnboardingHelper.setGetStartedCompleted();
       Logger.debug(_className, 'Get Started completion status saved');
       
       if (mounted) {
-        Logger.info(_className, 'Navigating to sign-in screen');
-        context.goNamed(RouteNames.signIn);
+        Logger.info(_className, 'Navigating to user agreement screen');
+        context.goNamed(RouteNames.userAgreement);
       }
     } catch (e, stackTrace) {
-      Logger.error(_className, 'Failed to navigate to sign-in', 
+      Logger.error(_className, 'Failed to navigate to user agreement', 
                   error: e, stackTrace: stackTrace);
       
       if (mounted) {

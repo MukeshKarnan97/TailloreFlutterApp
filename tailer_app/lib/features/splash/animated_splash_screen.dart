@@ -186,14 +186,14 @@ class _AnimatedSplashScreenState extends State<AnimatedSplashScreen>
             end: Alignment.bottomRight,
             colors: isDarkMode
                 ? [
-                    const Color(0xFF1A1A2E),
-                    const Color(0xFF16213E),
-                    const Color(0xFF0F3460),
+                    const Color(0xFF0F1419),  // Very dark background
+                    const Color(0xFF1A1F26),  // Dark surface
+                    const Color(0xFF252C35),  // Lighter dark
                   ]
                 : [
-                    const Color(0xFF667eea),
-                    const Color(0xFF764ba2),
-                    const Color(0xFF6B73FF),
+                    const Color(0xFF0D7377),  // Deep Teal - Main brand
+                    const Color(0xFF14FFEC),  // Bright Teal - Accent
+                    const Color(0xFF06484A),  // Dark Teal - Depth
                   ],
           ),
         ),
@@ -257,6 +257,16 @@ class _AnimatedSplashScreenState extends State<AnimatedSplashScreen>
 
   /// Build animated logo
   Widget _buildAnimatedLogo(Size screenSize) {
+    // Responsive logo size calculation based on screen width
+    // Mobile: 25-30% of screen width
+    // Tablet: Fixed 200px
+    // Desktop: Fixed 250px
+    final double logoSize = screenSize.width > 900 
+        ? 250.0  // Desktop/Large tablets
+        : screenSize.width > 600 
+            ? 200.0  // Tablets
+            : screenSize.width * 0.35;  // Mobile (35% of screen width)
+    
     return AnimatedBuilder(
       animation: Listenable.merge([_fadeAnimation, _scaleAnimation]),
       builder: (context, child) {
@@ -265,27 +275,53 @@ class _AnimatedSplashScreenState extends State<AnimatedSplashScreen>
           child: ScaleTransition(
             scale: _scaleAnimation,
             child: Container(
-              width: screenSize.width * 0.3,
-              height: screenSize.width * 0.3,
+              width: logoSize,
+              height: logoSize,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.3),
-                    blurRadius: 20,
+                    blurRadius: 30,
                     spreadRadius: 5,
-                    offset: const Offset(0, 10),
+                    offset: const Offset(0, 15),
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.1),
+                    blurRadius: 20,
+                    spreadRadius: -5,
+                    offset: const Offset(0, -5),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(30),
                 child: Image.asset(
-                  'assets/images/splash_logo.jpg',
+                  'assets/icon/app_icon.png',
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     Logger.warning(_className, 'Logo image failed to load: $error');
-                    return _buildFallbackLogo();
+                    // Fallback to scissors icon if image fails
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withOpacity(0.2),
+                            Colors.white.withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.content_cut,
+                          size: logoSize * 0.6,
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
                   },
                 ),
               ),
@@ -293,30 +329,6 @@ class _AnimatedSplashScreenState extends State<AnimatedSplashScreen>
           ),
         );
       },
-    );
-  }
-
-  /// Build fallback logo if image fails to load
-  Widget _buildFallbackLogo() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.indigo.shade300,
-            Colors.indigo.shade600,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Center(
-        child: Icon(
-          Icons.content_cut,
-          size: 60,
-          color: Colors.white,
-        ),
-      ),
     );
   }
 

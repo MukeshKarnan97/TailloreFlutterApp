@@ -25,22 +25,25 @@ class DashboardService {
   Map<String, dynamic> get dashboardStats => Map.from(_dashboardStats);
 
   /// Initialize dashboard data from database with optional time period filter
-  Future<void> initializeDashboard({String timePeriod = 'all_time'}) async {
+  Future<void> initializeDashboard({
+    required String tailorId,
+    String timePeriod = 'all_time',
+  }) async {
     try {
-      debugPrint('Initializing dashboard data for period: $timePeriod...');
+      debugPrint('Initializing dashboard data for tailor: $tailorId, period: $timePeriod...');
       
       // Get date range for the selected time period
       final dateRange = _getDateRangeForPeriod(timePeriod);
       
-      // Fetch real data from database with time filter
-      final totalCustomers = await _getTotalCustomers(dateRange);
-      final activeOrders = await _getActiveOrders(dateRange);
-      final completedOrders = await _getCompletedOrders(dateRange);
-      final totalRevenue = await _getTotalRevenue(dateRange);
-      final pendingMeasurements = await _getPendingMeasurements();
-      final todayAppointments = await _getTodayAppointments();
-      final monthlyOrders = await _getMonthlyOrders();
-      final avgOrderValue = await _getAverageOrderValue(dateRange);
+      // Fetch real data from database with time filter and tailor filter
+      final totalCustomers = await _getTotalCustomers(tailorId, dateRange);
+      final activeOrders = await _getActiveOrders(tailorId, dateRange);
+      final completedOrders = await _getCompletedOrders(tailorId, dateRange);
+      final totalRevenue = await _getTotalRevenue(tailorId, dateRange);
+      final pendingMeasurements = await _getPendingMeasurements(tailorId);
+      final todayAppointments = await _getTodayAppointments(tailorId);
+      final monthlyOrders = await _getMonthlyOrders(tailorId);
+      final avgOrderValue = await _getAverageOrderValue(tailorId, dateRange);
       
       _dashboardStats = {
         'totalCustomers': totalCustomers,
@@ -61,12 +64,12 @@ class DashboardService {
   }
 
   /// Refresh dashboard statistics from database
-  Future<void> refreshDashboard() async {
+  Future<void> refreshDashboard({required String tailorId}) async {
     try {
-      debugPrint('Refreshing dashboard data...');
+      debugPrint('Refreshing dashboard data for tailor: $tailorId...');
       
       // Re-initialize with fresh data from database
-      await initializeDashboard();
+      await initializeDashboard(tailorId: tailorId);
       
       debugPrint('Dashboard data refreshed successfully');
     } catch (e) {
@@ -176,12 +179,12 @@ class DashboardService {
   }
 
   /// Get total number of active customers
-  Future<int> _getTotalCustomers([Map<String, DateTime?>? dateRange]) async {
+  Future<int> _getTotalCustomers(String tailorId, [Map<String, DateTime?>? dateRange]) async {
     try {
       final customers = await _dbService.select(
         'customer',
-        where: 'is_deleted = ?',
-        whereArgs: [0],
+        where: 'tailor_id = ? AND is_deleted = ?',
+        whereArgs: [tailorId, 0],
       );
       return customers.length;
     } catch (e) {
@@ -191,10 +194,10 @@ class DashboardService {
   }
 
   /// Get number of active orders (pending, in_progress, measurement_pending)
-  Future<int> _getActiveOrders([Map<String, DateTime?>? dateRange]) async {
+  Future<int> _getActiveOrders(String tailorId, [Map<String, DateTime?>? dateRange]) async {
     try {
-      String where = 'status IN (?, ?, ?) AND is_deleted = ?';
-      List<dynamic> whereArgs = ['pending', 'in_progress', 'measurement_pending', 0];
+      String where = 'tailor_id = ? AND status IN (?, ?, ?) AND is_deleted = ?';
+      List<dynamic> whereArgs = [tailorId, 'pending', 'in_progress', 'measurement_pending', 0];
       
       if (dateRange != null && dateRange['start'] != null && dateRange['end'] != null) {
         where += ' AND created_at >= ? AND created_at < ?';
@@ -217,10 +220,10 @@ class DashboardService {
   }
 
   /// Get number of completed orders
-  Future<int> _getCompletedOrders([Map<String, DateTime?>? dateRange]) async {
+  Future<int> _getCompletedOrders(String tailorId, [Map<String, DateTime?>? dateRange]) async {
     try {
-      String where = 'status = ? AND is_deleted = ?';
-      List<dynamic> whereArgs = ['completed', 0];
+      String where = 'tailor_id = ? AND status = ? AND is_deleted = ?';
+      List<dynamic> whereArgs = [tailorId, 'completed', 0];
       
       if (dateRange != null && dateRange['start'] != null && dateRange['end'] != null) {
         where += ' AND created_at >= ? AND created_at < ?';
@@ -243,24 +246,40 @@ class DashboardService {
   }
 
   /// Get total revenue from all paid orders
-  Future<double> _getTotalRevenue([Map<String, DateTime?>? dateRange]) async {
+  Future<double> _getTotalRevenue(String tailorId, [Map<String, DateTime?>? dateRange]) async {
     try {
-      String where = 'is_deleted = ?';
-      List<dynamic> whereArgs = [0];
+      // Get all orders for this tailor to filter payments
+      String orderWhere = 'tailor_id = ? AND is_deleted = ?';
+      List<dynamic> orderWhereArgs = [tailorId, 0];
+      
+      final orders = await _dbService.select(
+        'orders',
+        where: orderWhere,
+        whereArgs: orderWhereArgs,
+      );
+      
+      // Get order IDs for this tailor
+      final orderIds = orders.map((o) => o['unique_id'] as String).toList();
+      
+      if (orderIds.isEmpty) return 0.0;
+      
+      // Build payment query with date filter if provided
+      String paymentWhere = 'order_id IN (${List.filled(orderIds.length, '?').join(',')}) AND is_deleted = ?';
+      List<dynamic> paymentWhereArgs = [...orderIds, 0];
       
       if (dateRange != null && dateRange['start'] != null && dateRange['end'] != null) {
-        where += ' AND paid_on >= ? AND paid_on < ?';
-        whereArgs.addAll([
+        paymentWhere += ' AND paid_on >= ? AND paid_on < ?';
+        paymentWhereArgs.addAll([
           dateRange['start']!.toIso8601String(),
           dateRange['end']!.toIso8601String(),
         ]);
       }
       
-      // Get all payments (excluding deleted ones)
+      // Get all payments for this tailor's orders
       final payments = await _dbService.select(
         'payment',
-        where: where,
-        whereArgs: whereArgs,
+        where: paymentWhere,
+        whereArgs: paymentWhereArgs,
       );
       
       double totalRevenue = 0.0;
@@ -275,12 +294,12 @@ class DashboardService {
   }
 
   /// Get number of pending measurements
-  Future<int> _getPendingMeasurements() async {
+  Future<int> _getPendingMeasurements(String tailorId) async {
     try {
       final orders = await _dbService.select(
         'orders',
-        where: 'status = ? AND is_deleted = ?',
-        whereArgs: ['measurement_pending', 0],
+        where: 'tailor_id = ? AND status = ? AND is_deleted = ?',
+        whereArgs: [tailorId, 'measurement_pending', 0],
       );
       return orders.length;
     } catch (e) {
@@ -290,7 +309,7 @@ class DashboardService {
   }
 
   /// Get today's appointments (orders with delivery date today)
-  Future<int> _getTodayAppointments() async {
+  Future<int> _getTodayAppointments(String tailorId) async {
     try {
       final today = DateTime.now();
       final todayStart = DateTime(today.year, today.month, today.day);
@@ -298,8 +317,9 @@ class DashboardService {
       
       final orders = await _dbService.select(
         'orders',
-        where: 'delivery_date >= ? AND delivery_date < ? AND is_deleted = ?',
+        where: 'tailor_id = ? AND delivery_date >= ? AND delivery_date < ? AND is_deleted = ?',
         whereArgs: [
+          tailorId,
           todayStart.millisecondsSinceEpoch,
           todayEnd.millisecondsSinceEpoch,
           0
@@ -313,7 +333,7 @@ class DashboardService {
   }
 
   /// Get this month's orders count
-  Future<int> _getMonthlyOrders() async {
+  Future<int> _getMonthlyOrders(String tailorId) async {
     try {
       final now = DateTime.now();
       final monthStart = DateTime(now.year, now.month, 1);
@@ -321,8 +341,9 @@ class DashboardService {
       
       final orders = await _dbService.select(
         'orders',
-        where: 'created_at >= ? AND created_at < ? AND is_deleted = ?',
+        where: 'tailor_id = ? AND created_at >= ? AND created_at < ? AND is_deleted = ?',
         whereArgs: [
+          tailorId,
           monthStart.millisecondsSinceEpoch,
           monthEnd.millisecondsSinceEpoch,
           0
@@ -336,10 +357,10 @@ class DashboardService {
   }
 
   /// Get average order value
-  Future<double> _getAverageOrderValue([Map<String, DateTime?>? dateRange]) async {
+  Future<double> _getAverageOrderValue(String tailorId, [Map<String, DateTime?>? dateRange]) async {
     try {
-      String where = 'is_deleted = ?';
-      List<dynamic> whereArgs = [0];
+      String where = 'tailor_id = ? AND is_deleted = ?';
+      List<dynamic> whereArgs = [tailorId, 0];
       
       if (dateRange != null && dateRange['start'] != null && dateRange['end'] != null) {
         where += ' AND created_at >= ? AND created_at < ?';

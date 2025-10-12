@@ -157,9 +157,28 @@ class _SignUpState extends State<SignUp> {
           'secondTitle': 'OTP',
           'emailText': _emailController.text,
           'email': _emailController.text,
-          'onVerified': () {
-            // Navigate to dashboard or sign in after successful signup verification
-            context.goNamed(RouteNames.dashboard);
+          'onVerified': () async {
+            // Sign in the user after successful signup verification
+            debugPrint('OTP verified, signing in user...');
+            try {
+              await _authService.signIn(
+                email: _emailController.text,
+                password: _passwordController.text,
+                keepSignedIn: true,
+              );
+              debugPrint('User signed in successfully, navigating to dashboard...');
+              // Navigate to dashboard after successful sign in
+              if (mounted) {
+                context.goNamed(RouteNames.dashboard);
+              }
+            } catch (e) {
+              debugPrint('Auto sign-in failed: $e');
+              // If sign-in fails, still navigate to dashboard
+              // The dashboard will handle the not-authenticated state
+              if (mounted) {
+                context.goNamed(RouteNames.dashboard);
+              }
+            }
           },
         },
       );

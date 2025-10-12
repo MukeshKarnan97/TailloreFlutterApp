@@ -11,6 +11,7 @@ import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import '../../../data/services/local_db_service.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../data/models/order_model.dart';
 import '../../../data/models/customer_model.dart';
 import '../../../core/utils/logger.dart';
@@ -31,10 +32,12 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
   int _currentNavIndex = 2; // Orders is index 2
   late SimpleLocaleProvider _localeProvider;
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  final AuthService _authService = AuthService();
   
   // Real data state
   List<Order> _allOrders = [];
   bool _isLoading = true;
+  String? _tailorId;
   int _totalOrders = 0;
   int _thisMonthOrders = 0;
   int _pendingOrders = 0;
@@ -51,8 +54,27 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
   @override
   void initState() {
     super.initState();
+    Logger.info('OrdersMainScreen', '🚀 initState called');
     _localeProvider = SimpleLocaleProvider();
-    _loadOrderData();
+    _initializeAuth();
+  }
+  
+  Future<void> _initializeAuth() async {
+    Logger.info('OrdersMainScreen', '🔐 Initializing auth...');
+    await _authService.initialize();
+    if (_authService.currentUser != null) {
+      Logger.info('OrdersMainScreen', '✅ User authenticated: ${_authService.currentUser!.email}');
+      setState(() {
+        _tailorId = _authService.currentUser!.email;
+      });
+      Logger.info('OrdersMainScreen', '📋 tailorId set to: $_tailorId');
+      _loadOrderData();
+    } else {
+      Logger.error('OrdersMainScreen', '❌ No user authenticated!');
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -182,6 +204,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
 
                             const SizedBox(height: 20),
                             _buildSearchBar(locale),
+                            const SizedBox(height: 20),
 
                             // Quick Actions Row
                             Row(
@@ -354,34 +377,34 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                   ],
                 ),
               ),
-          floatingActionButton: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              FloatingActionButton(
-                onPressed: _showDeletedOrders,
-                backgroundColor: AppColors.textSecondary,
-                heroTag: "deletedOrders",
-                child: const Icon(Icons.delete_outline, color: Colors.white),
-                tooltip: 'View Deleted Orders',
-              ),
-              const SizedBox(width: 10),
-              FloatingActionButton(
-                onPressed: _updateOrdersForPaymentCollection,
-                backgroundColor: Colors.blue,
-                heroTag: "updatePayments",
-                child: const Icon(Icons.payment, color: Colors.white),
-                tooltip: 'Update Orders for Payment Collection',
-              ),
-              const SizedBox(width: 10),
-              FloatingActionButton(
-                onPressed: _insertTestData,
-                backgroundColor: Colors.orange,
-                heroTag: "insertTest",
-                child: const Icon(Icons.add_box, color: Colors.white),
-                tooltip: 'Insert Test Data',
-              ),
-            ],
-          ),
+          // floatingActionButton: Row(
+          //   mainAxisAlignment: MainAxisAlignment.end,
+          //   children: [
+          //     FloatingActionButton(
+          //       onPressed: _showDeletedOrders,
+          //       backgroundColor: AppColors.textSecondary,
+          //       heroTag: "deletedOrders",
+          //       child: const Icon(Icons.delete_outline, color: Colors.white),
+          //       tooltip: 'View Deleted Orders',
+          //     ),
+          //     const SizedBox(width: 10),
+          //     FloatingActionButton(
+          //       onPressed: _updateOrdersForPaymentCollection,
+          //       backgroundColor: Colors.blue,
+          //       heroTag: "updatePayments",
+          //       child: const Icon(Icons.payment, color: Colors.white),
+          //       tooltip: 'Update Orders for Payment Collection',
+          //     ),
+          //     const SizedBox(width: 10),
+          //     FloatingActionButton(
+          //       onPressed: _insertTestData,
+          //       backgroundColor: Colors.orange,
+          //       heroTag: "insertTest",
+          //       child: const Icon(Icons.add_box, color: Colors.white),
+          //       tooltip: 'Insert Test Data',
+          //     ),
+          //   ],
+          // ),
           bottomNavigationBar: AnimatedBottomNavigation(
             currentIndex: _currentNavIndex,
             onTap: _onNavTap,
@@ -415,7 +438,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: AppColors.shadow,
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
@@ -442,7 +465,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 4),
@@ -489,7 +512,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: AppColors.shadow,
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
@@ -524,7 +547,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                                 style: GoogleFonts.inter(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                             ),
@@ -631,7 +654,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
           style: GoogleFonts.inter(
             fontSize: 24,
             fontWeight: FontWeight.w700,
-            color: Colors.black87,
+            color: AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 4),
@@ -741,7 +764,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: AppColors.shadow,
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -882,31 +905,35 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
 
   // Data Loading Methods
   Future<void> _loadOrderData() async {
+    if (_tailorId == null) {
+      Logger.error('OrdersMainScreen', '⚠️ tailorId is null, cannot load data');
+      setState(() => _isLoading = false);
+      return;
+    }
+    
+    Logger.info('OrdersMainScreen', '📊 Loading order data for tailorId: $_tailorId');
+    
     setState(() {
       _isLoading = true;
     });
 
     try {
-      List<Order> orders;
-      try {
-        // Try to get orders excluding deleted ones
-        final orderMaps = await _dbService.select('orders', where: 'is_deleted = 0');
-        orders = orderMaps.map((map) => Order.fromMap(map)).toList();
-      } catch (e) {
-        // If is_deleted column doesn't exist, get all orders
-        Logger.info('OrdersMainScreen', 'is_deleted column not found, loading all orders');
-        orders = await _dbService.getOrders();
-      }
+      // Get orders filtered by tailorId
+      final orders = await _dbService.getOrders(tailorId: _tailorId);
+      
+      Logger.info('OrdersMainScreen', '✅ Loaded ${orders.length} orders');
       
       _allOrders = orders;
       _calculateStats();
+      
+      Logger.info('OrdersMainScreen', '📊 Stats: Total=$_totalOrders, Pending=$_pendingOrders, InProgress=$_inProgressOrders, Ready=$_readyOrders, Completed=$_completedOrders');
+      Logger.info('OrdersMainScreen', '💰 Financial: Revenue=$_totalRevenue, Pending Payments=$_pendingPayments');
       
       setState(() {
         _isLoading = false;
       });
     } catch (e, stackTrace) {
-      Logger.error('OrdersMainScreen', 'Failed to load order data', 
-                   error: e, stackTrace: stackTrace);
+      Logger.error('OrdersMainScreen', '❌ Error loading order data', error: e, stackTrace: stackTrace);
       setState(() {
         _isLoading = false;
       });
@@ -1032,8 +1059,10 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
 
   /// Show deleted orders
   Future<void> _showDeletedOrders() async {
+    if (_tailorId == null) return;
+    
     try {
-      final deletedOrders = await _dbService.getDeletedOrders();
+      final deletedOrders = await _dbService.getDeletedOrders(tailorId: _tailorId);
       
       if (!mounted) return;
       
@@ -1158,6 +1187,8 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
 
   /// Update orders to make them appear in payment collection screen
   Future<void> _updateOrdersForPaymentCollection() async {
+    if (_tailorId == null) return;
+    
     try {
       showDialog(
         context: context,
@@ -1178,24 +1209,17 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
       // First, ensure database columns exist
       await _ensureDatabaseColumns();
       
-      // Get all orders (handle case where is_deleted column might not exist)
-      List<Map<String, Object?>> orders;
-      try {
-        orders = await _dbService.select('orders', where: 'is_deleted = 0');
-      } catch (e) {
-        // If is_deleted column doesn't exist, get all orders
-        Logger.info('OrdersMainScreen', 'is_deleted column not found, getting all orders');
-        orders = await _dbService.select('orders');
-      }
+      // Get orders filtered by tailorId
+      final orders = await _dbService.getOrders(tailorId: _tailorId);
       
       print('📊 Found ${orders.length} total orders');
       
       // Find orders that need updating (excluding the 2 reference orders)
       final excludeIds = ['ORDLQD6QU5', 'ORD70OC1ME'];
       final ordersToUpdate = orders.where((order) {
-        final orderId = order['unique_id'] as String;
-        final totalAmount = (order['total_amount'] as num?)?.toDouble() ?? 0.0;
-        final status = (order['status'] as String?)?.toLowerCase() ?? '';
+        final orderId = order.uniqueId;
+        final totalAmount = order.totalAmount;
+        final status = order.status.toLowerCase();
         
         // Skip excluded orders and completed/delivered orders
         return !excludeIds.contains(orderId) && 
@@ -1209,8 +1233,8 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
       int updateCount = 0;
       for (int i = 0; i < ordersToUpdate.length && i < 12; i++) {
         final order = ordersToUpdate[i];
-        final orderId = order['unique_id'] as String;
-        final totalAmount = (order['total_amount'] as num?)?.toDouble() ?? 0.0;
+        final orderId = order.uniqueId;
+        final totalAmount = order.totalAmount;
         
         // Calculate new advance payment (varying percentages)
         double paymentPercentage;

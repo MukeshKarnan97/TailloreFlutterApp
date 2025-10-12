@@ -3,6 +3,7 @@ import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../data/services/local_db_service.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../data/models/payment_model.dart';
 import '../../../data/enums/payment_method.dart';
 import '../../../core/utils/logger.dart';
@@ -26,6 +27,7 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> with 
   int _currentNavIndex = 2; // Orders section
   late SimpleLocaleProvider _localeProvider;
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  final AuthService _authService = AuthService();
   final TextEditingController _searchController = TextEditingController();
   
   List<Map<String, dynamic>> _allOrders = [];
@@ -80,8 +82,21 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> with 
     });
 
     try {
-      // Get tailor ID - for now using a default one, should be from auth
-      const tailorId = 'tailor_001';
+      // Get current tailor's email as tailorId
+      final currentTailor = _authService.currentUser;
+      if (currentTailor == null) {
+        Logger.warning('PaymentCollectionScreen', 'No tailor logged in');
+        setState(() {
+          _allOrders = [];
+          _ordersWithPendingPayments = [];
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      final tailorId = currentTailor.email;
+      Logger.info('PaymentCollectionScreen', 'Loading orders for tailor: $tailorId');
+      
       final orders = await _dbService.getOrdersWithCustomerDetails(tailorId);
       
       // Debug: Log total orders fetched

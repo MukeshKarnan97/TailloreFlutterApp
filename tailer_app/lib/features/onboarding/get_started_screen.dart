@@ -151,7 +151,6 @@ class _GetStartedScreenState extends State<GetStartedScreen> with TickerProvider
                       width: 120,
                       height: 120,
                       decoration: BoxDecoration(
-                        color: Colors.indigo.shade600,
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: [
                           BoxShadow(
@@ -162,10 +161,25 @@ class _GetStartedScreenState extends State<GetStartedScreen> with TickerProvider
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.content_cut,
-                        size: 60,
-                        color: Colors.white,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: Image.asset(
+                          'assets/icon/app_icon.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Colors.indigo.shade600,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: const Icon(
+                                Icons.content_cut,
+                                size: 60,
+                                color: Colors.white,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                     

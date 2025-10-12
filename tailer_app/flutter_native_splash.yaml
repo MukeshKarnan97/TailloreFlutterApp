@@ -1,15 +1,17 @@
 flutter_native_splash:
-  # Use a solid color background that matches our animated splash
-  color: "#667eea"  # Gradient start color
+  # Professional Teal Background (matches app theme)
+  color: "#0D7377"  # Deep Teal - Professional tailor brand color
   
-  # Minimal native splash - our custom splash will take over quickly
-  image: assets/images/splash_logo.jpg
+  # App icon/logo for splash screen
+  # TO CUSTOMIZE: Replace with your own logo
+  # Add image to: assets/images/splash_icon.png (1024x1024 recommended)
+  image: assets/icon/app_icon.png
   
   # Android 12+ specific configuration
   android_12:
-    image: assets/images/splash_logo.jpg
-    icon_background_color: "#667eea"
-    color: "#667eea"
+    image: assets/icon/app_icon.png
+    icon_background_color: "#0D7377"  # Deep Teal background (matches main theme)
+    color: "#0D7377"  # Deep Teal background (matches main theme)
   
   # iOS configuration
   ios: true
@@ -26,3 +28,4 @@ flutter_native_splash:
   # Info.plist modifications for iOS
   info_plist_files:
     - 'ios/Runner/Info.plist'
+

@@ -11,6 +11,10 @@ import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({Key? key}) : super(key: key);
@@ -28,6 +32,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with NavigationMi
   final AuthService _authService = AuthService();
   final LocalDatabaseService _dbService = LocalDatabaseService();
   final SimpleLocaleProvider _localeProvider = SimpleLocaleProvider();
+  final ImagePicker _imagePicker = ImagePicker();
   
   bool _isLoading = false;
   bool _isSaving = false;
@@ -55,22 +60,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> with NavigationMi
     try {
       final currentUser = _authService.currentUser;
       if (currentUser != null) {
-        _usernameController.text = currentUser.username;
+        _usernameController.text = currentUser.name;
         _emailController.text = currentUser.email;
-        _phoneController.text = currentUser.phone ?? '';
-        _profileImagePath = currentUser.profilePicture;
+        _phoneController.text = currentUser.phone;
+        _shopNameController.text = currentUser.shopName;
         
-        // Set profile image file if exists
+        // Load profile image if exists
+        _profileImagePath = currentUser.profileImagePath;
         if (_profileImagePath != null && _profileImagePath!.isNotEmpty) {
-          final file = File(_profileImagePath!);
-          if (await file.exists()) {
-            _profileImageFile = file;
-          }
+          _profileImageFile = File(_profileImagePath!);
         }
-        
-        // For now, we'll use a default shop name since users table doesn't have shop_name
-        // You can modify this to fetch from a different source or add shop_name to users table
-        _shopNameController.text = '${currentUser.username}\'s Tailor Shop';
       }
     } catch (e) {
       Logger.error('EditProfileScreen', 'Failed to load user data', error: e);
@@ -91,25 +90,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> with NavigationMi
         throw Exception('No user logged in');
       }
 
-      // Update user in database
-      await _dbService.update(
-        'users',
-        {
-          'phone': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          'profile_picture': _profileImagePath,
-          'updated_at': DateTime.now().toIso8601String(),
-        },
-        where: 'id = ?',
-        whereArgs: [currentUser.id],
-      );
+      // Save image to permanent location if a new image was selected
+      String? savedImagePath = _profileImagePath;
+      if (_profileImageFile != null && _profileImagePath != null) {
+        try {
+          final appDir = await getApplicationDocumentsDirectory();
+          final imagesDir = Directory('${appDir.path}/profile_images');
+          if (!await imagesDir.exists()) {
+            await imagesDir.create(recursive: true);
+          }
+          
+          final fileName = 'profile_${currentUser.uniqueId}_${DateTime.now().millisecondsSinceEpoch}${path.extension(_profileImagePath!)}';
+          final savedImage = File('${imagesDir.path}/$fileName');
+          await _profileImageFile!.copy(savedImage.path);
+          savedImagePath = savedImage.path;
+          
+          Logger.info('EditProfileScreen', 'Profile image saved to: $savedImagePath');
+        } catch (e) {
+          Logger.error('EditProfileScreen', 'Failed to save profile image', error: e);
+          // Continue with update even if image save fails
+        }
+      }
 
-      // Note: Shop name is not stored in users table for now
-      // You can create a separate shop_profiles table or add shop_name to users table
-      // For now, we'll just save the other fields
+      // Update tailor in database using uniqueId
+      await _dbService.updateTailor(currentUser.uniqueId, {
+        'name': _usernameController.text.trim(),
+        'shop_name': _shopNameController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'profile_image_path': savedImagePath,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
 
-      // Refresh auth service user data
-      // Note: AuthService doesn't have refreshUserData method yet
-      // We can implement it later or just proceed without it
+      // Refresh auth service to reload user data
+      await _authService.initialize();
+      
+      // Reload profile data to refresh UI
+      await _loadUserData();
 
       Logger.info('EditProfileScreen', 'Profile updated successfully');
       
@@ -187,44 +203,164 @@ class _EditProfileScreenState extends State<EditProfileScreen> with NavigationMi
   }
 
   Future<void> _pickImageFromGallery() async {
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
+    
     try {
-      // For now, we'll simulate image selection
-      // In a real app, you would use image_picker package
-      // final ImagePicker picker = ImagePicker();
-      // final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-      // if (image != null) {
-      //   final file = File(image.path);
-      //   setState(() {
-      //     _profileImageFile = file;
-      //     _profileImagePath = file.path;
-      //   });
-      // }
+      // Request permission
+      PermissionStatus permissionStatus;
+      if (Platform.isAndroid) {
+        // Android 13+ uses READ_MEDIA_IMAGES, older uses READ_EXTERNAL_STORAGE
+        if (await Permission.photos.isGranted || await Permission.storage.isGranted) {
+          permissionStatus = PermissionStatus.granted;
+        } else {
+          permissionStatus = await Permission.photos.request();
+          if (permissionStatus.isDenied) {
+            permissionStatus = await Permission.storage.request();
+          }
+        }
+      } else {
+        // iOS
+        permissionStatus = await Permission.photos.request();
+      }
       
-      // Simulate for now
-      Logger.info('EditProfileScreen', 'Gallery selection simulated');
+      // Check if permission was denied
+      if (permissionStatus.isDenied) {
+        if (mounted) {
+          showNavigationMessage(
+            context,
+            'Permission Denied',
+            customMessage: 'Please grant storage permission to select photos',
+            backgroundColor: Colors.orange,
+          );
+        }
+        return;
+      }
+      
+      if (permissionStatus.isPermanentlyDenied) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) => AlertDialog(
+              title: const Text('Permission Required'),
+              content: const Text('Storage permission is required to select photos. Please enable it in app settings.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    openAppSettings();
+                  },
+                  child: const Text('Open Settings'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+      
+      // Permission granted, pick image
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      
+      if (pickedFile != null) {
+        setState(() {
+          _profileImageFile = File(pickedFile.path);
+          _profileImagePath = pickedFile.path;
+        });
+        Logger.info('EditProfileScreen', 'Image selected from gallery: ${pickedFile.path}');
+      }
     } catch (e) {
       Logger.error('EditProfileScreen', 'Failed to pick image from gallery', error: e);
+      if (mounted) {
+        showNavigationMessage(
+          context,
+          locale.translate('error'),
+          customMessage: 'Failed to select image',
+          backgroundColor: Colors.red,
+        );
+      }
     }
   }
 
   Future<void> _pickImageFromCamera() async {
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
+    
     try {
-      // For now, we'll simulate camera capture
-      // In a real app, you would use image_picker package
-      // final ImagePicker picker = ImagePicker();
-      // final XFile? image = await picker.pickImage(source: ImageSource.camera);
-      // if (image != null) {
-      //   final file = File(image.path);
-      //   setState(() {
-      //     _profileImageFile = file;
-      //     _profileImagePath = file.path;
-      //   });
-      // }
+      // Request camera permission
+      PermissionStatus permissionStatus = await Permission.camera.request();
       
-      // Simulate for now
-      Logger.info('EditProfileScreen', 'Camera capture simulated');
+      // Check if permission was denied
+      if (permissionStatus.isDenied) {
+        if (mounted) {
+          showNavigationMessage(
+            context,
+            'Permission Denied',
+            customMessage: 'Please grant camera permission to take photos',
+            backgroundColor: Colors.orange,
+          );
+        }
+        return;
+      }
+      
+      if (permissionStatus.isPermanentlyDenied) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) => AlertDialog(
+              title: const Text('Permission Required'),
+              content: const Text('Camera permission is required to take photos. Please enable it in app settings.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    openAppSettings();
+                  },
+                  child: const Text('Open Settings'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+      
+      // Permission granted, take photo
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      
+      if (pickedFile != null) {
+        setState(() {
+          _profileImageFile = File(pickedFile.path);
+          _profileImagePath = pickedFile.path;
+        });
+        Logger.info('EditProfileScreen', 'Photo captured from camera: ${pickedFile.path}');
+      }
     } catch (e) {
       Logger.error('EditProfileScreen', 'Failed to pick image from camera', error: e);
+      if (mounted) {
+        showNavigationMessage(
+          context,
+          locale.translate('error'),
+          customMessage: 'Failed to capture photo',
+          backgroundColor: Colors.red,
+        );
+      }
     }
   }
 

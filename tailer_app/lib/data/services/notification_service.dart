@@ -4,15 +4,18 @@ import '../models/order_model.dart';
 import '../models/order_cancellation_model.dart';
 import '../enums/order_enums.dart';
 import 'local_db_service.dart';
+import 'notification_manager.dart';
 import '../../core/utils/logger.dart';
 
 /// Service for managing in-app notifications
+/// Handles both database storage and system notifications
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  final NotificationManager _notificationManager = NotificationManager();
   final ValueNotifier<List<NotificationModel>> _notifications = ValueNotifier([]);
   final ValueNotifier<int> _unreadCount = ValueNotifier(0);
 
@@ -29,9 +32,13 @@ class NotificationService {
   int get unreadCount => _unreadCount.value;
 
   /// Initialize notification service
-  Future<void> initialize() async {
+  Future<void> initialize({Function(String?)? onNotificationTap}) async {
     try {
       Logger.info('NotificationService', 'Initializing notification service');
+      
+      // Initialize notification manager for system notifications
+      await _notificationManager.initialize(onNotificationTap: onNotificationTap);
+      
       await _loadNotifications();
       Logger.info('NotificationService', 'Notification service initialized with ${notifications.length} notifications');
     } catch (e, stackTrace) {
@@ -219,6 +226,9 @@ class NotificationService {
     final title = 'Order Status Updated';
     final message = 'Order ${order.uniqueId} status changed from ${oldStatus.toUpperCase()} to ${newStatus.toUpperCase()}';
     
+    // Show system notification
+    await _notificationManager.notifyOrderStatusChange(order, oldStatus, newStatus);
+    
     return await createNotification(
       title: title,
       message: message,
@@ -239,6 +249,9 @@ class NotificationService {
   Future<NotificationModel> notifyOrderCancellation(Order order, OrderCancellation cancellation) async {
     final title = 'Order Cancelled';
     final message = 'Order ${order.uniqueId} has been cancelled. Reason: ${cancellation.reasonDisplayText}';
+    
+    // Show system notification
+    await _notificationManager.notifyOrderCancellation(order, cancellation.reasonDisplayText);
     
     return await createNotification(
       title: title,
@@ -261,6 +274,9 @@ class NotificationService {
     final title = 'Payment Received';
     final message = 'Payment of ₹${amount.toStringAsFixed(0)} received for order ${order.uniqueId}';
     
+    // Show system notification
+    await _notificationManager.notifyPaymentReceived(order, amount);
+    
     return await createNotification(
       title: title,
       message: message,
@@ -281,6 +297,9 @@ class NotificationService {
     final title = 'Order Delivered';
     final message = 'Order ${order.uniqueId} has been successfully delivered';
     
+    // Show system notification
+    await _notificationManager.notifyOrderDelivered(order);
+    
     return await createNotification(
       title: title,
       message: message,
@@ -300,6 +319,9 @@ class NotificationService {
     final title = 'Order Overdue';
     final message = 'Order ${order.uniqueId} is overdue. Delivery was scheduled for ${order.deliveryDate.toString().substring(0, 10)}';
     
+    // Show system notification
+    await _notificationManager.notifyOrderOverdue(order);
+    
     return await createNotification(
       title: title,
       message: message,
@@ -313,6 +335,21 @@ class NotificationService {
         'delivery_date': order.deliveryDate.toIso8601String(),
       },
     );
+  }
+
+  /// Schedule delivery reminder notification
+  Future<void> scheduleDeliveryReminder(Order order) async {
+    await _notificationManager.scheduleDeliveryReminder(order);
+  }
+
+  /// Schedule payment reminder notification
+  Future<void> schedulePaymentReminder(Order order, {int daysBeforeDelivery = 2}) async {
+    await _notificationManager.schedulePaymentReminder(order, daysBeforeDelivery: daysBeforeDelivery);
+  }
+
+  /// Cancel scheduled reminders for an order
+  Future<void> cancelOrderReminders(String orderId) async {
+    await _notificationManager.cancelOrderReminders(orderId);
   }
 
   /// Dispose resources

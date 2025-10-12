@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/routes/route_names.dart';
@@ -50,13 +52,13 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
       builder: (context, child) {
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         return PopupMenuButton<String>(
-          color: Colors.white,
+          color: AppColors.surface,
           offset: const Offset(0, 50),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           elevation: 8,
-          shadowColor: Colors.black26,
+          shadowColor: _isDarkMode ? Colors.black87 : Colors.black26,
           child: _buildProfileIcon(),
           itemBuilder: (BuildContext context) => [
             // User Profile Section
@@ -81,7 +83,7 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
                 _getCurrentLanguageName(),
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Colors.grey[600],
+                  color: AppColors.textSecondary,
                 ),
               ),
               onTap: () => _showLanguageSelection(context),
@@ -153,10 +155,12 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
           CircleAvatar(
             radius: 18,
             backgroundColor: const Color(AppConstants.primaryTeal),
-            backgroundImage: widget.userAvatarUrl != null 
-                ? NetworkImage(widget.userAvatarUrl!) 
+            backgroundImage: widget.userAvatarUrl != null && widget.userAvatarUrl!.isNotEmpty
+                ? (widget.userAvatarUrl!.startsWith('http') 
+                    ? NetworkImage(widget.userAvatarUrl!)
+                    : FileImage(File(widget.userAvatarUrl!))) as ImageProvider
                 : null,
-            child: widget.userAvatarUrl == null
+            child: widget.userAvatarUrl == null || widget.userAvatarUrl!.isEmpty
                 ? const Icon(
                     Icons.person,
                     color: Colors.white,
@@ -204,7 +208,7 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: const Color(AppConstants.primaryTeal),
+              backgroundColor: AppColors.primary,
               backgroundImage: widget.userAvatarUrl != null 
                   ? NetworkImage(widget.userAvatarUrl!) 
                   : null,
@@ -226,7 +230,7 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: AppColors.textPrimary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -236,7 +240,7 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
                     widget.userEmail ?? 'user@example.com',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: AppColors.textSecondary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -275,7 +279,7 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
               Icon(
                 icon,
                 size: 20,
-                color: iconColor ?? Colors.grey[700],
+                color: iconColor ?? AppColors.textSecondary,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -284,7 +288,7 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: textColor ?? Colors.black87,
+                    color: textColor ?? AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -293,7 +297,7 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.red,
+                    color: AppColors.error,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -389,15 +393,43 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
   void _toggleTheme() {
     setState(() {
       _isDarkMode = !_isDarkMode;
+      // Update AppColors theme globally
+      AppColors.setDarkMode(_isDarkMode);
     });
+    
     final locale = AppLocalizations.of(_localeProvider.languageCode);
-    // TODO: Implement theme switching logic with provider/bloc
+    
+    // Show confirmation snackbar with theme colors
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${_isDarkMode ? locale.translate('darkMode') : locale.translate('lightMode')} ${locale.translate('enabled')}'),
-        backgroundColor: const Color(AppConstants.primaryTeal),
+        content: Row(
+          children: [
+            Icon(
+              _isDarkMode ? Icons.dark_mode : Icons.light_mode,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '${_isDarkMode ? locale.translate('darkMode') : locale.translate('lightMode')} ${locale.translate('enabled')}',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        duration: const Duration(seconds: 2),
       ),
     );
+    
+    // Force rebuild of the entire app (you might need to use a state management solution)
+    // For now, this will update the dropdown menu immediately
   }
 
   void _handleHelp(BuildContext context) {
@@ -432,7 +464,18 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
         context: context,
         applicationName: 'Tailor App',
         applicationVersion: '1.0.0',
-        applicationIcon: const Icon(Icons.content_cut, size: 32),
+        applicationIcon: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.asset(
+            'assets/icon/app_icon.png',
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return const Icon(Icons.content_cut, size: 32);
+            },
+          ),
+        ),
         children: [
           Text(locale.translate('comprehensiveTailorManagement')),
         ],

@@ -10,6 +10,7 @@ import '../features/auth/screens/signup_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/privacy/privacy_policy_screen.dart';
 import '../features/onboarding/get_started_screen.dart';
+import '../features/onboarding/user_agreement_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
 import '../features/customers/screens/customers_main_screen.dart';
@@ -147,6 +148,13 @@ class AppRoutes {
         name: 'getStarted',
         path: '/get-started',
         pageBuilder: (context, state) => buildPage(const GetStartedScreen(), state),
+      ),
+
+      // User Agreement Screen
+      GoRoute(
+        name: 'userAgreement',
+        path: '/user-agreement',
+        pageBuilder: (context, state) => buildPage(const UserAgreementScreen(), state),
       ),
 
       // Privacy Policy

@@ -33,7 +33,7 @@ class LocalDatabaseService {
   
   // Database configuration from AppConfig
   static String get _databaseName => AppConfig.databaseName;
-  static int get _databaseVersion => 6; // Updated to include new tables
+  static int get _databaseVersion => 12; // v12: Added image_path_1 and image_path_2 to orders table
 
   /// Get database instance (lazy initialization)
   /// Returns the database instance, creating it if it doesn't exist
@@ -86,7 +86,7 @@ class LocalDatabaseService {
     Logger.info('LocalDatabaseService', 'Creating database tables...');
     final batch = db.batch();
 
-    // Create tailor table
+    // Create tailor table (now used for authentication)
     batch.execute('''
       CREATE TABLE tailor (
         id TEXT PRIMARY KEY,
@@ -98,6 +98,8 @@ class LocalDatabaseService {
         password_hash TEXT NOT NULL,
         auth_provider TEXT CHECK(auth_provider IN ('google', 'facebook', 'email')) NOT NULL,
         address TEXT NOT NULL,
+        profile_image_path TEXT,
+        is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -118,7 +120,7 @@ class LocalDatabaseService {
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
-        FOREIGN KEY (tailor_id) REFERENCES tailor (unique_id) ON DELETE CASCADE
+        FOREIGN KEY (tailor_id) REFERENCES tailor (unique_id) ON DELETE CASCADE ON UPDATE CASCADE
       )
     ''');
 
@@ -134,7 +136,7 @@ class LocalDatabaseService {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         is_deleted INTEGER DEFAULT 0,
-        FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE
+        FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE ON UPDATE CASCADE
       )
     ''');
 
@@ -155,11 +157,15 @@ class LocalDatabaseService {
         advance_paid REAL NOT NULL,
         balance_amount REAL NOT NULL,
         measurements TEXT,
+        measurement_id TEXT,
+        image_path_1 TEXT,
+        image_path_2 TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         is_deleted INTEGER DEFAULT 0,
-        FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE,
-        FOREIGN KEY (tailor_id) REFERENCES tailor (unique_id) ON DELETE CASCADE
+        FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (tailor_id) REFERENCES tailor (unique_id) ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (measurement_id) REFERENCES measurement (unique_id) ON DELETE SET NULL ON UPDATE CASCADE
       )
     ''');
 
@@ -177,7 +183,7 @@ class LocalDatabaseService {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         is_deleted INTEGER DEFAULT 0,
-        FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE
+        FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE ON UPDATE CASCADE
       )
     ''');
 
@@ -263,8 +269,8 @@ class LocalDatabaseService {
         action_url TEXT,
         is_read INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (order_id) REFERENCES orders (unique_id),
-        FOREIGN KEY (customer_id) REFERENCES customer (unique_id)
+        FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE ON UPDATE CASCADE
       )
     ''');
 
@@ -283,7 +289,7 @@ class LocalDatabaseService {
         additional_data TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
-        FOREIGN KEY (order_id) REFERENCES orders (unique_id)
+        FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE ON UPDATE CASCADE
       )
     ''');
 
@@ -292,6 +298,7 @@ class LocalDatabaseService {
     batch.execute('CREATE INDEX idx_measurement_customer_id ON measurement (customer_id)');
     batch.execute('CREATE INDEX idx_order_customer_id ON orders (customer_id)');
     batch.execute('CREATE INDEX idx_order_tailor_id ON orders (tailor_id)');
+    batch.execute('CREATE INDEX idx_order_measurement_id ON orders (measurement_id)');
     batch.execute('CREATE INDEX idx_payment_order_id ON payment (order_id)');
     batch.execute('CREATE INDEX idx_tailor_email ON tailor (email)');
     batch.execute('CREATE INDEX idx_order_status ON orders (status)');
@@ -314,6 +321,22 @@ class LocalDatabaseService {
     batch.execute('CREATE INDEX idx_order_cancellations_order_id ON order_cancellations (order_id)');
     batch.execute('CREATE INDEX idx_order_cancellations_cancelled_at ON order_cancellations (cancelled_at)');
     batch.execute('CREATE INDEX idx_order_cancellations_reason ON order_cancellations (reason)');
+
+    // Create composite indexes for common query patterns
+    // For filtering orders by tailor and deletion status
+    batch.execute('CREATE INDEX idx_orders_tailor_deleted ON orders (tailor_id, is_deleted)');
+    // For filtering orders by status and deletion status
+    batch.execute('CREATE INDEX idx_orders_status_deleted ON orders (status, is_deleted)');
+    // For querying orders by tailor and status
+    batch.execute('CREATE INDEX idx_orders_tailor_status ON orders (tailor_id, status)');
+    // For payment queries by order and date
+    batch.execute('CREATE INDEX idx_payment_order_date ON payment (order_id, paid_on)');
+    // For payment queries by deletion status and date
+    batch.execute('CREATE INDEX idx_payment_deleted_date ON payment (is_deleted, paid_on)');
+    // For customer queries by tailor and deletion status
+    batch.execute('CREATE INDEX idx_customer_tailor_deleted ON customer (tailor_id, is_deleted)');
+    // For measurement queries by customer and deletion status
+    batch.execute('CREATE INDEX idx_measurement_customer_deleted ON measurement (customer_id, is_deleted)');
 
     await batch.commit();
   }
@@ -556,6 +579,551 @@ class LocalDatabaseService {
         Logger.info('LocalDatabaseService', 'Successfully fixed payment table constraints');
       } catch (e, stackTrace) {
         Logger.error('LocalDatabaseService', 'Failed to fix payment table', error: e, stackTrace: stackTrace);
+        // Don't rethrow as this is not critical for app functionality
+      }
+    }
+
+    // Add measurement_id to orders table (version 6 to 7)
+    if (oldVersion < 7) {
+      try {
+        Logger.info('LocalDatabaseService', 'Adding measurement_id column to orders table');
+        
+        // Check if the column already exists
+        final columns = await db.rawQuery("PRAGMA table_info(orders)");
+        final hasColumn = columns.any((col) => col['name'] == 'measurement_id');
+        
+        if (!hasColumn) {
+          await db.execute('ALTER TABLE orders ADD COLUMN measurement_id TEXT');
+          Logger.info('LocalDatabaseService', 'Successfully added measurement_id column');
+          
+          // Create index for better query performance
+          await db.execute('CREATE INDEX IF NOT EXISTS idx_order_measurement_id ON orders (measurement_id)');
+          Logger.info('LocalDatabaseService', 'Created index on measurement_id');
+        } else {
+          Logger.info('LocalDatabaseService', 'measurement_id column already exists');
+        }
+
+        // Add composite indexes for better query performance
+        Logger.info('LocalDatabaseService', 'Creating composite indexes');
+        
+        // Check existing indexes to avoid duplicates
+        final existingIndexes = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='index'");
+        final indexNames = existingIndexes.map((idx) => idx['name'] as String).toSet();
+        
+        final compositIndexes = {
+          'idx_orders_tailor_deleted': 'CREATE INDEX IF NOT EXISTS idx_orders_tailor_deleted ON orders (tailor_id, is_deleted)',
+          'idx_orders_status_deleted': 'CREATE INDEX IF NOT EXISTS idx_orders_status_deleted ON orders (status, is_deleted)',
+          'idx_orders_tailor_status': 'CREATE INDEX IF NOT EXISTS idx_orders_tailor_status ON orders (tailor_id, status)',
+          'idx_payment_order_date': 'CREATE INDEX IF NOT EXISTS idx_payment_order_date ON payment (order_id, paid_on)',
+          'idx_payment_deleted_date': 'CREATE INDEX IF NOT EXISTS idx_payment_deleted_date ON payment (is_deleted, paid_on)',
+          'idx_customer_tailor_deleted': 'CREATE INDEX IF NOT EXISTS idx_customer_tailor_deleted ON customer (tailor_id, is_deleted)',
+          'idx_measurement_customer_deleted': 'CREATE INDEX IF NOT EXISTS idx_measurement_customer_deleted ON measurement (customer_id, is_deleted)',
+        };
+        
+        for (final entry in compositIndexes.entries) {
+          if (!indexNames.contains(entry.key)) {
+            await db.execute(entry.value);
+            Logger.info('LocalDatabaseService', 'Created composite index: ${entry.key}');
+          }
+        }
+        
+        Logger.info('LocalDatabaseService', 'Successfully completed version 7 migration');
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to add measurement_id column', error: e, stackTrace: stackTrace);
+        // Don't rethrow as this is not critical for app functionality
+      }
+    }
+    
+    // Recreate all tables with proper FK references (version 7 to 8)
+    if (oldVersion < 8) {
+      try {
+        Logger.info('LocalDatabaseService', '========================================');
+        Logger.info('LocalDatabaseService', 'Starting Version 8 Migration');
+        Logger.info('LocalDatabaseService', 'Recreating all tables with proper FK references');
+        Logger.info('LocalDatabaseService', '========================================');
+        
+        await db.transaction((txn) async {
+          // ============ BACKUP EXISTING DATA ============
+          Logger.info('LocalDatabaseService', 'Step 1: Backing up existing data...');
+          
+          // Backup tailor data
+          final tailorData = await txn.query('tailor');
+          Logger.info('LocalDatabaseService', 'Backed up ${tailorData.length} tailors');
+          
+          // Backup customer data
+          final customerData = await txn.query('customer');
+          Logger.info('LocalDatabaseService', 'Backed up ${customerData.length} customers');
+          
+          // Backup measurement data
+          final measurementData = await txn.query('measurement');
+          Logger.info('LocalDatabaseService', 'Backed up ${measurementData.length} measurements');
+          
+          // Backup order data
+          final orderData = await txn.query('orders');
+          Logger.info('LocalDatabaseService', 'Backed up ${orderData.length} orders');
+          
+          // Backup payment data
+          final paymentData = await txn.query('payment');
+          Logger.info('LocalDatabaseService', 'Backed up ${paymentData.length} payments');
+          
+          // Backup users data
+          final usersData = await txn.query('users');
+          Logger.info('LocalDatabaseService', 'Backed up ${usersData.length} users');
+          
+          // Backup auth_sessions data
+          final authSessionsData = await txn.query('auth_sessions');
+          Logger.info('LocalDatabaseService', 'Backed up ${authSessionsData.length} auth sessions');
+          
+          // Backup user_preferences data
+          final userPreferencesData = await txn.query('user_preferences');
+          Logger.info('LocalDatabaseService', 'Backed up ${userPreferencesData.length} user preferences');
+          
+          // Backup login_history data
+          final loginHistoryData = await txn.query('login_history');
+          Logger.info('LocalDatabaseService', 'Backed up ${loginHistoryData.length} login history records');
+          
+          // Backup notifications data
+          final notificationsData = await txn.query('notifications');
+          Logger.info('LocalDatabaseService', 'Backed up ${notificationsData.length} notifications');
+          
+          // Backup order_cancellations data
+          final orderCancellationsData = await txn.query('order_cancellations');
+          Logger.info('LocalDatabaseService', 'Backed up ${orderCancellationsData.length} order cancellations');
+          
+          // ============ DROP OLD TABLES ============
+          Logger.info('LocalDatabaseService', 'Step 2: Dropping old tables...');
+          
+          await txn.execute('DROP TABLE IF EXISTS order_cancellations');
+          await txn.execute('DROP TABLE IF EXISTS notifications');
+          await txn.execute('DROP TABLE IF EXISTS login_history');
+          await txn.execute('DROP TABLE IF EXISTS user_preferences');
+          await txn.execute('DROP TABLE IF EXISTS auth_sessions');
+          await txn.execute('DROP TABLE IF EXISTS users');
+          await txn.execute('DROP TABLE IF EXISTS payment');
+          await txn.execute('DROP TABLE IF EXISTS orders');
+          await txn.execute('DROP TABLE IF EXISTS measurement');
+          await txn.execute('DROP TABLE IF EXISTS customer');
+          await txn.execute('DROP TABLE IF EXISTS tailor');
+          
+          Logger.info('LocalDatabaseService', 'All old tables dropped');
+          
+          // ============ CREATE NEW TABLES WITH PROPER FK ============
+          Logger.info('LocalDatabaseService', 'Step 3: Creating new tables with proper FK references...');
+          
+          // Create tailor table
+          await txn.execute('''
+            CREATE TABLE tailor (
+              id TEXT PRIMARY KEY,
+              unique_id TEXT UNIQUE NOT NULL,
+              name TEXT NOT NULL,
+              shop_name TEXT NOT NULL,
+              email TEXT UNIQUE NOT NULL,
+              phone TEXT NOT NULL,
+              password_hash TEXT NOT NULL,
+              auth_provider TEXT CHECK(auth_provider IN ('google', 'facebook', 'email')) NOT NULL,
+              address TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+          ''');
+          Logger.info('LocalDatabaseService', '✓ Created tailor table');
+          
+          // Create customer table with CASCADE
+          await txn.execute('''
+            CREATE TABLE customer (
+              id TEXT PRIMARY KEY,
+              unique_id TEXT UNIQUE NOT NULL,
+              tailor_id TEXT NOT NULL,
+              name TEXT NOT NULL,
+              gender TEXT,
+              phone TEXT NOT NULL,
+              email TEXT,
+              address TEXT NOT NULL,
+              notes TEXT,
+              is_deleted INTEGER DEFAULT 0,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              FOREIGN KEY (tailor_id) REFERENCES tailor (unique_id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+          ''');
+          Logger.info('LocalDatabaseService', '✓ Created customer table with FK CASCADE');
+          
+          // Create measurement table with CASCADE
+          await txn.execute('''
+            CREATE TABLE measurement (
+              id TEXT PRIMARY KEY,
+              unique_id TEXT UNIQUE NOT NULL,
+              customer_id TEXT NOT NULL,
+              dress_type TEXT NOT NULL,
+              measurements TEXT NOT NULL,
+              notes TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              is_deleted INTEGER DEFAULT 0,
+              FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+          ''');
+          Logger.info('LocalDatabaseService', '✓ Created measurement table with FK CASCADE');
+          
+          // Create orders table with CASCADE and measurement_id
+          await txn.execute('''
+            CREATE TABLE orders (
+              id TEXT PRIMARY KEY,
+              unique_id TEXT UNIQUE NOT NULL,
+              customer_id TEXT NOT NULL,
+              tailor_id TEXT NOT NULL,
+              service_type TEXT NOT NULL,
+              status TEXT CHECK(status IN ('pending', 'cutting', 'stitching', 'ready', 'delivered')) NOT NULL,
+              payment_status TEXT CHECK(payment_status IN ('pending', 'partial', 'paid', 'overdue')) DEFAULT 'pending',
+              delivery_date TEXT NOT NULL,
+              notes TEXT NOT NULL,
+              design_image_url TEXT,
+              total_amount REAL NOT NULL,
+              advance_paid REAL NOT NULL,
+              balance_amount REAL NOT NULL,
+              measurements TEXT,
+              measurement_id TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              is_deleted INTEGER DEFAULT 0,
+              FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE ON UPDATE CASCADE,
+              FOREIGN KEY (tailor_id) REFERENCES tailor (unique_id) ON DELETE CASCADE ON UPDATE CASCADE,
+              FOREIGN KEY (measurement_id) REFERENCES measurement (unique_id) ON DELETE SET NULL ON UPDATE CASCADE
+            )
+          ''');
+          Logger.info('LocalDatabaseService', '✓ Created orders table with FK CASCADE and measurement_id');
+          
+          // Create payment table with CASCADE
+          await txn.execute('''
+            CREATE TABLE payment (
+              id TEXT PRIMARY KEY,
+              unique_id TEXT UNIQUE NOT NULL,
+              order_id TEXT NOT NULL,
+              amount REAL NOT NULL,
+              method TEXT NOT NULL DEFAULT 'cash',
+              notes TEXT DEFAULT '',
+              transaction_id TEXT,
+              paid_on TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              is_deleted INTEGER DEFAULT 0,
+              FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+          ''');
+          Logger.info('LocalDatabaseService', '✓ Created payment table with FK CASCADE');
+          
+          // Create users table
+          await txn.execute('''
+            CREATE TABLE users (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              username TEXT UNIQUE NOT NULL,
+              email TEXT UNIQUE NOT NULL,
+              phone TEXT,
+              password_hash TEXT NOT NULL,
+              profile_picture TEXT,
+              is_email_verified INTEGER DEFAULT 0,
+              is_phone_verified INTEGER DEFAULT 0,
+              login_count INTEGER DEFAULT 0,
+              last_login TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+          ''');
+          Logger.info('LocalDatabaseService', '✓ Created users table');
+          
+          // Create auth_sessions table with CASCADE
+          await txn.execute('''
+            CREATE TABLE auth_sessions (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              session_id TEXT UNIQUE NOT NULL,
+              user_id INTEGER NOT NULL,
+              access_token TEXT NOT NULL,
+              refresh_token TEXT NOT NULL,
+              expires_at TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT,
+              device_info TEXT,
+              ip_address TEXT,
+              user_agent TEXT,
+              is_active INTEGER DEFAULT 1,
+              FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+          ''');
+          Logger.info('LocalDatabaseService', '✓ Created auth_sessions table with FK CASCADE');
+          
+          // Create user_preferences table with CASCADE
+          await txn.execute('''
+            CREATE TABLE user_preferences (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER NOT NULL,
+              theme_mode TEXT DEFAULT 'system',
+              language TEXT DEFAULT 'en',
+              measurement_unit TEXT DEFAULT 'inches',
+              notifications_enabled INTEGER DEFAULT 1,
+              biometric_enabled INTEGER DEFAULT 0,
+              remember_me INTEGER DEFAULT 1,
+              auto_logout_duration INTEGER DEFAULT 3600,
+              custom_settings TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+          ''');
+          Logger.info('LocalDatabaseService', '✓ Created user_preferences table with FK CASCADE');
+          
+          // Create login_history table with CASCADE
+          await txn.execute('''
+            CREATE TABLE login_history (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER NOT NULL,
+              login_time TEXT NOT NULL,
+              device_info TEXT,
+              ip_address TEXT,
+              user_agent TEXT,
+              login_method TEXT DEFAULT 'password',
+              was_successful INTEGER NOT NULL,
+              failure_reason TEXT,
+              FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+          ''');
+          Logger.info('LocalDatabaseService', '✓ Created login_history table with FK CASCADE');
+          
+          // Create notifications table with CASCADE
+          await txn.execute('''
+            CREATE TABLE notifications (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              message TEXT NOT NULL,
+              type TEXT NOT NULL,
+              data TEXT,
+              order_id TEXT,
+              customer_id TEXT,
+              action_url TEXT,
+              is_read INTEGER DEFAULT 0,
+              created_at TEXT NOT NULL,
+              FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE ON UPDATE CASCADE,
+              FOREIGN KEY (customer_id) REFERENCES customer (unique_id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+          ''');
+          Logger.info('LocalDatabaseService', '✓ Created notifications table with FK CASCADE');
+          
+          // Create order_cancellations table with CASCADE
+          await txn.execute('''
+            CREATE TABLE order_cancellations (
+              id TEXT PRIMARY KEY,
+              order_id TEXT NOT NULL,
+              reason TEXT NOT NULL,
+              custom_reason TEXT,
+              cancelled_by TEXT NOT NULL,
+              cancelled_at TEXT NOT NULL,
+              refund_amount REAL DEFAULT 0.0,
+              refund_status TEXT DEFAULT 'not_applicable',
+              refund_notes TEXT,
+              additional_data TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              FOREIGN KEY (order_id) REFERENCES orders (unique_id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+          ''');
+          Logger.info('LocalDatabaseService', '✓ Created order_cancellations table with FK CASCADE');
+          
+          // ============ CREATE ALL INDEXES ============
+          Logger.info('LocalDatabaseService', 'Step 4: Creating indexes...');
+          
+          // Basic indexes
+          await txn.execute('CREATE INDEX idx_customer_tailor_id ON customer (tailor_id)');
+          await txn.execute('CREATE INDEX idx_measurement_customer_id ON measurement (customer_id)');
+          await txn.execute('CREATE INDEX idx_order_customer_id ON orders (customer_id)');
+          await txn.execute('CREATE INDEX idx_order_tailor_id ON orders (tailor_id)');
+          await txn.execute('CREATE INDEX idx_order_measurement_id ON orders (measurement_id)');
+          await txn.execute('CREATE INDEX idx_payment_order_id ON payment (order_id)');
+          await txn.execute('CREATE INDEX idx_tailor_email ON tailor (email)');
+          await txn.execute('CREATE INDEX idx_order_status ON orders (status)');
+          
+          // Auth-related indexes
+          await txn.execute('CREATE INDEX idx_users_email ON users (email)');
+          await txn.execute('CREATE INDEX idx_users_username ON users (username)');
+          await txn.execute('CREATE INDEX idx_auth_sessions_user_id ON auth_sessions (user_id)');
+          await txn.execute('CREATE INDEX idx_auth_sessions_session_id ON auth_sessions (session_id)');
+          await txn.execute('CREATE INDEX idx_auth_sessions_expires_at ON auth_sessions (expires_at)');
+          await txn.execute('CREATE INDEX idx_user_preferences_user_id ON user_preferences (user_id)');
+          await txn.execute('CREATE INDEX idx_login_history_user_id ON login_history (user_id)');
+          await txn.execute('CREATE INDEX idx_login_history_login_time ON login_history (login_time)');
+          
+          // Notification and cancellation indexes
+          await txn.execute('CREATE INDEX idx_notifications_created_at ON notifications (created_at)');
+          await txn.execute('CREATE INDEX idx_notifications_is_read ON notifications (is_read)');
+          await txn.execute('CREATE INDEX idx_notifications_order_id ON notifications (order_id)');
+          await txn.execute('CREATE INDEX idx_notifications_customer_id ON notifications (customer_id)');
+          await txn.execute('CREATE INDEX idx_order_cancellations_order_id ON order_cancellations (order_id)');
+          await txn.execute('CREATE INDEX idx_order_cancellations_cancelled_at ON order_cancellations (cancelled_at)');
+          await txn.execute('CREATE INDEX idx_order_cancellations_reason ON order_cancellations (reason)');
+          
+          // Composite indexes for common query patterns
+          await txn.execute('CREATE INDEX idx_orders_tailor_deleted ON orders (tailor_id, is_deleted)');
+          await txn.execute('CREATE INDEX idx_orders_status_deleted ON orders (status, is_deleted)');
+          await txn.execute('CREATE INDEX idx_orders_tailor_status ON orders (tailor_id, status)');
+          await txn.execute('CREATE INDEX idx_payment_order_date ON payment (order_id, paid_on)');
+          await txn.execute('CREATE INDEX idx_payment_deleted_date ON payment (is_deleted, paid_on)');
+          await txn.execute('CREATE INDEX idx_customer_tailor_deleted ON customer (tailor_id, is_deleted)');
+          await txn.execute('CREATE INDEX idx_measurement_customer_deleted ON measurement (customer_id, is_deleted)');
+          
+          Logger.info('LocalDatabaseService', '✓ Created all indexes');
+          
+          // ============ RESTORE DATA ============
+          Logger.info('LocalDatabaseService', 'Step 5: Restoring data...');
+          
+          // Restore tailor data
+          for (final row in tailorData) {
+            await txn.insert('tailor', row);
+          }
+          Logger.info('LocalDatabaseService', '✓ Restored ${tailorData.length} tailors');
+          
+          // Restore customer data
+          for (final row in customerData) {
+            await txn.insert('customer', row);
+          }
+          Logger.info('LocalDatabaseService', '✓ Restored ${customerData.length} customers');
+          
+          // Restore measurement data
+          for (final row in measurementData) {
+            await txn.insert('measurement', row);
+          }
+          Logger.info('LocalDatabaseService', '✓ Restored ${measurementData.length} measurements');
+          
+          // Restore order data (add measurement_id if missing)
+          for (final row in orderData) {
+            // Ensure measurement_id exists in the row
+            if (!row.containsKey('measurement_id')) {
+              row['measurement_id'] = null;
+            }
+            await txn.insert('orders', row);
+          }
+          Logger.info('LocalDatabaseService', '✓ Restored ${orderData.length} orders');
+          
+          // Restore payment data
+          for (final row in paymentData) {
+            await txn.insert('payment', row);
+          }
+          Logger.info('LocalDatabaseService', '✓ Restored ${paymentData.length} payments');
+          
+          // Restore users data
+          for (final row in usersData) {
+            await txn.insert('users', row);
+          }
+          Logger.info('LocalDatabaseService', '✓ Restored ${usersData.length} users');
+          
+          // Restore auth_sessions data
+          for (final row in authSessionsData) {
+            await txn.insert('auth_sessions', row);
+          }
+          Logger.info('LocalDatabaseService', '✓ Restored ${authSessionsData.length} auth sessions');
+          
+          // Restore user_preferences data
+          for (final row in userPreferencesData) {
+            await txn.insert('user_preferences', row);
+          }
+          Logger.info('LocalDatabaseService', '✓ Restored ${userPreferencesData.length} user preferences');
+          
+          // Restore login_history data
+          for (final row in loginHistoryData) {
+            await txn.insert('login_history', row);
+          }
+          Logger.info('LocalDatabaseService', '✓ Restored ${loginHistoryData.length} login history records');
+          
+          // Restore notifications data
+          for (final row in notificationsData) {
+            await txn.insert('notifications', row);
+          }
+          Logger.info('LocalDatabaseService', '✓ Restored ${notificationsData.length} notifications');
+          
+          // Restore order_cancellations data
+          for (final row in orderCancellationsData) {
+            await txn.insert('order_cancellations', row);
+          }
+          Logger.info('LocalDatabaseService', '✓ Restored ${orderCancellationsData.length} order cancellations');
+          
+          Logger.info('LocalDatabaseService', '========================================');
+          Logger.info('LocalDatabaseService', 'Version 8 Migration Completed Successfully!');
+          Logger.info('LocalDatabaseService', 'All tables recreated with proper FK CASCADE');
+          Logger.info('LocalDatabaseService', 'All data restored successfully');
+          Logger.info('LocalDatabaseService', '========================================');
+        });
+        
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'CRITICAL: Version 8 migration failed!', error: e, stackTrace: stackTrace);
+        Logger.error('LocalDatabaseService', 'Database may be in an inconsistent state');
+        throw Exception('Failed to migrate to version 8: $e');
+      }
+    }
+    
+    // Add is_deleted column to tailor table (version 9 to 10)
+    if (oldVersion < 10) {
+      try {
+        Logger.info('LocalDatabaseService', 'Adding is_deleted column to tailor table');
+        
+        // Check if the column already exists
+        final columns = await db.rawQuery("PRAGMA table_info(tailor)");
+        final hasColumn = columns.any((col) => col['name'] == 'is_deleted');
+        
+        if (!hasColumn) {
+          await db.execute('ALTER TABLE tailor ADD COLUMN is_deleted INTEGER DEFAULT 0');
+          Logger.info('LocalDatabaseService', 'Successfully added is_deleted column to tailor table');
+        } else {
+          Logger.info('LocalDatabaseService', 'is_deleted column already exists in tailor table');
+        }
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to add is_deleted column to tailor table', error: e, stackTrace: stackTrace);
+        // Don't rethrow as this is not critical for app functionality
+      }
+    }
+
+    // Add profile_image_path column to tailor table (version 10 to 11)
+    if (oldVersion < 11) {
+      try {
+        Logger.info('LocalDatabaseService', 'Adding profile_image_path column to tailor table');
+        
+        // Check if the column already exists
+        final columns = await db.rawQuery("PRAGMA table_info(tailor)");
+        final hasColumn = columns.any((col) => col['name'] == 'profile_image_path');
+        
+        if (!hasColumn) {
+          await db.execute('ALTER TABLE tailor ADD COLUMN profile_image_path TEXT');
+          Logger.info('LocalDatabaseService', 'Successfully added profile_image_path column to tailor table');
+        } else {
+          Logger.info('LocalDatabaseService', 'profile_image_path column already exists in tailor table');
+        }
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to add profile_image_path column to tailor table', error: e, stackTrace: stackTrace);
+        // Don't rethrow as this is not critical for app functionality
+      }
+    }
+
+    // Add image_path_1 and image_path_2 columns to orders table (version 11 to 12)
+    if (oldVersion < 12) {
+      try {
+        Logger.info('LocalDatabaseService', 'Adding image columns to orders table');
+        
+        // Check if the columns already exist
+        final columns = await db.rawQuery("PRAGMA table_info(orders)");
+        final hasImagePath1 = columns.any((col) => col['name'] == 'image_path_1');
+        final hasImagePath2 = columns.any((col) => col['name'] == 'image_path_2');
+        
+        if (!hasImagePath1) {
+          await db.execute('ALTER TABLE orders ADD COLUMN image_path_1 TEXT');
+          Logger.info('LocalDatabaseService', 'Successfully added image_path_1 column to orders table');
+        } else {
+          Logger.info('LocalDatabaseService', 'image_path_1 column already exists in orders table');
+        }
+        
+        if (!hasImagePath2) {
+          await db.execute('ALTER TABLE orders ADD COLUMN image_path_2 TEXT');
+          Logger.info('LocalDatabaseService', 'Successfully added image_path_2 column to orders table');
+        } else {
+          Logger.info('LocalDatabaseService', 'image_path_2 column already exists in orders table');
+        }
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to add image columns to orders table', error: e, stackTrace: stackTrace);
         // Don't rethrow as this is not critical for app functionality
       }
     }
@@ -930,6 +1498,7 @@ class LocalDatabaseService {
       'advance_paid': order.advancePaid,
       'balance_amount': order.balanceAmount,
       'measurements': order.measurements.isNotEmpty ? jsonEncode(order.measurements) : null,
+      'measurement_id': order.measurementId, // NEW: Add measurement reference
       'created_at': order.createdAt.toIso8601String(),
       'updated_at': order.updatedAt.toIso8601String(),
     });
@@ -963,6 +1532,7 @@ class LocalDatabaseService {
     return Logger.traceAsyncMethod('LocalDatabaseService', 'insertOrderWithoutTailorForeignKeyCheck', () async {
       try {
         Logger.debug('LocalDatabaseService', 'Inserting order without tailor FK check: ${order.uniqueId}');
+        Logger.debug('LocalDatabaseService', 'Order image paths - Path1: ${order.imagePath1}, Path2: ${order.imagePath2}');
         final db = await database;
         
         // Ensure measurements column exists before insertion
@@ -985,6 +1555,9 @@ class LocalDatabaseService {
           'advance_paid': order.advancePaid,
           'balance_amount': order.balanceAmount,
           'measurements': order.measurements.isNotEmpty ? jsonEncode(order.measurements) : null,
+          'measurement_id': order.measurementId, // NEW: Add measurement reference
+          'image_path_1': order.imagePath1, // CRITICAL: Add garment image 1
+          'image_path_2': order.imagePath2, // CRITICAL: Add garment image 2
           'created_at': order.createdAt.toIso8601String(),
           'updated_at': order.updatedAt.toIso8601String(),
         });
@@ -1035,9 +1608,11 @@ class LocalDatabaseService {
   }
 
   /// Get all orders as Order objects
-  Future<List<Order>> getOrders() async {
+  Future<List<Order>> getOrders({String? tailorId}) async {
     final maps = await select(
       'orders',
+      where: tailorId != null ? 'tailor_id = ?' : null,
+      whereArgs: tailorId != null ? [tailorId] : null,
       orderBy: 'created_at DESC',
     );
     
@@ -1141,10 +1716,18 @@ class LocalDatabaseService {
   }
 
   /// Get deleted orders
-  Future<List<Order>> getDeletedOrders() async {
+  Future<List<Order>> getDeletedOrders({String? tailorId}) async {
     return Logger.traceAsyncMethod('LocalDatabaseService', 'getDeletedOrders', () async {
       try {
-        final results = await select('orders', where: 'is_deleted = 1');
+        String where = 'is_deleted = 1';
+        List<Object?> whereArgs = [];
+        
+        if (tailorId != null) {
+          where += ' AND tailor_id = ?';
+          whereArgs.add(tailorId);
+        }
+        
+        final results = await select('orders', where: where, whereArgs: whereArgs);
         return results.map((map) => Order.fromMap(map)).toList();
       } catch (e) {
         // If is_deleted column doesn't exist, return empty list
@@ -1218,20 +1801,41 @@ class LocalDatabaseService {
     int? limit,
     int? offset,
     String? orderBy,
+    String? tailorId, // Filter by tailor
   }) async {
     return Logger.traceAsyncMethod('LocalDatabaseService', 'getPayments', () async {
       try {
-        Logger.debug('LocalDatabaseService', 'Getting all payments');
-        final result = await select(
-          'payment',
-          where: 'is_deleted = 0',
-          orderBy: orderBy ?? 'paid_on DESC',
-          limit: limit,
-          offset: offset,
-        );
-        final payments = result.map((map) => Payment.fromMap(map)).toList();
-        Logger.info('LocalDatabaseService', 'Found ${payments.length} payments');
-        return payments;
+        Logger.debug('LocalDatabaseService', 'Getting all payments${tailorId != null ? ' for tailor: $tailorId' : ''}');
+        
+        if (tailorId != null) {
+          // Join with orders table to filter by tailor_id
+          final result = await rawQuery(
+            '''
+            SELECT p.* FROM payment p
+            INNER JOIN orders o ON p.order_id = o.unique_id
+            WHERE p.is_deleted = 0 AND o.tailor_id = ?
+            ORDER BY ${orderBy ?? 'p.paid_on DESC'}
+            ${limit != null ? 'LIMIT $limit' : ''}
+            ${offset != null ? 'OFFSET $offset' : ''}
+            ''',
+            [tailorId],
+          );
+          final payments = result.map((map) => Payment.fromMap(map)).toList();
+          Logger.info('LocalDatabaseService', 'Found ${payments.length} payments for tailor $tailorId');
+          return payments;
+        } else {
+          // Get all payments (no filtering)
+          final result = await select(
+            'payment',
+            where: 'is_deleted = 0',
+            orderBy: orderBy ?? 'paid_on DESC',
+            limit: limit,
+            offset: offset,
+          );
+          final payments = result.map((map) => Payment.fromMap(map)).toList();
+          Logger.info('LocalDatabaseService', 'Found ${payments.length} payments');
+          return payments;
+        }
       } catch (e, stackTrace) {
         Logger.error('LocalDatabaseService', 'Failed to get payments', error: e, stackTrace: stackTrace);
         return [];
@@ -1426,6 +2030,349 @@ class LocalDatabaseService {
       WHERE o.tailor_id = ?
       ORDER BY o.created_at DESC
     ''', [tailorId]);
+  }
+
+  // ==================== OPTIMIZED QUERY METHODS ====================
+
+  /// Get orders with full details (customer, payments, measurements) using JOINs
+  /// Eliminates N+1 query problem by fetching all related data in one query
+  Future<List<Map<String, dynamic>>> getOrdersWithFullDetails({
+    String? tailorId,
+    String? status,
+    int? limit,
+    int? offset,
+  }) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'getOrdersWithFullDetails', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Getting orders with full details');
+        
+        String sql = '''
+          SELECT 
+            o.*,
+            c.name as customer_name,
+            c.phone as customer_phone,
+            c.email as customer_email,
+            c.address as customer_address,
+            m.dress_type as measurement_dress_type,
+            m.measurements as measurement_data,
+            m.notes as measurement_notes,
+            (SELECT COALESCE(SUM(p.amount), 0) 
+             FROM payment p 
+             WHERE p.order_id = o.unique_id AND p.is_deleted = 0) as total_paid,
+            (SELECT COUNT(*) 
+             FROM payment p 
+             WHERE p.order_id = o.unique_id AND p.is_deleted = 0) as payment_count
+          FROM orders o
+          INNER JOIN customer c ON o.customer_id = c.unique_id
+          LEFT JOIN measurement m ON o.measurement_id = m.unique_id
+          WHERE o.is_deleted = 0
+        ''';
+        
+        List<dynamic> args = [];
+        
+        if (tailorId != null) {
+          sql += ' AND o.tailor_id = ?';
+          args.add(tailorId);
+        }
+        
+        if (status != null) {
+          sql += ' AND o.status = ?';
+          args.add(status);
+        }
+        
+        sql += ' ORDER BY o.created_at DESC';
+        
+        if (limit != null) {
+          sql += ' LIMIT ?';
+          args.add(limit);
+          
+          if (offset != null) {
+            sql += ' OFFSET ?';
+            args.add(offset);
+          }
+        }
+        
+        final result = await rawQuery(sql, args);
+        Logger.info('LocalDatabaseService', 'Found ${result.length} orders with full details');
+        return result;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to get orders with full details', 
+                     error: e, stackTrace: stackTrace);
+        return [];
+      }
+    }, parameters: {'tailorId': tailorId, 'status': status});
+  }
+
+  /// Get customer with comprehensive statistics
+  /// Includes order count, total revenue, pending balance, and payment stats
+  Future<Map<String, dynamic>?> getCustomerWithStats(String customerId) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'getCustomerWithStats', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Getting customer stats for: $customerId');
+        
+        final result = await rawQuery('''
+          SELECT 
+            c.*,
+            COUNT(DISTINCT o.id) as total_orders,
+            COUNT(DISTINCT CASE WHEN o.status = 'pending' THEN o.id END) as pending_orders,
+            COUNT(DISTINCT CASE WHEN o.status = 'in_progress' THEN o.id END) as in_progress_orders,
+            COUNT(DISTINCT CASE WHEN o.status = 'ready' THEN o.id END) as ready_orders,
+            COUNT(DISTINCT CASE WHEN o.status = 'delivered' THEN o.id END) as delivered_orders,
+            COALESCE(SUM(o.total_amount), 0) as total_revenue,
+            COALESCE(SUM(o.advance_paid), 0) as total_advance,
+            COALESCE(SUM(o.balance_amount), 0) as pending_balance,
+            COUNT(DISTINCT m.id) as total_measurements,
+            (SELECT COUNT(*) FROM payment p 
+             INNER JOIN orders ord ON p.order_id = ord.unique_id 
+             WHERE ord.customer_id = c.unique_id AND p.is_deleted = 0) as total_payments
+          FROM customer c
+          LEFT JOIN orders o ON c.unique_id = o.customer_id AND o.is_deleted = 0
+          LEFT JOIN measurement m ON c.unique_id = m.customer_id AND m.is_deleted = 0
+          WHERE c.unique_id = ?
+          GROUP BY c.id
+        ''', [customerId]);
+        
+        if (result.isEmpty) {
+          Logger.warning('LocalDatabaseService', 'Customer not found: $customerId');
+          return null;
+        }
+        
+        Logger.info('LocalDatabaseService', 'Retrieved customer stats successfully');
+        return result.first;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to get customer stats', 
+                     error: e, stackTrace: stackTrace);
+        return null;
+      }
+    }, parameters: {'customerId': customerId});
+  }
+
+  /// Get payment analytics data for reports
+  /// Includes payments grouped by date, method, and status
+  Future<Map<String, dynamic>> getPaymentAnalyticsData({
+    String? tailorId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'getPaymentAnalyticsData', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Getting payment analytics');
+        
+        String whereClause = 'p.is_deleted = 0';
+        List<dynamic> args = [];
+        
+        if (tailorId != null) {
+          whereClause += ' AND o.tailor_id = ?';
+          args.add(tailorId);
+        }
+        
+        if (startDate != null) {
+          whereClause += ' AND p.paid_on >= ?';
+          args.add(startDate.toIso8601String());
+        }
+        
+        if (endDate != null) {
+          whereClause += ' AND p.paid_on <= ?';
+          args.add(endDate.toIso8601String());
+        }
+        
+        // Get total payments and amount
+        final totalResult = await rawQuery('''
+          SELECT 
+            COUNT(*) as total_count,
+            COALESCE(SUM(p.amount), 0) as total_amount
+          FROM payment p
+          INNER JOIN orders o ON p.order_id = o.unique_id
+          WHERE $whereClause
+        ''', args);
+        
+        // Get payments by method
+        final methodResult = await rawQuery('''
+          SELECT 
+            p.method,
+            COUNT(*) as count,
+            COALESCE(SUM(p.amount), 0) as amount
+          FROM payment p
+          INNER JOIN orders o ON p.order_id = o.unique_id
+          WHERE $whereClause
+          GROUP BY p.method
+          ORDER BY amount DESC
+        ''', args);
+        
+        // Get recent payments with customer details
+        final recentResult = await rawQuery('''
+          SELECT 
+            p.*,
+            c.name as customer_name,
+            c.phone as customer_phone,
+            o.unique_id as order_unique_id,
+            o.service_type as order_service_type
+          FROM payment p
+          INNER JOIN orders o ON p.order_id = o.unique_id
+          INNER JOIN customer c ON o.customer_id = c.unique_id
+          WHERE $whereClause
+          ORDER BY p.paid_on DESC
+          LIMIT 50
+        ''', args);
+        
+        Logger.info('LocalDatabaseService', 'Retrieved payment analytics successfully');
+        
+        return {
+          'total_count': totalResult.first['total_count'],
+          'total_amount': totalResult.first['total_amount'],
+          'by_method': methodResult,
+          'recent_payments': recentResult,
+        };
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to get payment analytics', 
+                     error: e, stackTrace: stackTrace);
+        return {
+          'total_count': 0,
+          'total_amount': 0.0,
+          'by_method': [],
+          'recent_payments': [],
+        };
+      }
+    }, parameters: {'tailorId': tailorId, 'startDate': startDate, 'endDate': endDate});
+  }
+
+  /// Get orders with pending payments and customer details
+  /// Optimized for payment collection screen
+  Future<List<Map<String, dynamic>>> getOrdersWithPendingPayments({
+    String? tailorId,
+    int? limit,
+  }) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'getOrdersWithPendingPayments', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Getting orders with pending payments');
+        
+        String sql = '''
+          SELECT 
+            o.*,
+            c.name as customer_name,
+            c.phone as customer_phone,
+            c.email as customer_email,
+            (SELECT COALESCE(SUM(p.amount), 0) 
+             FROM payment p 
+             WHERE p.order_id = o.unique_id AND p.is_deleted = 0) as total_paid,
+            (o.total_amount - COALESCE((SELECT SUM(p.amount) 
+             FROM payment p 
+             WHERE p.order_id = o.unique_id AND p.is_deleted = 0), 0)) as remaining_balance
+          FROM orders o
+          INNER JOIN customer c ON o.customer_id = c.unique_id
+          WHERE o.is_deleted = 0
+          AND (o.payment_status = 'pending' OR o.payment_status = 'partial')
+        ''';
+        
+        List<dynamic> args = [];
+        
+        if (tailorId != null) {
+          sql += ' AND o.tailor_id = ?';
+          args.add(tailorId);
+        }
+        
+        sql += ' ORDER BY o.delivery_date ASC';
+        
+        if (limit != null) {
+          sql += ' LIMIT ?';
+          args.add(limit);
+        }
+        
+        final result = await rawQuery(sql, args);
+        Logger.info('LocalDatabaseService', 'Found ${result.length} orders with pending payments');
+        return result;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to get orders with pending payments', 
+                     error: e, stackTrace: stackTrace);
+        return [];
+      }
+    }, parameters: {'tailorId': tailorId, 'limit': limit});
+  }
+
+  /// Get payment history with full details (order, customer info)
+  /// Optimized for payment history screen
+  Future<List<Map<String, dynamic>>> getPaymentHistoryWithDetails({
+    String? tailorId,
+    String? customerId,
+    String? method,
+    DateTime? startDate,
+    DateTime? endDate,
+    int? limit,
+    int? offset,
+  }) async {
+    return Logger.traceAsyncMethod('LocalDatabaseService', 'getPaymentHistoryWithDetails', () async {
+      try {
+        Logger.debug('LocalDatabaseService', 'Getting payment history with details');
+        
+        String sql = '''
+          SELECT 
+            p.*,
+            c.name as customer_name,
+            c.phone as customer_phone,
+            o.unique_id as order_unique_id,
+            o.service_type,
+            o.total_amount as order_total,
+            o.status as order_status
+          FROM payment p
+          INNER JOIN orders o ON p.order_id = o.unique_id
+          INNER JOIN customer c ON o.customer_id = c.unique_id
+          WHERE p.is_deleted = 0
+        ''';
+        
+        List<dynamic> args = [];
+        
+        if (tailorId != null) {
+          sql += ' AND o.tailor_id = ?';
+          args.add(tailorId);
+        }
+        
+        if (customerId != null) {
+          sql += ' AND o.customer_id = ?';
+          args.add(customerId);
+        }
+        
+        if (method != null) {
+          sql += ' AND p.method = ?';
+          args.add(method);
+        }
+        
+        if (startDate != null) {
+          sql += ' AND p.paid_on >= ?';
+          args.add(startDate.toIso8601String());
+        }
+        
+        if (endDate != null) {
+          sql += ' AND p.paid_on <= ?';
+          args.add(endDate.toIso8601String());
+        }
+        
+        sql += ' ORDER BY p.paid_on DESC';
+        
+        if (limit != null) {
+          sql += ' LIMIT ?';
+          args.add(limit);
+          
+          if (offset != null) {
+            sql += ' OFFSET ?';
+            args.add(offset);
+          }
+        }
+        
+        final result = await rawQuery(sql, args);
+        Logger.info('LocalDatabaseService', 'Found ${result.length} payment records');
+        return result;
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to get payment history', 
+                     error: e, stackTrace: stackTrace);
+        return [];
+      }
+    }, parameters: {
+      'tailorId': tailorId,
+      'customerId': customerId,
+      'method': method,
+      'startDate': startDate,
+      'endDate': endDate,
+    });
   }
 
   // ==================== USER PREFERENCES METHODS ====================

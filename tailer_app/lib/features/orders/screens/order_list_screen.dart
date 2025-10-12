@@ -6,6 +6,7 @@ import '../../../core/providers/simple_locale_provider.dart';
 import '../../../core/translations/app_localizations.dart';
 import '../../../data/models/order_model.dart';
 import '../../../data/services/local_db_service.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../routes/route_names.dart';
 import '../../../widgets/custom_header.dart';
@@ -24,6 +25,7 @@ class OrderListScreen extends StatefulWidget {
 
 class _OrderListScreenState extends State<OrderListScreen> with NavigationMixin {
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  final AuthService _authService = AuthService();
   final SimpleLocaleProvider _localeProvider = SimpleLocaleProvider();
   final TextEditingController _searchController = TextEditingController();
   
@@ -31,12 +33,23 @@ class _OrderListScreenState extends State<OrderListScreen> with NavigationMixin 
   List<Order> _filteredOrders = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  String? _tailorId;
   int _currentNavIndex = 2; // Orders tab
 
   @override
   void initState() {
     super.initState();
-    _loadOrders();
+    _initializeAuth();
+  }
+  
+  Future<void> _initializeAuth() async {
+    await _authService.initialize();
+    if (_authService.currentUser != null) {
+      setState(() {
+        _tailorId = _authService.currentUser!.email;
+      });
+      _loadOrders();
+    }
   }
 
   @override
@@ -47,12 +60,14 @@ class _OrderListScreenState extends State<OrderListScreen> with NavigationMixin 
   }
 
   Future<void> _loadOrders() async {
+    if (_tailorId == null) return;
+    
     try {
       setState(() {
         _isLoading = true;
       });
 
-      final orders = await _dbService.getOrders();
+      final orders = await _dbService.getOrders(tailorId: _tailorId);
       
       if (mounted) {
         setState(() {

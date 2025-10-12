@@ -17,6 +17,9 @@ class Order {
   final double advancePaid;
   final double balanceAmount;
   final Map<String, double> measurements; // Store measurements for this order
+  final String? measurementId; // Reference to measurement table (NEW)
+  final String? imagePath1; // First garment image
+  final String? imagePath2; // Second garment image
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isDeleted;
@@ -36,6 +39,9 @@ class Order {
     required this.advancePaid,
     required this.balanceAmount,
     required this.measurements,
+    this.measurementId, // NEW: Optional reference to measurement
+    this.imagePath1, // Optional first garment image
+    this.imagePath2, // Optional second garment image
     required this.createdAt,
     required this.updatedAt,
     this.isDeleted = false,
@@ -66,6 +72,9 @@ class Order {
     required double advancePaid,
     required double balanceAmount,
     required Map<String, double> measurements,
+    String? measurementId, // NEW: Optional measurement reference
+    String? imagePath1, // Optional first garment image
+    String? imagePath2, // Optional second garment image
   }) {
     final now = DateTime.now();
     final uniqueId = _generateStylishId();
@@ -85,6 +94,9 @@ class Order {
       advancePaid: advancePaid,
       balanceAmount: balanceAmount,
       measurements: Map<String, double>.from(measurements),
+      measurementId: measurementId, // NEW
+      imagePath1: imagePath1, // NEW
+      imagePath2: imagePath2, // NEW
       createdAt: now,
       updatedAt: now,
       isDeleted: false,
@@ -108,6 +120,9 @@ class Order {
       advancePaid: (map['advance_paid'] as num?)?.toDouble() ?? 0.0,
       balanceAmount: (map['balance_amount'] as num?)?.toDouble() ?? 0.0,
       measurements: _parseMeasurements(map['measurements']),
+      measurementId: map['measurement_id']?.toString(), // NEW
+      imagePath1: map['image_path_1']?.toString(), // NEW
+      imagePath2: map['image_path_2']?.toString(), // NEW
       createdAt: DateTime.parse(map['created_at']?.toString() ?? DateTime.now().toIso8601String()),
       updatedAt: DateTime.parse(map['updated_at']?.toString() ?? DateTime.now().toIso8601String()),
       isDeleted: (map['is_deleted'] as int?) == 1,
@@ -151,6 +166,9 @@ class Order {
       'advance_paid': advancePaid,
       'balance_amount': balanceAmount,
       'measurements': jsonEncode(measurements),
+      'measurement_id': measurementId, // NEW
+      'image_path_1': imagePath1, // NEW
+      'image_path_2': imagePath2, // NEW
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'is_deleted': isDeleted ? 1 : 0,
@@ -179,6 +197,9 @@ class Order {
     double? advancePaid,
     double? balanceAmount,
     Map<String, double>? measurements,
+    String? measurementId, // NEW
+    String? imagePath1, // NEW
+    String? imagePath2, // NEW
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isDeleted,
@@ -198,6 +219,9 @@ class Order {
       advancePaid: advancePaid ?? this.advancePaid,
       balanceAmount: balanceAmount ?? this.balanceAmount,
       measurements: measurements ?? Map<String, double>.from(this.measurements),
+      measurementId: measurementId ?? this.measurementId, // NEW
+      imagePath1: imagePath1 ?? this.imagePath1, // NEW
+      imagePath2: imagePath2 ?? this.imagePath2, // NEW
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,

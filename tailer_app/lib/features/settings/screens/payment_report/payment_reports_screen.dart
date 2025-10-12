@@ -7,6 +7,7 @@ import '../../../../widgets/custom_header.dart';
 import '../../../../data/models/payment_analytics.dart';
 import '../../../../data/services/payment_analytics_service.dart';
 import '../../../../data/services/local_db_service.dart';
+import '../../../../data/services/auth_service.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../routes/route_names.dart';
 
@@ -21,6 +22,7 @@ class PaymentReportsScreen extends StatefulWidget {
 class _PaymentReportsScreenState extends State<PaymentReportsScreen> with NavigationMixin {
   final PaymentAnalyticsService _analyticsService = PaymentAnalyticsService();
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  final AuthService _authService = AuthService();
   PaymentAnalytics? _currentAnalytics;
   List<Map<String, dynamic>> _ordersWithPayments = [];
   bool _isLoading = true;
@@ -37,16 +39,35 @@ class _PaymentReportsScreenState extends State<PaymentReportsScreen> with Naviga
 
   Future<void> _loadOrdersWithPayments() async {
     try {
-      // Get orders with their payment details
-      final orders = await _dbService.select('orders', orderBy: 'created_at DESC');
+      // Get current tailor
+      final currentTailor = _authService.currentUser;
+      if (currentTailor == null) {
+        Logger.warning('PaymentReportsScreen', 'No tailor logged in');
+        setState(() {
+          _ordersWithPayments = [];
+        });
+        return;
+      }
+      
+      final tailorId = currentTailor.email;
+      Logger.info('PaymentReportsScreen', 'Loading orders for tailor: $tailorId');
+      
+      // Get orders filtered by tailor
+      final orders = await _dbService.select(
+        'orders',
+        where: 'tailor_id = ? AND is_deleted = 0',
+        whereArgs: [tailorId],
+        orderBy: 'created_at DESC',
+      );
+      
       List<Map<String, dynamic>> ordersWithPayments = [];
       
       for (final order in orders) {
         // Get payment details for each order
         final payments = await _dbService.select(
           'payment',
-          where: 'order_id = ?',
-          whereArgs: [order['id']],
+          where: 'order_id = ? AND is_deleted = 0',
+          whereArgs: [order['unique_id']],
         );
         
         // Get customer details
@@ -158,42 +179,44 @@ class _PaymentReportsScreenState extends State<PaymentReportsScreen> with Naviga
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              // Period Selector Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.shadow.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(child: _buildPeriodSelector()),
-                    const SizedBox(width: 12),
-                    _buildViewToggle(),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: _isLoading
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.secondary,
+          child: _isLoading
+              ? Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.secondary,
+                  ),
+                )
+              : CustomScrollView(
+                  slivers: [
+                    // Period Selector Header - Sticky
+                    SliverToBoxAdapter(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.shadow.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      )
-                    : _showOrdersList
-                        ? _buildOrdersList()
-                        : _buildAnalyticsView(),
-              ),
-            ],
-          ),
+                        child: Row(
+                          children: [
+                            Expanded(child: _buildPeriodSelector()),
+                            const SizedBox(width: 12),
+                            _buildViewToggle(),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    // Content Area
+                    _showOrdersList
+                        ? _buildOrdersListSliver()
+                        : _buildAnalyticsSliver(),
+                  ],
+                ),
         ),
       ),
     );
@@ -256,154 +279,162 @@ class _PaymentReportsScreenState extends State<PaymentReportsScreen> with Naviga
     );
   }
 
-  Widget _buildOrdersList() {
+  // Sliver version for better scrolling
+  Widget _buildOrdersListSliver() {
     if (_ordersWithPayments.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.receipt_long_outlined, size: 80, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'No orders with payments found',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-          ],
+      return SliverFillRemaining(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.receipt_long_outlined, size: 80, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'No orders with payments found',
+                style: GoogleFonts.inter(fontSize: 18, color: Colors.grey),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return ListView.builder(
+    return SliverPadding(
       padding: const EdgeInsets.all(16),
-      itemCount: _ordersWithPayments.length,
-      itemBuilder: (context, index) {
-        final orderData = _ordersWithPayments[index];
-        final order = orderData['order'] as Map<String, dynamic>;
-        final payments = orderData['payments'] as List<Map<String, dynamic>>;
-        final customer = orderData['customer'] as Map<String, dynamic>?;
-        final totalPaid = orderData['total_paid'] as double;
-        final totalAmount = double.tryParse(order['total_amount']?.toString() ?? '0') ?? 0.0;
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final orderData = _ordersWithPayments[index];
+            final order = orderData['order'] as Map<String, dynamic>;
+            final payments = orderData['payments'] as List<Map<String, dynamic>>;
+            final customer = orderData['customer'] as Map<String, dynamic>?;
+            final totalPaid = orderData['total_paid'] as double;
+            final totalAmount = double.tryParse(order['total_amount']?.toString() ?? '0') ?? 0.0;
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Order #${order['id']?.toString().substring(0, 8) ?? 'N/A'}',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Chip(
+                          label: Text(
+                            order['status']?.toString().toUpperCase() ?? 'UNKNOWN',
+                            style: GoogleFonts.inter(fontSize: 11),
+                          ),
+                          backgroundColor: _getStatusColor(order['status']?.toString() ?? 'unknown'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (customer != null) ...[
+                      Text(
+                        'Customer: ${customer['name'] ?? 'Unknown'}',
+                        style: GoogleFonts.inter(color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
                     Text(
-                      'Order #${order['id']?.toString().substring(0, 8) ?? 'N/A'}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'Total Amount: ₹${totalAmount.toStringAsFixed(2)}',
+                      style: GoogleFonts.inter(color: AppColors.textPrimary),
                     ),
-                    Chip(
-                      label: Text(order['status']?.toString().toUpperCase() ?? 'UNKNOWN'),
-                      backgroundColor: _getStatusColor(order['status']?.toString() ?? 'unknown'),
+                    Text(
+                      'Total Paid: ₹${totalPaid.toStringAsFixed(2)}',
+                      style: GoogleFonts.inter(color: AppColors.success),
+                    ),
+                    Text(
+                      'Remaining: ₹${(totalAmount - totalPaid).toStringAsFixed(2)}',
+                      style: GoogleFonts.inter(color: AppColors.error),
+                    ),
+                    const SizedBox(height: 8),
+                    if (payments.isNotEmpty) ...[
+                      Text(
+                        'Payments (${payments.length}):',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ...payments.map((payment) => Padding(
+                        padding: const EdgeInsets.only(left: 16, top: 2),
+                        child: Text(
+                          '• ₹${payment['amount']} (${payment['method']}) - ${payment['paid_on']?.toString().split(' ').first ?? 'Unknown date'}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      )),
+                    ] else ...[
+                      Text(
+                        'No payments recorded',
+                        style: GoogleFonts.inter(color: Colors.grey),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () => _showOrderDetailsDialog(orderData),
+                          icon: const Icon(Icons.visibility, size: 16),
+                          label: Text('View Details', style: GoogleFonts.inter()),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: () => _generateOrderReport(orderData),
+                          icon: const Icon(Icons.picture_as_pdf, size: 16),
+                          label: Text('PDF', style: GoogleFonts.inter()),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                if (customer != null) ...[
-                  Text('Customer: ${customer['name'] ?? 'Unknown'}'),
-                  const SizedBox(height: 4),
-                ],
-                Text('Total Amount: ₹${totalAmount.toStringAsFixed(2)}'),
-                Text('Total Paid: ₹${totalPaid.toStringAsFixed(2)}'),
-                Text('Remaining: ₹${(totalAmount - totalPaid).toStringAsFixed(2)}'),
-                const SizedBox(height: 8),
-                if (payments.isNotEmpty) ...[
-                  Text(
-                    'Payments (${payments.length}):',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  ...payments.map((payment) => Padding(
-                    padding: const EdgeInsets.only(left: 16, top: 2),
-                    child: Text(
-                      '• ₹${payment['amount']} (${payment['method']}) - ${payment['paid_on']?.toString().split(' ').first ?? 'Unknown date'}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  )),
-                ] else ...[
-                  const Text(
-                    'No payments recorded',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () => _showOrderDetailsDialog(orderData),
-                      icon: const Icon(Icons.visibility, size: 16),
-                      label: const Text('Show Full Details'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: () => _generateOrderReport(orderData),
-                      icon: const Icon(Icons.picture_as_pdf, size: 16),
-                      label: const Text('Generate PDF'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+              ),
+            );
+          },
+          childCount: _ordersWithPayments.length,
+        ),
+      ),
     );
   }
 
-  Widget _buildAnalyticsView() {
+  // Sliver version for better scrolling
+  Widget _buildAnalyticsSliver() {
     if (_currentAnalytics == null) {
-      return const Center(
-        child: Text('No analytics data available'),
+      return SliverFillRemaining(
+        child: Center(
+          child: Text(
+            'No analytics data available',
+            style: GoogleFonts.inter(color: AppColors.textSecondary),
+          ),
+        ),
       );
     }
 
     final analytics = _currentAnalytics!;
 
-    return SingleChildScrollView(
+    return SliverPadding(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Period selector
-          Row(
-            children: [
-              const Text('Period: '),
-              DropdownButton<String>(
-                value: _selectedPeriod,
-                items: const [
-                  DropdownMenuItem(value: 'day', child: Text('Today')),
-                  DropdownMenuItem(value: 'week', child: Text('This Week')),
-                  DropdownMenuItem(value: 'month', child: Text('This Month')),
-                  DropdownMenuItem(value: 'year', child: Text('This Year')),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedPeriod = value;
-                    });
-                    _loadAnalytics();
-                  }
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
+      sliver: SliverList(
+        delegate: SliverChildListDelegate([
           // Summary cards
           Row(
             children: [
@@ -412,7 +443,7 @@ class _PaymentReportsScreenState extends State<PaymentReportsScreen> with Naviga
                   'Total Revenue',
                   '₹${analytics.totalRevenue.toStringAsFixed(2)}',
                   Icons.monetization_on,
-                  Colors.green,
+                  AppColors.success,
                 ),
               ),
               const SizedBox(width: 16),
@@ -421,7 +452,7 @@ class _PaymentReportsScreenState extends State<PaymentReportsScreen> with Naviga
                   'Total Payments',
                   analytics.totalTransactions.toString(),
                   Icons.payment,
-                  Colors.blue,
+                  AppColors.primary,
                 ),
               ),
             ],
@@ -434,7 +465,7 @@ class _PaymentReportsScreenState extends State<PaymentReportsScreen> with Naviga
                   'Avg Payment',
                   '₹${analytics.averageTransactionValue.toStringAsFixed(2)}',
                   Icons.trending_up,
-                  Colors.orange,
+                  AppColors.accent,
                 ),
               ),
               const SizedBox(width: 16),
@@ -443,7 +474,7 @@ class _PaymentReportsScreenState extends State<PaymentReportsScreen> with Naviga
                   'Pending Amount',
                   '₹${analytics.outstandingAmount.toStringAsFixed(2)}',
                   Icons.pending,
-                  Colors.red,
+                  AppColors.error,
                 ),
               ),
             ],
@@ -454,15 +485,35 @@ class _PaymentReportsScreenState extends State<PaymentReportsScreen> with Naviga
           if (analytics.revenueByPaymentMethod.isNotEmpty) ...[
             Text(
               'Payment Methods',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 16),
             ...analytics.revenueByPaymentMethod.entries.map((entry) {
               return Card(
+                margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: Icon(_getPaymentMethodIcon(entry.key)),
-                  title: Text(entry.key.toUpperCase()),
-                  trailing: Text('₹${entry.value.toStringAsFixed(2)}'),
+                  leading: Icon(
+                    _getPaymentMethodIcon(entry.key),
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    entry.key.toUpperCase(),
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  trailing: Text(
+                    '₹${entry.value.toStringAsFixed(2)}',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.success,
+                    ),
+                  ),
                 ),
               );
             }),
@@ -472,28 +523,55 @@ class _PaymentReportsScreenState extends State<PaymentReportsScreen> with Naviga
           // Recent revenue by day
           Text(
             'Revenue Trends',
-            style: Theme.of(context).textTheme.titleLarge,
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
           ),
           const SizedBox(height: 16),
           if (analytics.revenueByDay.isNotEmpty)
             ...analytics.revenueByDay.entries.take(5).map((entry) {
               return Card(
+                margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: const Icon(Icons.calendar_today),
-                  title: Text('₹${entry.value.toStringAsFixed(2)}'),
-                  subtitle: Text('Revenue on ${entry.key}'),
-                  trailing: Text(entry.key),
+                  leading: Icon(
+                    Icons.calendar_today,
+                    color: AppColors.secondary,
+                  ),
+                  title: Text(
+                    '₹${entry.value.toStringAsFixed(2)}',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.success,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Revenue on ${entry.key}',
+                    style: GoogleFonts.inter(color: AppColors.textSecondary),
+                  ),
+                  trailing: Text(
+                    entry.key,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 ),
               );
             })
           else
-            const Card(
+            Card(
               child: ListTile(
-                leading: Icon(Icons.info),
-                title: Text('No revenue data available'),
+                leading: Icon(Icons.info, color: AppColors.info),
+                title: Text(
+                  'No revenue data available',
+                  style: GoogleFonts.inter(color: AppColors.textSecondary),
+                ),
               ),
             ),
-        ],
+          const SizedBox(height: 24), // Bottom padding
+        ]),
       ),
     );
   }

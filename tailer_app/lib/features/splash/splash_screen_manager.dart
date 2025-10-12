@@ -370,39 +370,47 @@ class _SplashScreenManagerState extends State<SplashScreenManager> {
         }
       }
       
-      // If not authenticated or doesn't want to stay logged in, continue with normal onboarding flow
-      final onboardingComplete = await OnboardingHelper.isOnboardingComplete();
+      // Check user agreement acceptance
+      final agreementAccepted = await OnboardingHelper.isUserAgreementAccepted();
       
-      if (mounted) {
-        if (onboardingComplete) {
-          Logger.info(_className, 'Onboarding complete, navigating to sign-in screen');
-          if (mounted) {
+      if (agreementAccepted) {
+        // User has accepted the agreement, skip home and agreement screens
+        Logger.info(_className, 'User agreement accepted, checking onboarding completion');
+        
+        final onboardingComplete = await OnboardingHelper.isOnboardingComplete();
+        
+        if (mounted) {
+          if (onboardingComplete) {
+            Logger.info(_className, 'Onboarding complete, navigating to sign-in screen');
             context.goNamed(RouteNames.signIn);
+          } else {
+            // Show privacy policy screen if not completed
+            Logger.info(_className, 'Privacy policy not accepted, showing privacy policy screen');
+            context.goNamed(RouteNames.privacyPolicy);
           }
-        } else {
-          // Check which step of onboarding to show
-          final getStartedCompleted = await OnboardingHelper.isGetStartedCompleted();
-          
+        }
+      } else {
+        // User has not accepted agreement yet, continue with normal onboarding flow
+        final getStartedCompleted = await OnboardingHelper.isGetStartedCompleted();
+        
+        if (mounted) {
           if (!getStartedCompleted) {
             Logger.info(_className, 'Get Started not completed, showing Home screen');
-            if (mounted) {
-              context.goNamed(RouteNames.home);
-            }
+            context.goNamed(RouteNames.home);
           } else {
-            Logger.info(_className, 'Get Started completed but privacy policy not accepted, showing privacy policy screen');
-            if (mounted) {
-              context.goNamed(RouteNames.privacyPolicy);
-            }
+            // Get Started completed but agreement not accepted yet
+            Logger.info(_className, 'Get Started completed but agreement not accepted, showing user agreement screen');
+            context.goNamed(RouteNames.userAgreement);
           }
         }
       }
     } catch (e) {
       Logger.error(_className, 'Error checking onboarding status: $e');
       
-      // Fallback to privacy policy screen on error
+      // Fallback to home screen on error
       if (mounted) {
-        Logger.info(_className, 'Falling back to privacy policy screen due to error');
-        context.goNamed(RouteNames.privacyPolicy);
+        Logger.info(_className, 'Falling back to home screen due to error');
+        context.goNamed(RouteNames.home);
       }
     }
   }

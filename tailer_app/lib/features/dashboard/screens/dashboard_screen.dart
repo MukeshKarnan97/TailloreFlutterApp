@@ -5,11 +5,13 @@ import 'package:tailer_app/core/theme/text_styles.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/data/services/dashboard_service.dart';
+import 'package:tailer_app/data/services/auth_service.dart';
 import 'package:tailer_app/features/dashboard/widgets/dashboard_card.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/core/services/back_button_handler.dart';
+import 'package:tailer_app/core/utils/logger.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -20,6 +22,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final DashboardService _dashboardService = DashboardService();
+  final AuthService _authService = AuthService();
   Map<String, dynamic> _dashboardData = {};
   bool _isLoading = true;
   bool _isRefreshing = false;
@@ -27,12 +30,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Timer? _refreshTimer;
   DateTime? _lastUpdated;
   String _selectedTimePeriod = 'today'; // today, this_week, this_month, this_year, all_time
+  String? _tailorId;
 
   @override
   void initState() {
     super.initState();
-    _loadDashboardData();
-    _startAutoRefresh();
+    Logger.info('DashboardScreen', '🚀 initState called');
+    _initializeAuth();
+  }
+  
+  Future<void> _initializeAuth() async {
+    Logger.info('DashboardScreen', '🔐 Initializing auth...');
+    await _authService.initialize();
+    
+    if (_authService.currentUser != null) {
+      Logger.info('DashboardScreen', '✅ User authenticated: ${_authService.currentUser!.email}');
+      setState(() {
+        _tailorId = _authService.currentUser!.email;
+      });
+      Logger.info('DashboardScreen', '📋 tailorId set to: $_tailorId');
+      _loadDashboardData();
+      _startAutoRefresh();
+    } else {
+      Logger.error('DashboardScreen', '❌ No user authenticated!');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -52,8 +76,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Refresh dashboard data silently without showing loading indicator
   Future<void> _refreshDashboardSilently() async {
+    if (_tailorId == null) return;
+    
     try {
-      await _dashboardService.refreshDashboard();
+      await _dashboardService.refreshDashboard(tailorId: _tailorId!);
       if (mounted) {
         setState(() {
           _dashboardData = _dashboardService.dashboardStats;
@@ -67,16 +93,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadDashboardData() async {
+    if (_tailorId == null) {
+      Logger.error('DashboardScreen', '⚠️ tailorId is null, cannot load data');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      return;
+    }
+    
+    Logger.info('DashboardScreen', '📊 Loading data for tailorId: $_tailorId');
+    
     try {
-      await _dashboardService.initializeDashboard();
+      await _dashboardService.initializeDashboard(tailorId: _tailorId!);
+      Logger.info('DashboardScreen', '✅ Data loaded successfully');
+      
       if (mounted) {
         setState(() {
           _dashboardData = _dashboardService.dashboardStats;
           _lastUpdated = DateTime.now();
           _isLoading = false;
         });
+        Logger.debug('DashboardScreen', '📊 Dashboard Data: $_dashboardData');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      Logger.error('DashboardScreen', '❌ Error loading data', error: e, stackTrace: stackTrace);
+      
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -91,10 +132,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Load dashboard data with specific time period filter
   Future<void> _loadDashboardDataWithFilter(String timePeriod) async {
+    if (_tailorId == null) return;
+    
     setState(() => _isRefreshing = true);
     
     try {
-      await _dashboardService.initializeDashboard(timePeriod: timePeriod);
+      await _dashboardService.initializeDashboard(
+        tailorId: _tailorId!,
+        timePeriod: timePeriod,
+      );
       if (mounted) {
         setState(() {
           _dashboardData = _dashboardService.dashboardStats;
@@ -116,13 +162,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _refreshDashboard() async {
-    if (_isRefreshing) return;
+    if (_isRefreshing || _tailorId == null) return;
     
     setState(() => _isRefreshing = true);
     
     try {
       // Force refresh from database
-      await _dashboardService.refreshDashboard();
+      await _dashboardService.refreshDashboard(tailorId: _tailorId!);
       if (mounted) {
         setState(() {
           _dashboardData = _dashboardService.dashboardStats;

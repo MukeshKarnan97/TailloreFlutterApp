@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../data/services/local_db_service.dart';
+import '../../../../data/services/auth_service.dart';
 import '../../../../data/services/receipt_pdf_service.dart';
 import '../../../../data/models/payment_model.dart';
 import '../../../../data/enums/payment_method.dart';
@@ -21,6 +22,7 @@ class ReceiptManagementScreen extends StatefulWidget {
 
 class _ReceiptManagementScreenState extends State<ReceiptManagementScreen> with NavigationMixin {
   final LocalDatabaseService _databaseService = LocalDatabaseService();
+  final AuthService _authService = AuthService();
   List<Map<String, dynamic>> _receipts = [];
   List<Map<String, dynamic>> _orders = [];
   bool _isLoading = true;
@@ -38,14 +40,32 @@ class _ReceiptManagementScreenState extends State<ReceiptManagementScreen> with 
         _isLoading = true;
       });
 
-      // Load both receipts (payments) and orders from database
-      final receipts = await _databaseService.select(
-        'payment',
-        orderBy: 'created_at DESC',
-      );
+      // Get current tailor
+      final currentTailor = _authService.currentUser;
+      if (currentTailor == null) {
+        Logger.warning('ReceiptManagementScreen', 'No tailor logged in');
+        setState(() {
+          _receipts = [];
+          _orders = [];
+          _isLoading = false;
+        });
+        return;
+      }
       
+      final tailorId = currentTailor.email;
+      Logger.info('ReceiptManagementScreen', 'Loading receipts for tailor: $tailorId');
+
+      // Load payments filtered by tailor (via orders)
+      final payments = await _databaseService.getPayments(tailorId: tailorId);
+      
+      // Convert Payment objects to Map for UI compatibility
+      final receipts = payments.map((payment) => payment.toMap()).toList();
+      
+      // Load orders filtered by tailor
       final orders = await _databaseService.select(
         'orders',
+        where: 'tailor_id = ? AND is_deleted = 0',
+        whereArgs: [tailorId],
         orderBy: 'created_at DESC',
       );
 

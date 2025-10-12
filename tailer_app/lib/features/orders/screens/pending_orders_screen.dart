@@ -6,6 +6,7 @@ import '../widgets/sub_header.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import '../../../data/services/local_db_service.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../data/models/order_model.dart';
 import '../../../core/utils/logger.dart';
 import 'order_detail_screen.dart';
@@ -20,11 +21,13 @@ class PendingOrdersScreen extends StatefulWidget {
 class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
   late SimpleLocaleProvider _localeProvider;
   final LocalDatabaseService _dbService = LocalDatabaseService();
+  final AuthService _authService = AuthService();
   final TextEditingController _searchController = TextEditingController();
   
   List<Order> _allPendingOrders = [];
   List<Order> _filteredOrders = [];
   bool _isLoading = true;
+  String? _tailorId;
   
   // Statistics
   double _totalPendingValue = 0.0;
@@ -36,7 +39,17 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
   void initState() {
     super.initState();
     _localeProvider = SimpleLocaleProvider();
-    _loadPendingOrders();
+    _initializeAuth();
+  }
+  
+  Future<void> _initializeAuth() async {
+    await _authService.initialize();
+    if (_authService.currentUser != null) {
+      setState(() {
+        _tailorId = _authService.currentUser!.email;
+      });
+      _loadPendingOrders();
+    }
   }
 
   @override
@@ -46,12 +59,14 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
   }
 
   Future<void> _loadPendingOrders() async {
+    if (_tailorId == null) return;
+    
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final allOrders = await _dbService.getOrders();
+      final allOrders = await _dbService.getOrders(tailorId: _tailorId);
       _allPendingOrders = allOrders
           .where((order) => 
               order.status.toLowerCase() == 'pending' && 
@@ -136,17 +151,30 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
           ),
           body: _isLoading 
             ? const Center(child: CircularProgressIndicator())
-            : SafeArea(
-                child: Column(
-                  children: [
-                    // Sub-header
-                    _buildSubHeader(locale),
-                    
-                    // Welcome Section with Stats
-                    Container(
+            : CustomScrollView(
+                slivers: [
+                  // Sub-header
+                  SliverToBoxAdapter(
+  child: Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), // safe margins
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _buildSubHeader(locale),
+        ),
+      ],
+    ),
+  ),
+),
+
+                  
+                  // Welcome Section with Stats
+                  SliverToBoxAdapter(
+                    child: Container(
                       width: double.infinity,
                       color: Colors.orange,
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -163,8 +191,8 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                           Text(
                             'Orders awaiting production start • Total Value: ₹${_totalPendingValue.toStringAsFixed(0)}',
                             style: GoogleFonts.inter(
-                              fontSize: 16,
-                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 15,
+                              color: Colors.white.withOpacity(0.95),
                               height: 1.4,
                             ),
                           ),
@@ -179,7 +207,7 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                                   _highPriorityOrders.toString(),
                                   Icons.priority_high,
                                   Colors.red.shade100,
-                                  Colors.red.shade600,
+                                  Colors.red.shade700,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -189,17 +217,17 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                                   _overdueOrders.toString(),
                                   Icons.schedule,
                                   Colors.amber.shade100,
-                                  Colors.amber.shade600,
+                                  Colors.amber.shade800,
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _buildStatCard(
-                                  'Advance Paid',
-                                  '₹${_totalAdvanceReceived.toStringAsFixed(0)}',
+                                  'Advance',
+                                  '₹${(_totalAdvanceReceived / 1000).toStringAsFixed(1)}k',
                                   Icons.payment,
                                   Colors.green.shade100,
-                                  Colors.green.shade600,
+                                  Colors.green.shade700,
                                 ),
                               ),
                             ],
@@ -207,9 +235,11 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                         ],
                       ),
                     ),
+                  ),
 
-                    // Search Bar
-                    Container(
+                  // Search Bar
+                  SliverToBoxAdapter(
+                    child: Container(
                       padding: const EdgeInsets.all(20),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -218,7 +248,7 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
+                              color: Colors.black.withOpacity(0.05),
                               blurRadius: 10,
                               offset: const Offset(0, 2),
                             ),
@@ -248,22 +278,27 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
                         ),
                       ),
                     ),
+                  ),
 
-                    // Orders List
-                    Expanded(
-                      child: _filteredOrders.isEmpty
-                        ? _buildEmptyState(locale)
-                        : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                            itemCount: _filteredOrders.length,
-                            itemBuilder: (context, index) {
-                              final order = _filteredOrders[index];
-                              return _buildEnhancedOrderCard(order, locale);
-                            },
-                          ),
+                  // Orders List or Empty State
+                  if (_filteredOrders.isEmpty)
+                    SliverFillRemaining(
+                      child: _buildEmptyState(locale),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final order = _filteredOrders[index];
+                            return _buildEnhancedOrderCard(order, locale);
+                          },
+                          childCount: _filteredOrders.length,
+                        ),
+                      ),
                     ),
-                  ],
-                ),
+                ],
               ),
         );
       },
@@ -272,30 +307,37 @@ class _PendingOrdersScreenState extends State<PendingOrdersScreen> {
 
   Widget _buildStatCard(String label, String value, IconData icon, Color bgColor, Color textColor) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: textColor, size: 16),
-          const SizedBox(height: 4),
+          Icon(icon, color: textColor, size: 20),
+          const SizedBox(height: 6),
           Text(
             value,
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: textColor,
+              height: 1.2,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 10,
-              color: textColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: textColor.withOpacity(0.85),
+              height: 1.2,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
