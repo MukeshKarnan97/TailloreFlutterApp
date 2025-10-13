@@ -32,6 +32,8 @@ import '../features/settings/screens/support/help_center_screen.dart';
 import '../features/settings/screens/support/feedback_screen.dart';
 import '../features/settings/screens/support/bug_report_screen.dart';
 import '../features/settings/screens/legal/terms_of_service_screen.dart';
+import '../features/settings/screens/legal/privacy_policy_viewer_screen.dart';
+import '../features/settings/screens/about/app_info_screen.dart';
 import '../features/settings/screens/privacy/privacy_security_screen.dart';
 import '../features/demo/simple_language_demo_screen.dart';
 import '../features/language/screens/language_selection_screen.dart';
@@ -319,6 +321,16 @@ class AppRoutes {
         name: 'privacySecurity',
         path: '/settings/privacy-security',
         pageBuilder: (context, state) => buildPage(const PrivacySecurityScreen(), state),
+      ),
+      GoRoute(
+        name: 'privacyPolicyViewer',
+        path: '/settings/privacy-policy',
+        pageBuilder: (context, state) => buildPage(const PrivacyPolicyViewerScreen(), state),
+      ),
+      GoRoute(
+        name: 'appInfo',
+        path: '/settings/app-info',
+        pageBuilder: (context, state) => buildPage(const AppInfoScreen(), state),
       ),
 
       // Language Demo Screen

@@ -374,13 +374,23 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
       color: AppColors.info,
       children: [
         _buildSettingsItem(
+          icon: Icons.info_rounded,
+          title: locale.translate('appInfo'),
+          subtitle: 'Version, features & contact',
+          iconBgColor: AppColors.primary.withOpacity(0.1),
+          iconColor: AppColors.primary,
+          onTap: () {
+            context.pushNamed(RouteNames.appInfo);
+          },
+        ),
+        _buildSettingsItem(
           icon: Icons.privacy_tip_rounded,
           title: locale.translate('privacyPolicy'),
           subtitle: locale.translate('readOurPrivacyPolicy'),
           iconBgColor: AppColors.info.withOpacity(0.1),
           iconColor: AppColors.info,
           onTap: () {
-            context.goNamed(RouteNames.privacyPolicy);
+            context.pushNamed(RouteNames.privacyPolicyViewer);
           },
         ),
         _buildSettingsItem(
@@ -394,32 +404,38 @@ class _SettingsScreenState extends State<SettingsScreen> with NavigationMixin {
           },
         ),
         _buildSettingsItem(
-          icon: Icons.info_rounded,
-          title: locale.translate('appVersion'),
-          subtitle: locale.translate('currentVersionInformation'),
-          iconBgColor: AppColors.primary.withOpacity(0.1),
-          iconColor: AppColors.primary,
+          icon: Icons.code_rounded,
+          title: 'Open Source Licenses',
+          subtitle: 'View third-party licenses',
+          iconBgColor: AppColors.accent.withOpacity(0.1),
+          iconColor: AppColors.accent,
           trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.border.withOpacity(0.3),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppColors.primary.withOpacity(0.3),
-                width: 1,
-              ),
             ),
-            child: Text(
-              'v1.0.0',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
+            child: Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppColors.textSecondary,
+              size: 14,
             ),
           ),
-          showTrailing: false,
-          onTap: () {},
+          onTap: () {
+            showLicensePage(
+              context: context,
+              applicationName: 'Tailor Management',
+              applicationVersion: '1.0.0',
+              applicationIcon: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Icon(
+                  Icons.checkroom_rounded,
+                  size: 48,
+                  color: AppColors.primary,
+                ),
+              ),
+            );
+          },
         ),
       ],
     );

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
+import 'package:tailer_app/widgets/custom_header.dart';
+import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tailer_app/core/services/navigation_service.dart';
 
 class HelpCenterScreen extends StatefulWidget {
   const HelpCenterScreen({Key? key}) : super(key: key);
@@ -17,6 +21,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
   final SimpleLocaleProvider _localeProvider = SimpleLocaleProvider();
   final TextEditingController _searchController = TextEditingController();
   
+  int _currentNavIndex = 3; // Settings is index 3
   String _searchQuery = '';
 
   final List<FAQItem> _faqItems = [
@@ -82,59 +87,82 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
       animation: _localeProvider,
       builder: (context, child) {
         final locale = AppLocalizations.of(_localeProvider.languageCode);
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isSmallScreen = screenWidth < 360;
         
         return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
-            title: Text(
-              locale.translate('helpCenter'),
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+          backgroundColor: AppColors.background,
+          appBar: DashboardHeader(
+            title: locale.translate('helpCenter'),
+            backgroundColor: AppColors.primary,
+            notificationCount: 3,
+            onBackPressed: () {
+              context.pop();
+            },
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.translate('notifications'));
+            },
+          ),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.primary.withOpacity(0.03),
+                  AppColors.background,
+                ],
               ),
             ),
-            backgroundColor: const Color(AppConstants.primaryTeal),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
-            ),
-          ),
-          body: SafeArea(
-            child: Column(
-              children: [
-                _buildSearchSection(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(AppConstants.spacingM),
-                    child: Column(
-                      children: [
-                        _buildQuickActions(),
-                        const SizedBox(height: AppConstants.spacingL),
-                        _buildFAQSection(),
-                      ],
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _buildSearchSection(isSmallScreen),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                      child: Column(
+                        children: [
+                          _buildQuickActions(isSmallScreen),
+                          SizedBox(height: isSmallScreen ? 16 : 20),
+                          _buildFAQSection(isSmallScreen),
+                          const SizedBox(height: 100), // Space for bottom nav
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+          ),
+          bottomNavigationBar: AnimatedBottomNavigation(
+            currentIndex: _currentNavIndex,
+            onTap: _onNavTap,
+            items: TailorAppBottomNavItems.defaultItems,
+            selectedItemColor: AppColors.primary,
+            backgroundColor: AppColors.background,
           ),
         );
       },
     );
   }
 
-  Widget _buildSearchSection() {
+  Widget _buildSearchSection(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     return Container(
-      color: const Color(AppConstants.primaryTeal),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      color: AppColors.primary,
+      padding: EdgeInsets.fromLTRB(
+        isSmallScreen ? 12 : 16,
+        0,
+        isSmallScreen ? 12 : 16,
+        isSmallScreen ? 20 : 24,
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -150,10 +178,22 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
           },
           decoration: InputDecoration(
             hintText: locale.translate('searchHelp'),
-            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+            hintStyle: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 13 : 14,
+              color: AppColors.textSecondary,
+            ),
+            prefixIcon: Icon(
+              Icons.search,
+              color: AppColors.textSecondary,
+              size: isSmallScreen ? 20 : 24,
+            ),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.grey),
+                    icon: Icon(
+                      Icons.clear,
+                      color: AppColors.textSecondary,
+                      size: isSmallScreen ? 18 : 20,
+                    ),
                     onPressed: () {
                       _searchController.clear();
                       setState(() => _searchQuery = '');
@@ -161,27 +201,37 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
                   )
                 : null,
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 12 : 16,
+              vertical: isSmallScreen ? 10 : 12,
+            ),
           ),
-          style: GoogleFonts.inter(fontSize: 16),
+          style: GoogleFonts.inter(
+            fontSize: isSmallScreen ? 13 : 15,
+            color: AppColors.textPrimary,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -190,23 +240,37 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
         children: [
           Row(
             children: [
-              Icon(
-                Icons.support_agent_outlined,
-                color: const Color(AppConstants.primaryTeal),
-                size: 24,
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accent.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.support_agent_rounded,
+                  color: Colors.white,
+                  size: isSmallScreen ? 18 : 20,
+                ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: isSmallScreen ? 10 : 12),
               Text(
                 locale.translate('quickActions'),
                 style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+                  fontSize: isSmallScreen ? 15 : 17,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isSmallScreen ? 16 : 20),
           Row(
             children: [
               Expanded(
@@ -215,6 +279,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
                   title: locale.translate('callSupport'),
                   subtitle: locale.translate('speakWithAgent'),
                   onTap: () => _callSupport(),
+                  isSmallScreen: isSmallScreen,
                 ),
               ),
               const SizedBox(width: 12),
@@ -224,6 +289,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
                   title: locale.translate('emailSupport'),
                   subtitle: locale.translate('sendMessage'),
                   onTap: () => _emailSupport(),
+                  isSmallScreen: isSmallScreen,
                 ),
               ),
             ],
@@ -237,6 +303,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
                   title: locale.translate('liveChat'),
                   subtitle: locale.translate('chatNow'),
                   onTap: () => _startLiveChat(),
+                  isSmallScreen: isSmallScreen,
                 ),
               ),
               const SizedBox(width: 12),
@@ -246,6 +313,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
                   title: locale.translate('videoCall'),
                   subtitle: locale.translate('scheduleCall'),
                   onTap: () => _scheduleVideoCall(),
+                  isSmallScreen: isSmallScreen,
                 ),
               ),
             ],
@@ -260,48 +328,56 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    required bool isSmallScreen,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
         decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+          border: Border.all(
+            color: AppColors.border.withOpacity(0.3),
+            width: 1,
+          ),
         ),
         child: Column(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: isSmallScreen ? 40 : 48,
+              height: isSmallScreen ? 40 : 48,
               decoration: BoxDecoration(
-                color: const Color(AppConstants.primaryTeal).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(24),
+                color: AppColors.accent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(isSmallScreen ? 20 : 24),
               ),
               child: Icon(
                 icon,
-                color: const Color(AppConstants.primaryTeal),
-                size: 24,
+                color: AppColors.accent,
+                size: isSmallScreen ? 20 : 24,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: isSmallScreen ? 6 : 8),
             Text(
               title,
               style: GoogleFonts.inter(
-                fontSize: 12,
+                fontSize: isSmallScreen ? 11 : 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87,
+                color: AppColors.textPrimary,
               ),
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
               subtitle,
               style: GoogleFonts.inter(
-                fontSize: 10,
-                color: Colors.grey[600],
+                fontSize: isSmallScreen ? 9 : 10,
+                color: AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -309,19 +385,23 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
     );
   }
 
-  Widget _buildFAQSection() {
+  Widget _buildFAQSection(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     final filteredFAQs = _filteredFAQs;
     
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        border: Border.all(
+          color: AppColors.info.withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -330,28 +410,49 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
         children: [
           // FAQ Header
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.info.withOpacity(0.08),
+                  AppColors.info.withOpacity(0.03),
+                ],
+              ),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(isSmallScreen ? 14 : 16),
+                topRight: Radius.circular(isSmallScreen ? 14 : 16),
               ),
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.quiz_outlined,
-                  color: const Color(AppConstants.primaryTeal),
-                  size: 24,
+                Container(
+                  padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.info,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.info.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.quiz_rounded,
+                    color: Colors.white,
+                    size: isSmallScreen ? 18 : 20,
+                  ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  locale.translate('frequentlyAskedQuestions'),
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                SizedBox(width: isSmallScreen ? 10 : 12),
+                Expanded(
+                  child: Text(
+                    locale.translate('frequentlyAskedQuestions'),
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 15 : 17,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ],
@@ -360,20 +461,20 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
           // FAQ List
           if (filteredFAQs.isEmpty)
             Padding(
-              padding: const EdgeInsets.all(40),
+              padding: EdgeInsets.all(isSmallScreen ? 32 : 40),
               child: Column(
                 children: [
                   Icon(
-                    Icons.search_off_outlined,
-                    size: 48,
-                    color: Colors.grey[400],
+                    Icons.search_off_rounded,
+                    size: isSmallScreen ? 40 : 48,
+                    color: AppColors.textSecondary.withOpacity(0.6),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
                   Text(
                     locale.translate('noResultsFound'),
                     style: GoogleFonts.inter(
-                      fontSize: 16,
-                      color: Colors.grey[600],
+                      fontSize: isSmallScreen ? 14 : 16,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -387,11 +488,11 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
                 children: [
                   if (index > 0)
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20),
                       height: 1,
-                      color: Colors.grey[200],
+                      color: AppColors.border.withOpacity(0.5),
                     ),
-                  _buildFAQItem(faq),
+                  _buildFAQItem(faq, isSmallScreen),
                 ],
               );
             }).toList(),
@@ -400,31 +501,36 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
     );
   }
 
-  Widget _buildFAQItem(FAQItem faq) {
+  Widget _buildFAQItem(FAQItem faq, bool isSmallScreen) {
     return ExpansionTile(
       title: Text(
         faq.question,
         style: GoogleFonts.inter(
-          fontSize: 15,
+          fontSize: isSmallScreen ? 13 : 15,
           fontWeight: FontWeight.w600,
-          color: Colors.black87,
+          color: AppColors.textPrimary,
         ),
       ),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: EdgeInsets.fromLTRB(
+            isSmallScreen ? 12 : 16,
+            0,
+            isSmallScreen ? 12 : 16,
+            isSmallScreen ? 12 : 16,
+          ),
           child: Text(
             faq.answer,
             style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Colors.grey[700],
-              height: 1.5,
+              fontSize: isSmallScreen ? 12 : 14,
+              color: AppColors.textSecondary,
+              height: 1.6,
             ),
           ),
         ),
       ],
-      iconColor: const Color(AppConstants.primaryTeal),
-      collapsedIconColor: Colors.grey[600],
+      iconColor: AppColors.info,
+      collapsedIconColor: AppColors.textSecondary,
     );
   }
 
@@ -450,6 +556,27 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
         content: Text(message),
         backgroundColor: const Color(AppConstants.primaryTeal),
       ),
+    );
+  }
+
+  void _onNavTap(int index) {
+    handleBottomNavigation(
+      context,
+      index,
+      _currentNavIndex,
+      (newIndex) => setState(() => _currentNavIndex = newIndex),
+      customRoutes: [
+        NavigationRoutes.dashboard,
+        NavigationRoutes.customers,
+        NavigationRoutes.orders,
+        NavigationRoutes.settings,
+      ],
+      customDestinations: [
+        NavigationDestinations.dashboard,
+        NavigationDestinations.customers,
+        NavigationDestinations.orders,
+        NavigationDestinations.settings,
+      ],
     );
   }
 }

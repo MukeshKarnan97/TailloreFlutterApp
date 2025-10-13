@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
+import 'package:tailer_app/widgets/custom_header.dart';
+import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
+import 'package:tailer_app/core/services/navigation_service.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({Key? key}) : super(key: key);
@@ -21,6 +24,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
   final _subjectController = TextEditingController();
   final _messageController = TextEditingController();
   
+  int _currentNavIndex = 3; // Settings is index 3
   String _selectedCategory = 'general';
   int _rating = 0;
   bool _isSubmitting = false;
@@ -49,113 +53,135 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
       animation: _localeProvider,
       builder: (context, child) {
         final locale = AppLocalizations.of(_localeProvider.languageCode);
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isSmallScreen = screenWidth < 360;
         
         return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
-            title: Text(
-              locale.translate('feedback'),
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+          backgroundColor: AppColors.background,
+          appBar: DashboardHeader(
+            title: locale.translate('feedback'),
+            backgroundColor: AppColors.primary,
+            notificationCount: 3,
+            onBackPressed: () {
+              context.pop();
+            },
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.translate('notifications'));
+            },
+          ),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.primary.withOpacity(0.03),
+                  AppColors.background,
+                ],
               ),
             ),
-            backgroundColor: const Color(AppConstants.primaryTeal),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
-            ),
-          ),
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppConstants.spacingM),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFeedbackHeader(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildRatingSection(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildContactInfoSection(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildFeedbackDetailsSection(),
-                    const SizedBox(height: AppConstants.spacingXL),
-                    _buildSubmitButton(),
-                  ],
+            child: SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildFeedbackHeader(isSmallScreen),
+                      SizedBox(height: isSmallScreen ? 16 : 20),
+                      _buildRatingSection(isSmallScreen),
+                      SizedBox(height: isSmallScreen ? 16 : 20),
+                      _buildContactInfoSection(isSmallScreen),
+                      SizedBox(height: isSmallScreen ? 16 : 20),
+                      _buildFeedbackDetailsSection(isSmallScreen),
+                      SizedBox(height: isSmallScreen ? 24 : 32),
+                      _buildSubmitButton(isSmallScreen),
+                      const SizedBox(height: 100), // Space for bottom nav
+                    ],
+                  ),
                 ),
               ),
             ),
+          ),
+          bottomNavigationBar: AnimatedBottomNavigation(
+            currentIndex: _currentNavIndex,
+            onTap: _onNavTap,
+            items: TailorAppBottomNavItems.defaultItems,
+            selectedItemColor: AppColors.primary,
+            backgroundColor: AppColors.background,
           ),
         );
       },
     );
   }
 
-  Widget _buildFeedbackHeader() {
+  Widget _buildFeedbackHeader(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
+        border: Border.all(
+          color: AppColors.accent.withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         children: [
           Container(
-            width: 80,
-            height: 80,
+            width: isSmallScreen ? 64 : 80,
+            height: isSmallScreen ? 64 : 80,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.orange,
-                  Colors.orange.withOpacity(0.8),
+                  AppColors.accent,
+                  AppColors.accent.withOpacity(0.8),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(40),
+              borderRadius: BorderRadius.circular(isSmallScreen ? 32 : 40),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.orange.withOpacity(0.3),
+                  color: AppColors.accent.withOpacity(0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.feedback_outlined,
-              size: 40,
+            child: Icon(
+              Icons.feedback_rounded,
+              size: isSmallScreen ? 32 : 40,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 12 : 16),
           Text(
             locale.translate('shareYourFeedback'),
             style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
+              fontSize: isSmallScreen ? 17 : 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 6 : 8),
           Text(
             locale.translate('helpUsImprove'),
             style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Colors.grey[600],
+              fontSize: isSmallScreen ? 12 : 14,
+              color: AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -164,19 +190,23 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
     );
   }
 
-  Widget _buildRatingSection() {
+  Widget _buildRatingSection(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        border: Border.all(
+          color: AppColors.warning.withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -185,23 +215,39 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.star_outline,
-                color: const Color(AppConstants.primaryTeal),
-                size: 20,
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: AppColors.warning,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.warning.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.star_rounded,
+                  color: Colors.white,
+                  size: isSmallScreen ? 18 : 20,
+                ),
               ),
-              const SizedBox(width: 12),
-              Text(
-                locale.translate('rateYourExperience'),
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+              SizedBox(width: isSmallScreen ? 10 : 12),
+              Expanded(
+                child: Text(
+                  locale.translate('rateYourExperience'),
+                  style: GoogleFonts.inter(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 14 : 16),
           Center(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -209,11 +255,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
                 return GestureDetector(
                   onTap: () => setState(() => _rating = index + 1),
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 3 : 4),
                     child: Icon(
-                      index < _rating ? Icons.star : Icons.star_border,
-                      color: Colors.amber,
-                      size: 32,
+                      index < _rating ? Icons.star_rounded : Icons.star_border_rounded,
+                      color: AppColors.warning,
+                      size: isSmallScreen ? 28 : 32,
                     ),
                   ),
                 );
@@ -221,12 +267,12 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
             ),
           ),
           if (_rating > 0) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: isSmallScreen ? 10 : 12),
             Center(
               child: Text(
                 _getRatingText(_rating),
                 style: GoogleFonts.inter(
-                  fontSize: 14,
+                  fontSize: isSmallScreen ? 12 : 14,
                   fontWeight: FontWeight.w600,
                   color: _getRatingColor(_rating),
                 ),
@@ -238,19 +284,23 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
     );
   }
 
-  Widget _buildContactInfoSection() {
+  Widget _buildContactInfoSection(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -259,35 +309,74 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.person_outline,
-                color: const Color(AppConstants.primaryTeal),
-                size: 20,
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.person_rounded,
+                  color: Colors.white,
+                  size: isSmallScreen ? 18 : 20,
+                ),
               ),
-              const SizedBox(width: 12),
-              Text(
-                locale.translate('contactInformation'),
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+              SizedBox(width: isSmallScreen ? 10 : 12),
+              Expanded(
+                child: Text(
+                  locale.translate('contactInformation'),
+                  style: GoogleFonts.inter(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isSmallScreen ? 16 : 20),
           TextFormField(
             controller: _nameController,
+            style: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 13 : 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               labelText: locale.translate('fullName'),
-              prefixIcon: const Icon(Icons.person_outline),
+              labelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: Icon(
+                Icons.person_outline_rounded,
+                color: AppColors.primary,
+                size: isSmallScreen ? 20 : 22,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                borderSide: BorderSide(color: AppColors.primary, width: 2),
               ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.error),
+              ),
+              filled: true,
+              fillColor: AppColors.background,
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -296,20 +385,43 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
               return null;
             },
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 14 : 16),
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            style: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 13 : 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               labelText: locale.translate('email'),
-              prefixIcon: const Icon(Icons.email_outlined),
+              labelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: Icon(
+                Icons.email_outlined,
+                color: AppColors.primary,
+                size: isSmallScreen ? 20 : 22,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                borderSide: BorderSide(color: AppColors.primary, width: 2),
               ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.error),
+              ),
+              filled: true,
+              fillColor: AppColors.background,
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -326,19 +438,23 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
     );
   }
 
-  Widget _buildFeedbackDetailsSection() {
+  Widget _buildFeedbackDetailsSection(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        border: Border.all(
+          color: AppColors.info.withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -347,35 +463,70 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.message_outlined,
-                color: const Color(AppConstants.primaryTeal),
-                size: 20,
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: AppColors.info,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.info.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.message_rounded,
+                  color: Colors.white,
+                  size: isSmallScreen ? 18 : 20,
+                ),
               ),
-              const SizedBox(width: 12),
-              Text(
-                locale.translate('feedbackDetails'),
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+              SizedBox(width: isSmallScreen ? 10 : 12),
+              Expanded(
+                child: Text(
+                  locale.translate('feedbackDetails'),
+                  style: GoogleFonts.inter(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isSmallScreen ? 16 : 20),
           DropdownButtonFormField<String>(
             value: _selectedCategory,
+            style: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 13 : 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               labelText: locale.translate('category'),
-              prefixIcon: const Icon(Icons.category_outlined),
+              labelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: Icon(
+                Icons.category_outlined,
+                color: AppColors.info,
+                size: isSmallScreen ? 20 : 22,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                borderSide: BorderSide(color: AppColors.info, width: 2),
               ),
+              filled: true,
+              fillColor: AppColors.background,
             ),
             items: _categories.map((category) {
               return DropdownMenuItem<String>(
@@ -387,19 +538,42 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
               setState(() => _selectedCategory = value!);
             },
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 14 : 16),
           TextFormField(
             controller: _subjectController,
+            style: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 13 : 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               labelText: locale.translate('subject'),
-              prefixIcon: const Icon(Icons.subject_outlined),
+              labelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: Icon(
+                Icons.subject_rounded,
+                color: AppColors.info,
+                size: isSmallScreen ? 20 : 22,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                borderSide: BorderSide(color: AppColors.info, width: 2),
               ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.error),
+              ),
+              filled: true,
+              fillColor: AppColors.background,
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -408,23 +582,46 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
               return null;
             },
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 14 : 16),
           TextFormField(
             controller: _messageController,
             maxLines: 5,
+            style: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 13 : 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               labelText: locale.translate('message'),
-              prefixIcon: const Padding(
-                padding: EdgeInsets.only(bottom: 60),
-                child: Icon(Icons.edit_outlined),
+              labelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: Padding(
+                padding: EdgeInsets.only(bottom: isSmallScreen ? 50 : 60),
+                child: Icon(
+                  Icons.edit_rounded,
+                  color: AppColors.info,
+                  size: isSmallScreen ? 20 : 22,
+                ),
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                borderSide: BorderSide(color: AppColors.info, width: 2),
               ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.error),
+              ),
+              filled: true,
+              fillColor: AppColors.background,
               alignLabelWithHint: true,
             ),
             validator: (value) {
@@ -442,38 +639,68 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _isSubmitting ? null : _submitFeedback,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(AppConstants.primaryTeal),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 4,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withOpacity(0.9),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: _isSubmitting
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: isSmallScreen ? 50 : 56,
+        child: ElevatedButton(
+          onPressed: _isSubmitting ? null : _submitFeedback,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+            ),
+          ),
+          child: _isSubmitting
+              ? SizedBox(
+                  width: isSmallScreen ? 20 : 24,
+                  height: isSmallScreen ? 20 : 24,
+                  child: const CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.send_rounded,
+                      size: isSmallScreen ? 18 : 20,
+                    ),
+                    SizedBox(width: isSmallScreen ? 8 : 10),
+                    Text(
+                      locale.translate('submitFeedback'),
+                      style: GoogleFonts.inter(
+                        fontSize: isSmallScreen ? 14 : 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-              )
-            : Text(
-                locale.translate('submitFeedback'),
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+        ),
       ),
     );
   }
@@ -499,14 +726,14 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
     switch (rating) {
       case 1:
       case 2:
-        return Colors.red;
+        return AppColors.error;
       case 3:
-        return Colors.orange;
+        return AppColors.warning;
       case 4:
       case 5:
-        return Colors.green;
+        return AppColors.success;
       default:
-        return Colors.grey;
+        return AppColors.textSecondary;
     }
   }
 
@@ -548,8 +775,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
         title: Row(
           children: [
             Icon(
-              Icons.check_circle,
-              color: Colors.green,
+              Icons.check_circle_rounded,
+              color: AppColors.success,
               size: 28,
             ),
             const SizedBox(width: 12),
@@ -558,13 +785,17 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
               ),
             ),
           ],
         ),
         content: Text(
           locale.translate('feedbackSubmittedSuccessfully'),
-          style: GoogleFonts.inter(fontSize: 14),
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: AppColors.textSecondary,
+          ),
         ),
         actions: [
           TextButton(
@@ -572,10 +803,13 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
               Navigator.of(context).pop();
               context.pop();
             },
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+            ),
             child: Text(
               locale.translate('ok'),
               style: GoogleFonts.inter(
-                color: const Color(AppConstants.primaryTeal),
+                color: AppColors.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -588,9 +822,37 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(AppConstants.primaryTeal),
+        content: Text(
+          message,
+          style: GoogleFonts.inter(fontSize: 14),
+        ),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
+    );
+  }
+
+  void _onNavTap(int index) {
+    handleBottomNavigation(
+      context,
+      index,
+      _currentNavIndex,
+      (newIndex) => setState(() => _currentNavIndex = newIndex),
+      customRoutes: [
+        NavigationRoutes.dashboard,
+        NavigationRoutes.customers,
+        NavigationRoutes.orders,
+        NavigationRoutes.settings,
+      ],
+      customDestinations: [
+        NavigationDestinations.dashboard,
+        NavigationDestinations.customers,
+        NavigationDestinations.orders,
+        NavigationDestinations.settings,
+      ],
     );
   }
 }

@@ -298,6 +298,8 @@ const Map<String, String> enTranslations = {
   'sendFeedback': 'Send Feedback',
   'shareThoughtsWithUs': 'Share your thoughts with us',
   'reportABug': 'Report a Bug',
+  'aboutApp': 'About App',
+  'appInfo': 'App Info',
   'letUsKnowAboutIssues': 'Let us know about any issues',
   'readOurPrivacyPolicy': 'Read our privacy policy',
   'termsOfService': 'Terms of Service',

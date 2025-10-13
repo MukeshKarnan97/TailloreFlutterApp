@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tailer_app/core/constants/app_constants.dart';
+import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:tailer_app/core/mixins/navigation_mixin.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
+import 'package:tailer_app/widgets/custom_header.dart';
+import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
+import 'package:tailer_app/core/services/navigation_service.dart';
 import 'dart:io' show Platform;
 
 class BugReportScreen extends StatefulWidget {
@@ -23,15 +26,16 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
   final _expectedController = TextEditingController();
   final _actualController = TextEditingController();
   
+  int _currentNavIndex = 3; // Settings is index 3
   String _selectedPriority = 'medium';
   String _selectedCategory = 'ui';
   bool _isSubmitting = false;
 
   final List<Map<String, dynamic>> _priorities = [
-    {'value': 'low', 'label': 'Low', 'color': Colors.green},
-    {'value': 'medium', 'label': 'Medium', 'color': Colors.orange},
-    {'value': 'high', 'label': 'High', 'color': Colors.red},
-    {'value': 'critical', 'label': 'Critical', 'color': Colors.purple},
+    {'value': 'low', 'label': 'Low', 'color': AppColors.success},
+    {'value': 'medium', 'label': 'Medium', 'color': AppColors.warning},
+    {'value': 'high', 'label': 'High', 'color': AppColors.error},
+    {'value': 'critical', 'label': 'Critical', 'color': AppColors.info},
   ];
 
   final List<Map<String, String>> _categories = [
@@ -56,117 +60,140 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    
     return AnimatedBuilder(
       animation: _localeProvider,
       builder: (context, child) {
         final locale = AppLocalizations.of(_localeProvider.languageCode);
         
         return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
-            title: Text(
-              locale.translate('reportBug'),
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+          backgroundColor: AppColors.background,
+          appBar: DashboardHeader(
+            title: locale.translate('reportBug'),
+            backgroundColor: AppColors.primary,
+            notificationCount: 3,
+            onBackPressed: () {
+              context.pop();
+            },
+            onNotificationTap: () {
+              showNavigationMessage(context, locale.translate('notifications'));
+            },
+          ),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.primary.withOpacity(0.03),
+                  AppColors.background,
+                ],
               ),
             ),
-            backgroundColor: const Color(AppConstants.primaryTeal),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
-            ),
-          ),
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppConstants.spacingM),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildBugReportHeader(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildBasicInfoSection(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildBugDetailsSection(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildSystemInfoSection(),
-                    const SizedBox(height: AppConstants.spacingXL),
-                    _buildSubmitButton(),
-                  ],
+            child: SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildBugReportHeader(isSmallScreen),
+                      SizedBox(height: isSmallScreen ? 16 : 20),
+                      _buildBasicInfoSection(isSmallScreen),
+                      SizedBox(height: isSmallScreen ? 16 : 20),
+                      _buildBugDetailsSection(isSmallScreen),
+                      SizedBox(height: isSmallScreen ? 16 : 20),
+                      _buildSystemInfoSection(isSmallScreen),
+                      SizedBox(height: isSmallScreen ? 24 : 32),
+                      _buildSubmitButton(isSmallScreen),
+                      const SizedBox(height: 100), // Space for bottom nav
+                    ],
+                  ),
                 ),
               ),
             ),
+          ),
+          bottomNavigationBar: AnimatedBottomNavigation(
+            currentIndex: _currentNavIndex,
+            onTap: _onNavTap,
+            items: TailorAppBottomNavItems.defaultItems,
+            selectedItemColor: AppColors.primary,
+            backgroundColor: AppColors.background,
           ),
         );
       },
     );
   }
 
-  Widget _buildBugReportHeader() {
+  Widget _buildBugReportHeader(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
+        border: Border.all(
+          color: AppColors.error.withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         children: [
           Container(
-            width: 80,
-            height: 80,
+            width: isSmallScreen ? 64 : 80,
+            height: isSmallScreen ? 64 : 80,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.red,
-                  Colors.red.withOpacity(0.8),
+                  AppColors.error,
+                  AppColors.error.withOpacity(0.8),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(40),
+              borderRadius: BorderRadius.circular(isSmallScreen ? 32 : 40),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.red.withOpacity(0.3),
+                  color: AppColors.error.withOpacity(0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.bug_report_outlined,
-              size: 40,
+            child: Icon(
+              Icons.bug_report_rounded,
+              size: isSmallScreen ? 32 : 40,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 12 : 16),
           Text(
             locale.translate('reportABug'),
             style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
+              fontSize: isSmallScreen ? 17 : 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 6 : 8),
           Text(
             locale.translate('helpUsFixIssues'),
             style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Colors.grey[600],
+              fontSize: isSmallScreen ? 12 : 14,
+              color: AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -175,19 +202,23 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
     );
   }
 
-  Widget _buildBasicInfoSection() {
+  Widget _buildBasicInfoSection(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -196,36 +227,79 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
         children: [
           Row(
             children: [
-              Icon(
-                Icons.info_outline,
-                color: const Color(AppConstants.primaryTeal),
-                size: 20,
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.info_rounded,
+                  color: Colors.white,
+                  size: isSmallScreen ? 18 : 20,
+                ),
               ),
-              const SizedBox(width: 12),
-              Text(
-                locale.translate('basicInformation'),
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+              SizedBox(width: isSmallScreen ? 10 : 12),
+              Expanded(
+                child: Text(
+                  locale.translate('basicInformation'),
+                  style: GoogleFonts.inter(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isSmallScreen ? 16 : 20),
           TextFormField(
             controller: _titleController,
+            style: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 13 : 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               labelText: locale.translate('bugTitle'),
-              prefixIcon: const Icon(Icons.title_outlined),
+              labelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: Icon(
+                Icons.title_rounded,
+                color: AppColors.primary,
+                size: isSmallScreen ? 20 : 22,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                borderSide: BorderSide(color: AppColors.primary, width: 2),
               ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.error),
+              ),
+              filled: true,
+              fillColor: AppColors.background,
               hintText: locale.translate('briefDescriptionOfIssue'),
+              hintStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 13,
+                color: AppColors.textSecondary.withOpacity(0.6),
+              ),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -234,22 +308,41 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
               return null;
             },
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 14 : 16),
           Row(
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: _selectedCategory,
+                  style: GoogleFonts.inter(
+                    fontSize: isSmallScreen ? 13 : 14,
+                    color: AppColors.textPrimary,
+                  ),
                   decoration: InputDecoration(
                     labelText: locale.translate('category'),
-                    prefixIcon: const Icon(Icons.category_outlined),
+                    labelStyle: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 12 : 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.category_outlined,
+                      color: AppColors.primary,
+                      size: isSmallScreen ? 20 : 22,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.border),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
                     ),
+                    filled: true,
+                    fillColor: AppColors.background,
                   ),
                   items: _categories.map((category) {
                     return DropdownMenuItem<String>(
@@ -262,20 +355,39 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
                   },
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: isSmallScreen ? 12 : 16),
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: _selectedPriority,
+                  style: GoogleFonts.inter(
+                    fontSize: isSmallScreen ? 13 : 14,
+                    color: AppColors.textPrimary,
+                  ),
                   decoration: InputDecoration(
                     labelText: locale.translate('priority'),
-                    prefixIcon: const Icon(Icons.priority_high_outlined),
+                    labelStyle: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 12 : 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.priority_high_rounded,
+                      color: AppColors.error,
+                      size: isSmallScreen ? 20 : 22,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.border),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                      borderSide: BorderSide(color: AppColors.error, width: 2),
                     ),
+                    filled: true,
+                    fillColor: AppColors.background,
                   ),
                   items: _priorities.map((priority) {
                     return DropdownMenuItem<String>(
@@ -283,15 +395,27 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
                       child: Row(
                         children: [
                           Container(
-                            width: 12,
-                            height: 12,
+                            width: isSmallScreen ? 10 : 12,
+                            height: isSmallScreen ? 10 : 12,
                             decoration: BoxDecoration(
                               color: priority['color'],
                               shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (priority['color'] as Color).withOpacity(0.3),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(priority['label']),
+                          SizedBox(width: isSmallScreen ? 6 : 8),
+                          Text(
+                            priority['label'],
+                            style: GoogleFonts.inter(
+                              fontSize: isSmallScreen ? 12 : 14,
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -308,19 +432,23 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
     );
   }
 
-  Widget _buildBugDetailsSection() {
+  Widget _buildBugDetailsSection(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        border: Border.all(
+          color: AppColors.info.withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -329,41 +457,84 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
         children: [
           Row(
             children: [
-              Icon(
-                Icons.description_outlined,
-                color: const Color(AppConstants.primaryTeal),
-                size: 20,
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: AppColors.info,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.info.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.description_rounded,
+                  color: Colors.white,
+                  size: isSmallScreen ? 18 : 20,
+                ),
               ),
-              const SizedBox(width: 12),
-              Text(
-                locale.translate('bugDetails'),
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+              SizedBox(width: isSmallScreen ? 10 : 12),
+              Expanded(
+                child: Text(
+                  locale.translate('bugDetails'),
+                  style: GoogleFonts.inter(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isSmallScreen ? 16 : 20),
           TextFormField(
             controller: _descriptionController,
             maxLines: 4,
+            style: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 13 : 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               labelText: locale.translate('description'),
-              prefixIcon: const Padding(
-                padding: EdgeInsets.only(bottom: 80),
-                child: Icon(Icons.description_outlined),
+              labelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: Padding(
+                padding: EdgeInsets.only(bottom: isSmallScreen ? 70 : 80),
+                child: Icon(
+                  Icons.description_rounded,
+                  color: AppColors.info,
+                  size: isSmallScreen ? 20 : 22,
+                ),
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                borderSide: BorderSide(color: AppColors.info, width: 2),
               ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.error),
+              ),
+              filled: true,
+              fillColor: AppColors.background,
               alignLabelWithHint: true,
               hintText: locale.translate('describeBugInDetail'),
+              hintStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 13,
+                color: AppColors.textSecondary.withOpacity(0.6),
+              ),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -372,25 +543,52 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
               return null;
             },
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 14 : 16),
           TextFormField(
             controller: _stepsController,
             maxLines: 3,
+            style: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 13 : 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               labelText: locale.translate('stepsToReproduce'),
-              prefixIcon: const Padding(
-                padding: EdgeInsets.only(bottom: 60),
-                child: Icon(Icons.format_list_numbered_outlined),
+              labelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: Padding(
+                padding: EdgeInsets.only(bottom: isSmallScreen ? 50 : 60),
+                child: Icon(
+                  Icons.format_list_numbered_rounded,
+                  color: AppColors.info,
+                  size: isSmallScreen ? 20 : 22,
+                ),
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                borderSide: BorderSide(color: AppColors.info, width: 2),
               ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.error),
+              ),
+              filled: true,
+              fillColor: AppColors.background,
               alignLabelWithHint: true,
               hintText: locale.translate('stepByStepInstructions'),
+              hintStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 13,
+                color: AppColors.textSecondary.withOpacity(0.6),
+              ),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -399,46 +597,92 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
               return null;
             },
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 14 : 16),
           TextFormField(
             controller: _expectedController,
             maxLines: 2,
+            style: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 13 : 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               labelText: locale.translate('expectedBehavior'),
-              prefixIcon: const Padding(
-                padding: EdgeInsets.only(bottom: 40),
-                child: Icon(Icons.check_circle_outline),
+              labelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: Padding(
+                padding: EdgeInsets.only(bottom: isSmallScreen ? 35 : 40),
+                child: Icon(
+                  Icons.check_circle_rounded,
+                  color: AppColors.success,
+                  size: isSmallScreen ? 20 : 22,
+                ),
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                borderSide: BorderSide(color: AppColors.success, width: 2),
               ),
+              filled: true,
+              fillColor: AppColors.background,
               alignLabelWithHint: true,
               hintText: locale.translate('whatShouldHappen'),
+              hintStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 13,
+                color: AppColors.textSecondary.withOpacity(0.6),
+              ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 14 : 16),
           TextFormField(
             controller: _actualController,
             maxLines: 2,
+            style: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 13 : 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               labelText: locale.translate('actualBehavior'),
-              prefixIcon: const Padding(
-                padding: EdgeInsets.only(bottom: 40),
-                child: Icon(Icons.error_outline),
+              labelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: Padding(
+                padding: EdgeInsets.only(bottom: isSmallScreen ? 35 : 40),
+                child: Icon(
+                  Icons.error_rounded,
+                  color: AppColors.error,
+                  size: isSmallScreen ? 20 : 22,
+                ),
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: const Color(AppConstants.primaryTeal)),
+                borderSide: BorderSide(color: AppColors.error, width: 2),
               ),
+              filled: true,
+              fillColor: AppColors.background,
               alignLabelWithHint: true,
               hintText: locale.translate('whatActuallyHappens'),
+              hintStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 13,
+                color: AppColors.textSecondary.withOpacity(0.6),
+              ),
             ),
           ),
         ],
@@ -446,19 +690,23 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
     );
   }
 
-  Widget _buildSystemInfoSection() {
+  Widget _buildSystemInfoSection(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        border: Border.all(
+          color: AppColors.accent.withOpacity(0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -467,45 +715,61 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
         children: [
           Row(
             children: [
-              Icon(
-                Icons.phone_android_outlined,
-                color: const Color(AppConstants.primaryTeal),
-                size: 20,
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accent.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.phone_android_rounded,
+                  color: Colors.white,
+                  size: isSmallScreen ? 18 : 20,
+                ),
               ),
-              const SizedBox(width: 12),
-              Text(
-                locale.translate('systemInformation'),
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+              SizedBox(width: isSmallScreen ? 10 : 12),
+              Expanded(
+                child: Text(
+                  locale.translate('systemInformation'),
+                  style: GoogleFonts.inter(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 14 : 16),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: AppColors.background,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
+              border: Border.all(color: AppColors.border.withOpacity(0.5)),
             ),
             child: Column(
               children: [
-                _buildSystemInfoRow('Platform', _getPlatform()),
-                _buildSystemInfoRow('App Version', '1.0.0'),
-                _buildSystemInfoRow('Build Number', '100'),
-                _buildSystemInfoRow('Flutter Version', '3.19.0'),
+                _buildSystemInfoRow('Platform', _getPlatform(), isSmallScreen),
+                _buildSystemInfoRow('App Version', '1.0.0', isSmallScreen),
+                _buildSystemInfoRow('Build Number', '100', isSmallScreen),
+                _buildSystemInfoRow('Flutter Version', '3.19.0', isSmallScreen),
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: isSmallScreen ? 10 : 12),
           Text(
             locale.translate('systemInfoNote'),
             style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Colors.grey[600],
+              fontSize: isSmallScreen ? 11 : 12,
+              color: AppColors.textSecondary,
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -514,26 +778,26 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
     );
   }
 
-  Widget _buildSystemInfoRow(String label, String value) {
+  Widget _buildSystemInfoRow(String label, String value, bool isSmallScreen) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 3 : 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: isSmallScreen ? 12 : 14,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[700],
+              color: AppColors.textSecondary,
             ),
           ),
           Text(
             value,
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: isSmallScreen ? 12 : 14,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: AppColors.textPrimary,
             ),
           ),
         ],
@@ -541,45 +805,68 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton(bool isSmallScreen) {
     final locale = AppLocalizations.of(_localeProvider.languageCode);
     
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _isSubmitting ? null : _submitBugReport,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(AppConstants.primaryTeal),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 4,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withOpacity(0.9),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: _isSubmitting
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.send_outlined, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    locale.translate('submitBugReport'),
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: isSmallScreen ? 50 : 56,
+        child: ElevatedButton(
+          onPressed: _isSubmitting ? null : _submitBugReport,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+            ),
+          ),
+          child: _isSubmitting
+              ? SizedBox(
+                  width: isSmallScreen ? 20 : 24,
+                  height: isSmallScreen ? 20 : 24,
+                  child: const CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
                   ),
-                ],
-              ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.send_rounded,
+                      size: isSmallScreen ? 18 : 20,
+                    ),
+                    SizedBox(width: isSmallScreen ? 6 : 8),
+                    Text(
+                      locale.translate('submitBugReport'),
+                      style: GoogleFonts.inter(
+                        fontSize: isSmallScreen ? 14 : 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -630,8 +917,8 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
         title: Row(
           children: [
             Icon(
-              Icons.check_circle,
-              color: Colors.green,
+              Icons.check_circle_rounded,
+              color: AppColors.success,
               size: 28,
             ),
             const SizedBox(width: 12),
@@ -640,6 +927,7 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
               ),
             ),
           ],
@@ -650,7 +938,10 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
           children: [
             Text(
               locale.translate('bugReportSubmitted'),
-              style: GoogleFonts.inter(fontSize: 14),
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -658,7 +949,7 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: const Color(AppConstants.primaryTeal),
+                color: AppColors.primary,
               ),
             ),
           ],
@@ -669,10 +960,13 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
               Navigator.of(context).pop();
               context.pop();
             },
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+            ),
             child: Text(
               locale.translate('ok'),
               style: GoogleFonts.inter(
-                color: const Color(AppConstants.primaryTeal),
+                color: AppColors.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -685,9 +979,37 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(AppConstants.primaryTeal),
+        content: Text(
+          message,
+          style: GoogleFonts.inter(fontSize: 14),
+        ),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
+    );
+  }
+
+  void _onNavTap(int index) {
+    handleBottomNavigation(
+      context,
+      index,
+      _currentNavIndex,
+      (newIndex) => setState(() => _currentNavIndex = newIndex),
+      customRoutes: [
+        NavigationRoutes.dashboard,
+        NavigationRoutes.customers,
+        NavigationRoutes.orders,
+        NavigationRoutes.settings,
+      ],
+      customDestinations: [
+        NavigationDestinations.dashboard,
+        NavigationDestinations.customers,
+        NavigationDestinations.orders,
+        NavigationDestinations.settings,
+      ],
     );
   }
 }

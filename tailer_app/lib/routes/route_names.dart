@@ -32,6 +32,8 @@ class RouteNames {
   static const String bugReport = 'bugReport';
   static const String termsOfService = 'termsOfService';
   static const String privacySecurity = 'privacySecurity';
+  static const String privacyPolicyViewer = 'privacyPolicyViewer';
+  static const String appInfo = 'appInfo';
   
   // Customers
   static const String customers = 'customers';
