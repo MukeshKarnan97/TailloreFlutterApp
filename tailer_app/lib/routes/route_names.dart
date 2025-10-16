@@ -13,6 +13,7 @@ class RouteNames {
   static const String forgotPassword = 'forgotPassword';
   static const String otp = 'otp';
   static const String passwordReset = 'passwordReset';
+  static const String resetPassword = 'resetPassword'; // New reset password with OTP
   
   // Legal
   static const String privacyPolicy = 'privacyPolicy';

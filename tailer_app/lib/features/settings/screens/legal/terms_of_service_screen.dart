@@ -8,7 +8,7 @@ import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import '../../../../widgets/custom_header.dart';
 
 class TermsOfServiceScreen extends StatefulWidget {
-  const TermsOfServiceScreen({Key? key}) : super(key: key);
+  const TermsOfServiceScreen({super.key});
 
   @override
   State<TermsOfServiceScreen> createState() => _TermsOfServiceScreenState();

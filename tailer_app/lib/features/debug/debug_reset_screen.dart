@@ -4,7 +4,7 @@ import '../../core/utils/logger.dart';
 
 /// Debug helper screen to reset onboarding state for testing
 class DebugResetScreen extends StatelessWidget {
-  const DebugResetScreen({Key? key}) : super(key: key);
+  const DebugResetScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

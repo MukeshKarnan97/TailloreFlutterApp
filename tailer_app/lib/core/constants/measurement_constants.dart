@@ -1,5 +1,6 @@
 /// Measurement constants for the tailor app
 /// Contains dress types and their corresponding measurement categories
+library;
 
 class MeasurementConstants {
   // Dress Types

@@ -12,7 +12,7 @@ import 'package:tailer_app/routes/app_routes.dart';
 /// This screen shows the user agreement and terms of service.
 /// User must accept to continue using the app.
 class UserAgreementScreen extends StatefulWidget {
-  const UserAgreementScreen({Key? key}) : super(key: key);
+  const UserAgreementScreen({super.key});
 
   @override
   State<UserAgreementScreen> createState() => _UserAgreementScreenState();

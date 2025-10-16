@@ -11,7 +11,7 @@ import '../../core/utils/onboarding_helper.dart';
 /// This screen introduces users to the app and leads them to privacy policy.
 /// Once completed, it won't show again on subsequent launches.
 class GetStartedScreen extends StatefulWidget {
-  const GetStartedScreen({Key? key}) : super(key: key);
+  const GetStartedScreen({super.key});
 
   @override
   State<GetStartedScreen> createState() => _GetStartedScreenState();

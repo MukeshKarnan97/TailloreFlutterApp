@@ -7,6 +7,8 @@ void main() {
 }
 
 class DebugNavigationApp extends StatelessWidget {
+  const DebugNavigationApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
@@ -18,6 +20,8 @@ class DebugNavigationApp extends StatelessWidget {
 }
 
 class NavigationTestScreen extends StatelessWidget {
+  const NavigationTestScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

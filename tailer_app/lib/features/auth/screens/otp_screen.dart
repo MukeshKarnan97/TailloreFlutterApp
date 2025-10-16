@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
 import 'package:tailer_app/core/exceptions/auth_exceptions.dart';
-import 'package:tailer_app/data/services/auth_service.dart';
+import 'package:tailer_app/data/services/hybrid_auth_service.dart';
 import 'package:tailer_app/features/auth/widgets/AuthButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthLogo.dart';
 import 'package:tailer_app/features/auth/widgets/AuthTitle.dart';
@@ -77,7 +77,7 @@ class OtpForm extends StatefulWidget {
 
 class _OtpFormState extends State<OtpForm> {
   final _formKey = GlobalKey<FormState>();
-  final AuthService _authService = AuthService();
+  final HybridAuthService _authService = HybridAuthService();
   final SimpleLocaleProvider _localeProvider = SimpleLocaleProvider();
 
   late FocusNode _pin1Node;
@@ -98,7 +98,6 @@ class _OtpFormState extends State<OtpForm> {
   Timer? _resendTimer;
   int _resendCountdown = 180; // 3 minutes = 180 seconds
   bool _canResend = false;
-  String _currentOTP = '1234'; // Store current OTP
 
   @override
   void initState() {
@@ -108,8 +107,7 @@ class _OtpFormState extends State<OtpForm> {
     _pin3Node = FocusNode();
     _pin4Node = FocusNode();
     _startResendTimer();
-    // Generate initial OTP
-    _generateNewOTP();
+    // No local OTP generation - user will receive OTP via email from backend
   }
 
   @override
@@ -147,19 +145,6 @@ class _OtpFormState extends State<OtpForm> {
     });
   }
 
-  Future<void> _generateNewOTP() async {
-    try {
-      // Use auth service to send OTP to email
-      _currentOTP = await _authService.sendOTPToEmail(widget.email);
-      debugPrint('🔐 New OTP Generated for ${widget.email}: $_currentOTP');
-    } catch (e) {
-      // Fallback to local generation if service fails
-      final random = DateTime.now().millisecondsSinceEpoch % 9000 + 1000;
-      _currentOTP = random.toString();
-      debugPrint('🔐 Fallback OTP Generated: $_currentOTP');
-    }
-  }
-
   String _formatTime(int seconds) {
     final minutes = seconds ~/ 60;
     final remainingSeconds = seconds % 60;
@@ -175,8 +160,8 @@ class _OtpFormState extends State<OtpForm> {
     });
 
     try {
-      // Generate new OTP using auth service
-      await _generateNewOTP();
+      // Call backend API to resend OTP
+      await _authService.resendOTP(widget.email);
       
       if (mounted) {
         final locale = AppLocalizations.of(_localeProvider.languageCode);
@@ -231,35 +216,31 @@ class _OtpFormState extends State<OtpForm> {
     });
 
     try {
-      // Use auth service for OTP verification
-      final isValid = await _authService.verifyOTP(otp, widget.email);
+      // Call backend API to verify OTP (user enters OTP received via email)
+      final success = await _authService.verifyOTPAndActivate(
+        email: widget.email,
+        otpCode: otp,
+      );
       
-      // Also check against current generated OTP for development
-      final isDevelopmentOTP = (otp == _currentOTP || otp == '1234');
-      
-      if (isValid || isDevelopmentOTP) {
+      if (success && mounted) {
+        UserFeedbackService.showSuccess(
+          context,
+          locale.translate('otpVerifiedSuccessfully')
+        );
+        
+        // Cancel timer when verification is successful
+        _resendTimer?.cancel();
+        
+        // Small delay for user feedback
+        await Future.delayed(const Duration(milliseconds: 500));
+        
         if (mounted) {
-          UserFeedbackService.showSuccess(
-            context,
-            locale.translate('otpVerifiedSuccessfully')
-          );
-          
-          // Cancel timer when verification is successful
-          _resendTimer?.cancel();
-          
-          // Small delay for user feedback
-          await Future.delayed(const Duration(milliseconds: 500));
-          
-          if (mounted) {
-            widget.onVerified();
-          }
+          widget.onVerified();
         }
-      } else {
-        if (mounted) {
-          setState(() {
-            _errorMessage = locale.translate('invalidOTP');
-          });
-        }
+      } else if (mounted) {
+        setState(() {
+          _errorMessage = locale.translate('invalidOTP');
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -267,6 +248,8 @@ class _OtpFormState extends State<OtpForm> {
         
         if (e is AuthException) {
           errorMsg = e.userMessage;
+        } else {
+          errorMsg = e.toString();
         }
         
         setState(() {
@@ -396,9 +379,9 @@ class _OtpFormState extends State<OtpForm> {
                 ],
               ),
               
-              const SizedBox(height: 16.0),
+              const SizedBox(height: 24.0),
               
-              // Development Info
+              // Info: Check your email
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -406,25 +389,18 @@ class _OtpFormState extends State<OtpForm> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.blue.shade200),
                 ),
-                child: Column(
+                child: Row(
                   children: [
-                    Text(
-                      '${locale.translate('developmentOTP')}: $_currentOTP',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.blue[700],
+                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        locale.translate('checkEmailForOTP') ?? 'Check your email for OTP code',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Colors.blue[700],
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      locale.translate('fallbackOTP'),
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.blue[600],
-                      ),
-                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -456,12 +432,12 @@ class OtpTextFormField extends StatelessWidget {
   final bool autofocus;
 
   const OtpTextFormField({
-    Key? key,
+    super.key,
     this.controller,
     this.focusNode,
     this.onChanged,
     this.autofocus = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -512,12 +488,12 @@ class LogoWithTitle extends StatelessWidget {
   final List<Widget> children;
 
   const LogoWithTitle({
-    Key? key,
+    super.key,
     required this.firstTitle,
     required this.secondTitle,
     this.subText = '',
     required this.children,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

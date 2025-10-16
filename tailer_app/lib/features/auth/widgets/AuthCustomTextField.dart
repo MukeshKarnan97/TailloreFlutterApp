@@ -13,7 +13,7 @@ class CustomTextField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
 
   const CustomTextField({
-    Key? key,
+    super.key,
     required this.size,
     required this.hint,
     this.obscureText = false,
@@ -21,7 +21,7 @@ class CustomTextField extends StatefulWidget {
     this.controller,
     this.borderColor,
     this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();

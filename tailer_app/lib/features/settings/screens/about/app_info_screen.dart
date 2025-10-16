@@ -9,7 +9,7 @@ import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 
 class AppInfoScreen extends StatefulWidget {
-  const AppInfoScreen({Key? key}) : super(key: key);
+  const AppInfoScreen({super.key});
 
   @override
   State<AppInfoScreen> createState() => _AppInfoScreenState();

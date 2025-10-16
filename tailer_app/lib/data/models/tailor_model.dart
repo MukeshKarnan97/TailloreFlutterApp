@@ -11,6 +11,7 @@ class Tailor {
   final String authProvider;
   final String address;
   final String? profileImagePath; // Path to locally stored profile image
+  final bool isActive; // Whether user has verified OTP/email
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isDeleted;
@@ -26,6 +27,7 @@ class Tailor {
     required this.authProvider,
     required this.address,
     this.profileImagePath,
+    this.isActive = false,
     required this.createdAt,
     required this.updatedAt,
     this.isDeleted = false,
@@ -64,25 +66,29 @@ class Tailor {
       authProvider: authProvider,
       address: address,
       profileImagePath: profileImagePath,
+      isActive: false, // New users are inactive until OTP verified
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       isDeleted: false,
     );
   }
 
-  /// Create from database map
+  /// Create from database map or API response
   factory Tailor.fromMap(Map<String, dynamic> map) {
     return Tailor(
-      id: map['id'] as String,
-      uniqueId: map['unique_id'] as String,
+      id: map['id'].toString(), // Handle both int and String IDs from API
+      uniqueId: map['unique_id']?.toString() ?? map['id'].toString(),
       name: map['name'] as String,
       shopName: map['shop_name'] as String,
       email: map['email'] as String,
-      phone: map['phone'] as String,
-      passwordHash: map['password_hash'] as String,
+      phone: (map['phone'] as String?) ?? '', // Handle nullable phone from API
+      passwordHash: (map['password_hash'] as String?) ?? '', // May not be returned from API
       authProvider: map['auth_provider'] as String? ?? 'email',
-      address: map['address'] as String? ?? '',
-      profileImagePath: map['profile_image_path'] as String?,
+      address: (map['address'] as String?) ?? '',
+      // Handle both local path and API URL for profile image
+      profileImagePath: map['profile_image_path'] as String? ?? 
+                       map['profile_image_url'] as String?,
+      isActive: (map['is_active'] as int? ?? 0) == 1,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
       isDeleted: (map['is_deleted'] as int? ?? 0) == 1,
@@ -102,6 +108,7 @@ class Tailor {
       'auth_provider': authProvider,
       'address': address,
       'profile_image_path': profileImagePath,
+      'is_active': isActive ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'is_deleted': isDeleted ? 1 : 0,
@@ -120,6 +127,7 @@ class Tailor {
     String? authProvider,
     String? address,
     String? profileImagePath,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isDeleted,
@@ -135,6 +143,7 @@ class Tailor {
       authProvider: authProvider ?? this.authProvider,
       address: address ?? this.address,
       profileImagePath: profileImagePath ?? this.profileImagePath,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,

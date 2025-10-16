@@ -13,7 +13,7 @@ class ImprovedTextField extends StatefulWidget {
   final void Function(String)? onFieldSubmitted;
 
   const ImprovedTextField({
-    Key? key,
+    super.key,
     required this.controller,
     required this.labelText,
     required this.prefixIcon,
@@ -23,7 +23,7 @@ class ImprovedTextField extends StatefulWidget {
     this.onChanged,
     this.focusNode,
     this.onFieldSubmitted,
-  }) : super(key: key);
+  });
 
   @override
   State<ImprovedTextField> createState() => _ImprovedTextFieldState();

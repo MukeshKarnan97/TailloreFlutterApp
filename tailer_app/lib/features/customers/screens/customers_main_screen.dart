@@ -13,7 +13,7 @@ import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class CustomersMainScreen extends StatefulWidget {
-  const CustomersMainScreen({Key? key}) : super(key: key);
+  const CustomersMainScreen({super.key});
 
   @override
   State<CustomersMainScreen> createState() => _CustomersMainScreenState();

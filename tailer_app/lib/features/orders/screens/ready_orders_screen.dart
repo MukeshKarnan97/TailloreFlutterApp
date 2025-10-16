@@ -16,7 +16,7 @@ import '../../../core/utils/logger.dart';
 import 'order_detail_screen.dart';
 
 class ReadyOrdersScreen extends StatefulWidget {
-  const ReadyOrdersScreen({Key? key}) : super(key: key);
+  const ReadyOrdersScreen({super.key});
 
   @override
   State<ReadyOrdersScreen> createState() => _ReadyOrdersScreenState();

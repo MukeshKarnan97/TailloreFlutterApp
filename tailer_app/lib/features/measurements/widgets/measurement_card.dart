@@ -13,14 +13,14 @@ class MeasurementCard extends StatelessWidget {
   final bool showActions;
 
   const MeasurementCard({
-    Key? key,
+    super.key,
     required this.measurement,
     this.onTap,
     this.onEdit,
     this.onDelete,
     this.onRestore,
     this.showActions = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

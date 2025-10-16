@@ -50,7 +50,7 @@ void main() {
 
     testWidgets('should show OTP screen with correct test message', (WidgetTester tester) async {
       // Arrange
-      final onVerified = () {};
+      void onVerified() {}
 
       // Act
       await tester.pumpWidget(

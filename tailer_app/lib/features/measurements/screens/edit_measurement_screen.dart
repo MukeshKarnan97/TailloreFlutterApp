@@ -18,7 +18,7 @@ import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 class EditMeasurementScreen extends StatefulWidget {
   final String measurementId;
   
-  const EditMeasurementScreen({Key? key, required this.measurementId}) : super(key: key);
+  const EditMeasurementScreen({super.key, required this.measurementId});
 
   @override
   State<EditMeasurementScreen> createState() => _EditMeasurementScreenState();

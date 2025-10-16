@@ -9,7 +9,7 @@ import '../../../core/utils/logger.dart';
 import 'order_detail_screen.dart';
 
 class EnhancedPendingOrdersScreen extends StatefulWidget {
-  const EnhancedPendingOrdersScreen({Key? key}) : super(key: key);
+  const EnhancedPendingOrdersScreen({super.key});
 
   @override
   State<EnhancedPendingOrdersScreen> createState() => _EnhancedPendingOrdersScreenState();

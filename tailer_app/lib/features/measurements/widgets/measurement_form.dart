@@ -11,12 +11,12 @@ class MeasurementForm extends StatefulWidget {
   final String unit;
 
   const MeasurementForm({
-    Key? key,
+    super.key,
     required this.dressType,
     required this.measurements,
     required this.onMeasurementChanged,
     this.unit = 'inches',
-  }) : super(key: key);
+  });
 
   @override
   State<MeasurementForm> createState() => _MeasurementFormState();
@@ -73,7 +73,7 @@ class _MeasurementFormState extends State<MeasurementForm> {
           // Measurement sections
           ...groupedMeasurements.entries.map((entry) {
             return _buildMeasurementSection(entry.key, entry.value);
-          }).toList(),
+          }),
           
           // Bottom spacing for the floating action buttons
           const SizedBox(height: 100),
@@ -486,8 +486,12 @@ class _MeasurementFormState extends State<MeasurementForm> {
   @override
   void dispose() {
     // Dispose controllers and focus nodes
-    _controllers.values.forEach((controller) => controller.dispose());
-    _focusNodes.values.forEach((focusNode) => focusNode.dispose());
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    for (var focusNode in _focusNodes.values) {
+      focusNode.dispose();
+    }
     super.dispose();
   }
 }

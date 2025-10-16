@@ -14,7 +14,7 @@ import 'package:tailer_app/core/utils/logger.dart';
 class MeasurementCategoryScreen extends StatefulWidget {
   final String customerId;
   
-  const MeasurementCategoryScreen({Key? key, required this.customerId}) : super(key: key);
+  const MeasurementCategoryScreen({super.key, required this.customerId});
 
   @override
   State<MeasurementCategoryScreen> createState() => _MeasurementCategoryScreenState();

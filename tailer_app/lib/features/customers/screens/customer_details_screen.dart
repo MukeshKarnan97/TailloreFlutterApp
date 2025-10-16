@@ -16,7 +16,7 @@ import 'package:tailer_app/features/orders/screens/add_order_screen.dart';
 class CustomerDetailsScreen extends StatefulWidget {
   final String customerId;
 
-  const CustomerDetailsScreen({Key? key, required this.customerId}) : super(key: key);
+  const CustomerDetailsScreen({super.key, required this.customerId});
 
   @override
   State<CustomerDetailsScreen> createState() => _CustomerDetailsScreenState();

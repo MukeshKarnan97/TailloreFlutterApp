@@ -109,14 +109,14 @@ void main() {
       );
 
       // Get default preferences
-      final defaultPrefs = await userRepository.getPreferences(user.id!);
+      final defaultPrefs = await userRepository.getPreferences(user.id);
       expect(defaultPrefs.themeMode, equals('system'));
       expect(defaultPrefs.language, equals('en'));
       expect(defaultPrefs.notificationsEnabled, isTrue);
 
       // Update preferences
       final updatedPrefs = await userRepository.updatePreferences(
-        userId: user.id!,
+        userId: user.id,
         themeMode: 'dark',
         language: 'es',
         notificationsEnabled: false,

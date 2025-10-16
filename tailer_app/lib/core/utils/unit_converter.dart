@@ -1,5 +1,6 @@
 /// Unit conversion utility for measurements
 /// Provides conversion between inches and centimeters
+library;
 
 class UnitConverter {
   // Conversion constants

@@ -11,7 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/services/navigation_service.dart';
 
 class HelpCenterScreen extends StatefulWidget {
-  const HelpCenterScreen({Key? key}) : super(key: key);
+  const HelpCenterScreen({super.key});
 
   @override
   State<HelpCenterScreen> createState() => _HelpCenterScreenState();
@@ -495,7 +495,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
                   _buildFAQItem(faq, isSmallScreen),
                 ],
               );
-            }).toList(),
+            }),
         ],
       ),
     );
@@ -511,6 +511,8 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
           color: AppColors.textPrimary,
         ),
       ),
+      iconColor: AppColors.info,
+      collapsedIconColor: AppColors.textSecondary,
       children: [
         Padding(
           padding: EdgeInsets.fromLTRB(
@@ -529,8 +531,6 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> with NavigationMixi
           ),
         ),
       ],
-      iconColor: AppColors.info,
-      collapsedIconColor: AppColors.textSecondary,
     );
   }
 

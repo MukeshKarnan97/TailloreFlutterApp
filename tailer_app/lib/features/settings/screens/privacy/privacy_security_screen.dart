@@ -8,7 +8,7 @@ import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PrivacySecurityScreen extends StatefulWidget {
-  const PrivacySecurityScreen({Key? key}) : super(key: key);
+  const PrivacySecurityScreen({super.key});
 
   @override
   State<PrivacySecurityScreen> createState() => _PrivacySecurityScreenState();
@@ -439,7 +439,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> with Navi
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(AppConstants.primaryTeal),
+            activeThumbColor: const Color(AppConstants.primaryTeal),
             inactiveThumbColor: Colors.grey[400],
             inactiveTrackColor: Colors.grey[300],
           ),

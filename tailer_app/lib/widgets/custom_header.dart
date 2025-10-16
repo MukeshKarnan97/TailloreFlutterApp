@@ -13,7 +13,7 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
   final double? elevation;
 
   const CustomHeader({
-    Key? key,
+    super.key,
     required this.title,
     this.showBackButton = true,
     this.actions,
@@ -21,7 +21,7 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.titleColor,
     this.elevation,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -60,13 +60,13 @@ class CustomHeaderWithProfile extends StatelessWidget implements PreferredSizeWi
   final Color? backgroundColor;
 
   const CustomHeaderWithProfile({
-    Key? key,
+    super.key,
     required this.title,
     this.userImageUrl,
     this.onProfileTap,
     this.actions,
     this.backgroundColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +130,7 @@ class DashboardHeader extends StatefulWidget implements PreferredSizeWidget {
   final int notificationCount;
 
   const DashboardHeader({
-    Key? key,
+    super.key,
     required this.title,
     this.onBackPressed,
     this.onNotificationTap,
@@ -138,7 +138,7 @@ class DashboardHeader extends StatefulWidget implements PreferredSizeWidget {
     this.titleColor,
     this.appIconPath,
     this.notificationCount = 0,
-  }) : super(key: key);
+  });
 
   @override
   State<DashboardHeader> createState() => _DashboardHeaderState();

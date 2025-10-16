@@ -32,9 +32,9 @@ class AppConfig {
         Logger.info(_className, 'Environment configuration loaded successfully');
         
         // Log current environment
-        Logger.info(_className, 'Current environment: ${environment}');
-        Logger.debug(_className, 'App name: ${appName}');
-        Logger.debug(_className, 'App version: ${appVersion}');
+        Logger.info(_className, 'Current environment: $environment');
+        Logger.debug(_className, 'App name: $appName');
+        Logger.debug(_className, 'App version: $appVersion');
         
       } catch (e, stackTrace) {
         Logger.error(_className, 'Failed to load environment configuration', 

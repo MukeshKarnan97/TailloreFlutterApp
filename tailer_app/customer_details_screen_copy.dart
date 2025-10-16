@@ -14,7 +14,7 @@ import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 class CustomerDetailsScreen extends StatefulWidget {
   final String customerId;
 
-  const CustomerDetailsScreen({Key? key, required this.customerId}) : super(key: key);
+  const CustomerDetailsScreen({super.key, required this.customerId});
 
   @override
   State<CustomerDetailsScreen> createState() => _CustomerDetailsScreenState();

@@ -10,7 +10,7 @@ class CustomBottomNavigation extends StatelessWidget {
   final double? elevation;
 
   const CustomBottomNavigation({
-    Key? key,
+    super.key,
     required this.currentIndex,
     required this.onTap,
     required this.items,
@@ -18,7 +18,7 @@ class CustomBottomNavigation extends StatelessWidget {
     this.selectedItemColor,
     this.unselectedItemColor,
     this.elevation,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +62,7 @@ class AnimatedBottomNavigation extends StatelessWidget {
   final Duration animationDuration;
 
   const AnimatedBottomNavigation({
-    Key? key,
+    super.key,
     required this.currentIndex,
     required this.onTap,
     required this.items,
@@ -71,7 +71,7 @@ class AnimatedBottomNavigation extends StatelessWidget {
     this.unselectedItemColor,
     this.elevation,
     this.animationDuration = const Duration(milliseconds: 200),
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +178,7 @@ class FloatingBottomNavigation extends StatelessWidget {
   final double? margin;
 
   const FloatingBottomNavigation({
-    Key? key,
+    super.key,
     required this.currentIndex,
     required this.onTap,
     required this.items,
@@ -186,7 +186,7 @@ class FloatingBottomNavigation extends StatelessWidget {
     this.selectedItemColor,
     this.unselectedItemColor,
     this.margin = 16.0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

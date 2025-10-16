@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
 import 'package:tailer_app/core/exceptions/auth_exceptions.dart';
-import 'package:tailer_app/data/services/auth_service.dart';
+import 'package:tailer_app/data/services/hybrid_auth_service.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/features/auth/widgets/AuthButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthFooter.dart';
@@ -15,7 +15,7 @@ import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class ForgotPassword extends StatefulWidget {
-  const ForgotPassword({Key? key}) : super(key: key);
+  const ForgotPassword({super.key});
 
   @override
   State<ForgotPassword> createState() => _ForgotPasswordState();
@@ -25,7 +25,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final FocusNode _emailFocusNode = FocusNode();
-  final AuthService _authService = AuthService();
+  final HybridAuthService _hybridAuth = HybridAuthService();
   late SimpleLocaleProvider _localeProvider;
   bool _isLoading = false;
 
@@ -56,31 +56,29 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     });
 
     try {
-      await _authService.sendForgotPasswordEmail(_emailController.text.trim());
+      // Call API to send OTP and get reset token
+      final resetToken = await _hybridAuth.requestPasswordReset(_emailController.text.trim());
 
       if (mounted) {
         // Show success message
         UserFeedbackService.showSuccess(
           context,
-          'Password reset email sent! Please check your inbox.',
+          'OTP sent to your email! Please check your inbox.',
         );
 
-        // Navigate to OTP screen for password reset
-        await _navigateToOTP();
+        // Navigate to reset password screen with OTP input and reset token
+        await _navigateToResetPassword(resetToken);
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        UserFeedbackService.showError(context, e.message);
       }
     } catch (e) {
       if (mounted) {
-        // Handle different types of errors
-        if (e is UserNotFoundException) {
-          UserFeedbackService.showUserNotFound(context);
-        } else if (e is NetworkException) {
-          UserFeedbackService.showNetworkError(context);
-        } else {
-          UserFeedbackService.showError(
-            context,
-            'Failed to send reset email. Please try again.',
-          );
-        }
+        UserFeedbackService.showError(
+          context,
+          'Failed to send OTP. Please try again.',
+        );
       }
     } finally {
       if (mounted) {
@@ -91,38 +89,36 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     }
   }
 
-  Future<void> _navigateToOTP() async {
-    debugPrint('Starting navigation to OTP screen after password reset request...');
+  Future<void> _navigateToResetPassword(String resetToken) async {
+    debugPrint('=== Navigating to Reset Password ===');
+    debugPrint('Email: ${_emailController.text.trim()}');
+    debugPrint('Reset token: $resetToken');
+    debugPrint('Token length: ${resetToken.length}');
+    debugPrint('Token first 20 chars: ${resetToken.substring(0, 20)}');
+    
+    final navData = {
+      'email': _emailController.text.trim(),
+      'resetToken': resetToken,
+    };
+    debugPrint('Navigation data: $navData');
+    debugPrint('Data keys: ${navData.keys}');
+    debugPrint('===================================');
     
     try {
-      debugPrint('Attempting GoRouter navigation to OTP...');
       context.pushNamed(
-        RouteNames.otp,
-        extra: {
-          'firstTitle': 'Verification',
-          'secondTitle': 'OTP',
-          'emailText': _emailController.text,
-          'email': _emailController.text,
-          'onVerified': () {
-            // Navigate to password reset screen after OTP verification
-            context.pushReplacementNamed(
-              RouteNames.passwordReset,
-              extra: {'email': _emailController.text}
-            );
-          },
-        },
+        RouteNames.resetPassword,
+        extra: navData,
       );
-      debugPrint('GoRouter navigation successful');
+      debugPrint('✅ Navigation call completed');
     } catch (error) {
-      debugPrint('Navigation failed: $error');
+      debugPrint('❌ Navigation failed: $error');
       
-      // Show error to user
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Navigation failed. Please try again. Error: ${error.toString()}'),
+            content: Text('Navigation failed. Please try again.'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
+            duration: const Duration(seconds: 3),
           ),
         );
       }

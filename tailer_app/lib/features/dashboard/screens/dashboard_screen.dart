@@ -14,7 +14,7 @@ import 'package:tailer_app/core/services/back_button_handler.dart';
 import 'package:tailer_app/core/utils/logger.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();

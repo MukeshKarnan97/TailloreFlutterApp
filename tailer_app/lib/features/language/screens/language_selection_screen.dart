@@ -6,7 +6,7 @@ import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class LanguageSelectionScreen extends StatefulWidget {
-  const LanguageSelectionScreen({Key? key}) : super(key: key);
+  const LanguageSelectionScreen({super.key});
 
   @override
   State<LanguageSelectionScreen> createState() => _LanguageSelectionScreenState();
@@ -83,7 +83,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
         const SizedBox(height: 16),
         ...AppLocalizations.availableLanguages.map((language) {
           return _buildLanguageOption(language, locale);
-        }).toList(),
+        }),
       ],
     );
   }

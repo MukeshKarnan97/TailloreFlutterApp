@@ -12,11 +12,11 @@ class SignUpGoogleFacebookButton extends StatelessWidget {
   final Function(String)? onSocialAuthError;
 
   const SignUpGoogleFacebookButton({
-    Key? key, 
+    super.key, 
     required this.size,
     this.onSocialAuthSuccess,
     this.onSocialAuthError,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

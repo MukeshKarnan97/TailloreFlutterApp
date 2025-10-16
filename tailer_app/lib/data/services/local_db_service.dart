@@ -33,7 +33,7 @@ class LocalDatabaseService {
   
   // Database configuration from AppConfig
   static String get _databaseName => AppConfig.databaseName;
-  static int get _databaseVersion => 12; // v12: Added image_path_1 and image_path_2 to orders table
+  static int get _databaseVersion => 13; // v13: Added is_active field to tailor table for local auth
 
   /// Get database instance (lazy initialization)
   /// Returns the database instance, creating it if it doesn't exist
@@ -99,6 +99,7 @@ class LocalDatabaseService {
         auth_provider TEXT CHECK(auth_provider IN ('google', 'facebook', 'email')) NOT NULL,
         address TEXT NOT NULL,
         profile_image_path TEXT,
+        is_active INTEGER DEFAULT 0,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -1124,6 +1125,31 @@ class LocalDatabaseService {
         }
       } catch (e, stackTrace) {
         Logger.error('LocalDatabaseService', 'Failed to add image columns to orders table', error: e, stackTrace: stackTrace);
+        // Don't rethrow as this is not critical for app functionality
+      }
+    }
+
+    // Add is_active column to tailor table for local authentication (version 12 to 13)
+    if (oldVersion < 13) {
+      try {
+        Logger.info('LocalDatabaseService', 'Adding is_active column to tailor table for local auth');
+        
+        // Check if the column already exists
+        final columns = await db.rawQuery("PRAGMA table_info(tailor)");
+        final hasColumn = columns.any((col) => col['name'] == 'is_active');
+        
+        if (!hasColumn) {
+          await db.execute('ALTER TABLE tailor ADD COLUMN is_active INTEGER DEFAULT 0');
+          Logger.info('LocalDatabaseService', 'Successfully added is_active column to tailor table');
+          
+          // Create index for better query performance
+          await db.execute('CREATE INDEX IF NOT EXISTS idx_tailor_active ON tailor (is_active)');
+          Logger.info('LocalDatabaseService', 'Created index on is_active');
+        } else {
+          Logger.info('LocalDatabaseService', 'is_active column already exists in tailor table');
+        }
+      } catch (e, stackTrace) {
+        Logger.error('LocalDatabaseService', 'Failed to add is_active column to tailor table', error: e, stackTrace: stackTrace);
         // Don't rethrow as this is not critical for app functionality
       }
     }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
-import 'package:tailer_app/data/services/auth_service.dart';
+import 'package:tailer_app/data/services/hybrid_auth_service.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/features/auth/widgets/AuthButton.dart';
 import 'package:tailer_app/features/auth/widgets/AuthFooter.dart';
@@ -14,9 +14,10 @@ import 'package:tailer_app/data/services/social_auth_service.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
+import 'package:tailer_app/core/exceptions/auth_exceptions.dart';
 
 class SignUp extends StatefulWidget {
-  const SignUp({Key? key}) : super(key: key);
+  const SignUp({super.key});
 
   @override
   State<SignUp> createState() => _SignUpState();
@@ -30,7 +31,7 @@ class _SignUpState extends State<SignUp> {
   final FocusNode _usernameFocusNode = FocusNode();
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passwordFocusNode = FocusNode();
-  final AuthService _authService = AuthService();
+  final HybridAuthService _authService = HybridAuthService();
   late SimpleLocaleProvider _localeProvider;
   
   bool _isLoading = false;
@@ -103,38 +104,59 @@ class _SignUpState extends State<SignUp> {
       return;
     }
 
+    final locale = AppLocalizations.of(_localeProvider.languageCode);
+
     // Show loading state
     setState(() {
       _isLoading = true;
     });
 
     try {
-      await _authService.signUpNewUser(
-        username: _usernameController.text.trim(),
+      // Call backend API to register user
+      final response = await _authService.registerWithBackend(
         email: _emailController.text.trim(),
         password: _passwordController.text,
+        passwordConfirm: _passwordController.text, // Same as password
+        name: _usernameController.text.trim(),
+        shopName: '${_usernameController.text.trim()}\'s Shop',
+        phone: '', // Optional
+        address: '', // Optional
       );
 
+      // API call successful - user data is now in backend AND local DB
+      // Backend has sent OTP to email
       if (mounted) {
         // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome ${_usernameController.text.trim()}! Please verify your email.'),
-            backgroundColor: Colors.green,
-          ),
+        UserFeedbackService.showSuccess(
+          context,
+          locale.translate('registrationSuccessful') ?? 
+          'Welcome ${_usernameController.text.trim()}! Check your email for OTP.',
         );
 
         // Navigate to OTP screen for email verification
         await _navigateToOTP();
       }
     } catch (e) {
+      // API call failed - DO NOT navigate to OTP screen
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Registration failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        String errorMessage = locale.translate('registrationFailed') ?? 'Registration failed';
+        
+        // Extract user-friendly error message
+        if (e is AuthException) {
+          errorMessage = e.userMessage;
+        } else if (e.toString().contains('email')) {
+          errorMessage = locale.translate('emailAlreadyExists') ?? 
+                        'Email already exists. Please use a different email.';
+        } else if (e.toString().contains('network') || e.toString().contains('connect')) {
+          errorMessage = locale.translate('networkError') ?? 
+                        'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = '$errorMessage: ${e.toString()}';
+        }
+        
+        UserFeedbackService.showError(context, errorMessage);
+        
+        debugPrint('Registration failed: $e');
       }
     } finally {
       if (mounted) {
@@ -158,25 +180,57 @@ class _SignUpState extends State<SignUp> {
           'emailText': _emailController.text,
           'email': _emailController.text,
           'onVerified': () async {
-            // Sign in the user after successful signup verification
-            debugPrint('OTP verified, signing in user...');
-            try {
-              await _authService.signIn(
-                email: _emailController.text,
-                password: _passwordController.text,
-                keepSignedIn: true,
-              );
-              debugPrint('User signed in successfully, navigating to dashboard...');
-              // Navigate to dashboard after successful sign in
+            // After OTP verification, user is already logged in!
+            // - Tokens saved during registration
+            // - User data in local DB
+            // - _currentTailor is set
+            debugPrint('OTP verified successfully!');
+            
+            // Verify user is authenticated
+            if (_authService.isAuthenticated) {
+              debugPrint('User authenticated, navigating to dashboard...');
+              
+              // Navigate to dashboard
               if (mounted) {
+                UserFeedbackService.showSuccess(
+                  context,
+                  'Account verified! Welcome aboard.',
+                );
                 context.goNamed(RouteNames.dashboard);
               }
-            } catch (e) {
-              debugPrint('Auto sign-in failed: $e');
-              // If sign-in fails, still navigate to dashboard
-              // The dashboard will handle the not-authenticated state
-              if (mounted) {
-                context.goNamed(RouteNames.dashboard);
+            } else {
+              // Fallback: Try to restore session from tokens
+              debugPrint('User not authenticated, attempting to restore session...');
+              try {
+                await _authService.initialize();
+                
+                if (_authService.isAuthenticated && mounted) {
+                  debugPrint('Session restored, navigating to dashboard...');
+                  UserFeedbackService.showSuccess(
+                    context,
+                    'Account verified! Welcome aboard.',
+                  );
+                  context.goNamed(RouteNames.dashboard);
+                } else {
+                  // If still not authenticated, go to sign in
+                  debugPrint('Session restore failed, navigating to sign in...');
+                  if (mounted) {
+                    UserFeedbackService.showError(
+                      context,
+                      'Account verified! Please sign in to continue.',
+                    );
+                    context.goNamed(RouteNames.signIn);
+                  }
+                }
+              } catch (e) {
+                debugPrint('Session restore error: $e');
+                if (mounted) {
+                  UserFeedbackService.showError(
+                    context,
+                    'Account verified! Please sign in to continue.',
+                  );
+                  context.goNamed(RouteNames.signIn);
+                }
               }
             }
           },

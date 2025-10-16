@@ -20,7 +20,7 @@ class StandardScreenLayout extends StatelessWidget {
   final PreferredSizeWidget? customAppBar;
 
   const StandardScreenLayout({
-    Key? key,
+    super.key,
     required this.title,
     required this.body,
     this.actions,
@@ -33,7 +33,7 @@ class StandardScreenLayout extends StatelessWidget {
     this.resizeToAvoidBottomInset = true,
     this.backgroundColor,
     this.customAppBar,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +95,7 @@ class StandardCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const StandardCard({
-    Key? key,
+    super.key,
     required this.child,
     this.padding,
     this.margin,
@@ -103,7 +103,7 @@ class StandardCard extends StatelessWidget {
     this.elevation,
     this.borderRadius,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +138,7 @@ class StandardButton extends StatelessWidget {
   final EdgeInsets? padding;
 
   const StandardButton({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.isLoading = false,
@@ -147,7 +147,7 @@ class StandardButton extends StatelessWidget {
     this.width,
     this.height,
     this.padding,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

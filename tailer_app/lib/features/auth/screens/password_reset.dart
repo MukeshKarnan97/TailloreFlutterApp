@@ -16,7 +16,7 @@ import 'package:tailer_app/core/translations/app_localizations.dart';
 class PasswordReset extends StatefulWidget {
   final String? email;
   
-  const PasswordReset({Key? key, this.email}) : super(key: key);
+  const PasswordReset({super.key, this.email});
 
   @override
   State<PasswordReset> createState() => _PasswordResetState();

@@ -11,7 +11,7 @@ import 'package:tailer_app/core/services/navigation_service.dart';
 import 'dart:io' show Platform;
 
 class BugReportScreen extends StatefulWidget {
-  const BugReportScreen({Key? key}) : super(key: key);
+  const BugReportScreen({super.key});
 
   @override
   State<BugReportScreen> createState() => _BugReportScreenState();
@@ -313,7 +313,7 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   style: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 13 : 14,
                     color: AppColors.textPrimary,
@@ -358,7 +358,7 @@ class _BugReportScreenState extends State<BugReportScreen> with NavigationMixin 
               SizedBox(width: isSmallScreen ? 12 : 16),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedPriority,
+                  initialValue: _selectedPriority,
                   style: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 13 : 14,
                     color: AppColors.textPrimary,

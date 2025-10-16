@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:math';
 import '../models/tailor_model.dart';
 import '../services/local_db_service.dart';
-import '../services/auth_storage_service.dart';
+import '../../core/services/token_storage_service.dart';
 
 /// TailorAuthRepository - Authentication repository using Tailor model
 /// 
@@ -16,11 +16,18 @@ class TailorAuthRepository {
   TailorAuthRepository._internal();
 
   final LocalDatabaseService _dbService = LocalDatabaseService();
-  final AuthStorageService _storageService = AuthStorageService();
+  final TokenStorageService _storageService = TokenStorageService();
 
-  // Password hashing
+  // Password hashing with salt (old format)
   String _hashPassword(String password, String salt) {
     final bytes = utf8.encode(password + salt);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  // Simple password hashing without salt (new format - matches HybridAuthService)
+  String _hashPasswordSimple(String password) {
+    final bytes = utf8.encode(password);
     final digest = sha256.convert(bytes);
     return digest.toString();
   }
@@ -114,34 +121,60 @@ class TailorAuthRepository {
       final tailorData = tailors.first;
       final tailor = Tailor.fromMap(tailorData);
 
-      // Verify password
-      final passwordParts = tailor.passwordHash.split(':');
-      if (passwordParts.length != 2) {
+      // ✅ CHECK IS_ACTIVE FIELD - User must verify OTP before logging in
+      final isActive = tailorData['is_active'] == 1;
+      if (!isActive) {
+        throw Exception('Account not activated. Please verify your OTP first.');
+      }
+
+      // Verify password - Support both old (salt:hash) and new (simple SHA256) formats
+      final storedPasswordHash = tailor.passwordHash;
+      
+      if (storedPasswordHash.isEmpty) {
+        throw Exception('Password not set. Please reset your password.');
+      }
+
+      // Check if it's the new format (simple SHA256 - 64 chars, no colon)
+      if (!storedPasswordHash.contains(':') && storedPasswordHash.length == 64) {
+        // New format: Simple SHA256 without salt
+        final inputHash = _hashPasswordSimple(password);
+        if (inputHash != storedPasswordHash) {
+          throw Exception('Invalid password');
+        }
+      } else if (storedPasswordHash.contains(':')) {
+        // Old format: salt:hash
+        final passwordParts = storedPasswordHash.split(':');
+        if (passwordParts.length != 2) {
+          throw Exception('Invalid password hash format');
+        }
+        final salt = passwordParts[0];
+        final storedHash = passwordParts[1];
+        final inputHash = _hashPassword(password, salt);
+        if (inputHash != storedHash) {
+          throw Exception('Invalid password');
+        }
+      } else {
         throw Exception('Invalid password hash format');
       }
 
-      final salt = passwordParts[0];
-      final storedHash = passwordParts[1];
-      final inputHash = _hashPassword(password, salt);
-
-      if (inputHash != storedHash) {
-        throw Exception('Invalid password');
-      }
-
-      // Generate session token
+      // Generate session tokens
       final accessToken = _generateToken();
+      final refreshToken = _generateToken();
 
-      // Store in secure storage
-      await _storageService.storeAuthTokens(
+      // Store in secure storage using TokenStorageService
+      await _storageService.saveTokens(
         accessToken: accessToken,
-        refreshToken: _generateToken(),
-        sessionId: tailor.id, // Use tailor ID as session ID
-        userId: tailor.id, // Use tailor ID as user ID
-        userEmail: tailor.email,
+        refreshToken: refreshToken,
       );
-
-      // Update remember me preference
-      await _storageService.setRememberMe(rememberMe);
+      
+      // Save user info
+      await _storageService.saveUserId(tailor.id);
+      await _storageService.saveUserEmail(tailor.email);
+      await _storageService.saveUserType('tailor');
+      await _storageService.saveLoginState(true);
+      await _storageService.saveLastLoginDate();
+      
+      // Note: rememberMe is handled by the app, not token storage
 
       debugPrint('TailorAuthRepository: Tailor signed in successfully: ${tailor.email}');
       return tailor;
@@ -204,7 +237,7 @@ class TailorAuthRepository {
   Future<void> signOut() async {
     try {
       debugPrint('TailorAuthRepository: Signing out');
-      await _storageService.clearAuthData();
+      await _storageService.clearAll(); // Clear all tokens and user data
       debugPrint('TailorAuthRepository: Sign out successful');
     } catch (e) {
       debugPrint('TailorAuthRepository: Error during sign out: $e');

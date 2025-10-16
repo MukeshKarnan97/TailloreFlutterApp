@@ -15,7 +15,7 @@ import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 class EditCustomerScreen extends StatefulWidget {
   final String customerId;
   
-  const EditCustomerScreen({Key? key, required this.customerId}) : super(key: key);
+  const EditCustomerScreen({super.key, required this.customerId});
 
   @override
   State<EditCustomerScreen> createState() => _EditCustomerScreenState();
@@ -377,7 +377,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
         validator: isRequired
             ? (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return '${label} ${locale.translate('isRequired')}';
+                  return '$label ${locale.translate('isRequired')}';
                 }
                 return null;
               }
@@ -406,7 +406,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> with Navigation
         ],
       ),
       child: DropdownButtonFormField<String>(
-        value: _selectedGender,
+        initialValue: _selectedGender,
         decoration: InputDecoration(
           labelText: '${locale.translate('gender')} *',
           labelStyle: GoogleFonts.inter(

@@ -15,10 +15,11 @@ import 'package:tailer_app/features/auth/widgets/ImprovedTextField.dart';
 import 'package:tailer_app/data/services/social_auth_service.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
+import 'package:tailer_app/features/debug/database_viewer_screen.dart';
 
 
 class SignIn extends StatefulWidget {
-  const SignIn({Key? key}) : super(key: key);
+  const SignIn({super.key});
 
   @override
   State<SignIn> createState() => _SignInState();
@@ -207,90 +208,120 @@ class _SignInState extends State<SignIn> {
 
     return Scaffold(
       resizeToAvoidBottomInset: true, // 👈 important for keyboard
-      floatingActionButton: AnimatedBuilder(
-        animation: _localeProvider,
-        builder: (context, _) {
-          // Get current language details
-          final currentLanguage = AppLocalizations.availableLanguages
-              .firstWhere(
-                (lang) => lang.code == _localeProvider.languageCode,
-                orElse: () => AppLocalizations.availableLanguages.first,
-              );
-          
-          return Container(
-            width: 80,
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFF21899C),
-                  Color(0xFF1A7A8A),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF21899C).withOpacity(0.3),
-                  spreadRadius: 1,
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
-              ),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  context.pushNamed(RouteNames.languageSelection);
-                },
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        currentLanguage.flag,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(0.5, 0.5),
-                              blurRadius: 1.0,
-                              color: Colors.black26,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        currentLanguage.isoCode,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          shadows: [
-                            const Shadow(
-                              offset: Offset(0.5, 0.5),
-                              blurRadius: 1.0,
-                              color: Colors.black26,
-                            ),
-                          ],
-                        ),
+      floatingActionButton: Stack(
+        children: [
+          // Language Selector Button (bottom right)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: AnimatedBuilder(
+              animation: _localeProvider,
+              builder: (context, _) {
+                // Get current language details
+                final currentLanguage = AppLocalizations.availableLanguages
+                    .firstWhere(
+                      (lang) => lang.code == _localeProvider.languageCode,
+                      orElse: () => AppLocalizations.availableLanguages.first,
+                    );
+                
+                return Container(
+                  width: 80,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF21899C),
+                        Color(0xFF1A7A8A),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF21899C).withOpacity(0.3),
+                        spreadRadius: 1,
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
                       ),
                     ],
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 1,
+                    ),
                   ),
-                ),
-              ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        context.pushNamed(RouteNames.languageSelection);
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              currentLanguage.flag,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                shadows: [
+                                  Shadow(
+                                    offset: Offset(0.5, 0.5),
+                                    blurRadius: 1.0,
+                                    color: Colors.black26,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              currentLanguage.isoCode,
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                shadows: [
+                                  const Shadow(
+                                    offset: Offset(0.5, 0.5),
+                                    blurRadius: 1.0,
+                                    color: Colors.black26,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+          
+          // Debug Database Button (bottom left)
+          Positioned(
+            left: 16,
+            bottom: 0,
+            child: FloatingActionButton(
+              heroTag: 'debug_db',
+              mini: true,
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const DatabaseViewerScreen(),
+                  ),
+                );
+              },
+              child: const Icon(Icons.bug_report, size: 20),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Container(

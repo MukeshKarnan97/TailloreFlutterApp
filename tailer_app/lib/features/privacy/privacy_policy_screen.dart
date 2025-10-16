@@ -10,7 +10,7 @@ import '../../core/utils/privacy_policy_helper.dart';
 /// This screen shows the user agreement and privacy policy.
 /// Once accepted, it won't show again for the same user.
 class PrivacyPolicyScreen extends StatefulWidget {
-  const PrivacyPolicyScreen({Key? key}) : super(key: key);
+  const PrivacyPolicyScreen({super.key});
 
   @override
   State<PrivacyPolicyScreen> createState() => _PrivacyPolicyScreenState();

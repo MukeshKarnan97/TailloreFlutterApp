@@ -27,11 +27,11 @@ class SplashScreenManager extends StatefulWidget {
   final Duration splashDuration;
   
   const SplashScreenManager({
-    Key? key,
+    super.key,
     required this.mainAppBuilder,
     this.authScreenBuilder,
     this.splashDuration = const Duration(seconds: 3),
-  }) : super(key: key);
+  });
 
   @override
   State<SplashScreenManager> createState() => _SplashScreenManagerState();

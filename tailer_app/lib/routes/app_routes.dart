@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/utils/transition_helper.dart';
 import 'package:tailer_app/features/auth/screens/otp_screen.dart';
 import 'package:tailer_app/features/auth/screens/password_reset.dart';
+import 'package:tailer_app/features/auth/screens/reset_password_screen.dart';
 import 'package:tailer_app/features/splash/splash_screen_manager.dart';
 import '../features/auth/screens/welcome_screen.dart';
 import '../features/auth/screens/signin_screen.dart';
@@ -48,7 +49,6 @@ import '../features/settings/screens/payment_report/payment_reports_screen.dart'
 import '../features/settings/screens/payment_report/refund_management_screen.dart';
 import '../features/settings/screens/payment_report/receipt_management_screen.dart';
 import '../data/models/order_model.dart';
-import 'package:flutter/foundation.dart';
 
 // Export route names for easy access
 export 'route_names.dart';
@@ -142,6 +142,36 @@ class AppRoutes {
           final extra = state.extra as Map<String, dynamic>?;
           final email = extra?['email'] as String?;
           return buildPage(PasswordReset(email: email), state);
+        },
+      ),
+
+      // Reset Password with OTP Screen
+      GoRoute(
+        name: 'resetPassword',
+        path: '/auth/reset-password',
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          
+          // Debug logging
+          debugPrint('=== Route: resetPassword ===');
+          debugPrint('Extra data: $extra');
+          debugPrint('Extra keys: ${extra?.keys}');
+          
+          final email = extra?['email'] as String?;
+          final resetToken = extra?['resetToken'] as String?;
+          
+          debugPrint('Extracted email: $email');
+          debugPrint('Extracted resetToken: $resetToken');
+          debugPrint('Token length: ${resetToken?.length}');
+          debugPrint('==========================');
+          
+          return buildPage(
+            ResetPasswordScreen(
+              email: email,
+              resetToken: resetToken,
+            ),
+            state,
+          );
         },
       ),
 

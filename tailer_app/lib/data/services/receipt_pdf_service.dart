@@ -39,7 +39,7 @@ class ReceiptPdfService {
       final pdf = pw.Document();
       final order = orderData;
       final customer = customerData;
-      final totalPaid = payments.fold<double>(0.0, (sum, payment) => sum + (payment?.amount ?? 0.0));
+      final totalPaid = payments.fold<double>(0.0, (sum, payment) => sum + (payment.amount ?? 0.0));
       final totalAmount = double.tryParse(order['total_amount']?.toString() ?? '0') ?? 0.0;
       final remainingBalance = totalAmount - totalPaid;
       

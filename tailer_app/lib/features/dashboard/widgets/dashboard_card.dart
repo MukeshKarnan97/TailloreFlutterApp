@@ -13,7 +13,7 @@ class DashboardCard extends StatelessWidget {
   final String? subtitle;
 
   const DashboardCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     required this.icon,
@@ -21,7 +21,7 @@ class DashboardCard extends StatelessWidget {
     this.backgroundColor = const Color(0xFFE8EAF6), // AppColors.panel
     this.onTap,
     this.subtitle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

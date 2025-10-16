@@ -9,7 +9,7 @@ import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import 'package:tailer_app/widgets/custom_header.dart';
 
 class PrivacyPolicyViewerScreen extends StatefulWidget {
-  const PrivacyPolicyViewerScreen({Key? key}) : super(key: key);
+  const PrivacyPolicyViewerScreen({super.key});
 
   @override
   State<PrivacyPolicyViewerScreen> createState() => _PrivacyPolicyViewerScreenState();

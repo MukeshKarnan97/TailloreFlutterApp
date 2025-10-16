@@ -4,7 +4,7 @@ import 'package:tailer_app/core/translations/app_localizations.dart';
 
 /// Demo screen showing how language switching works with dictionary approach  
 class SimpleLanguageDemoScreen extends StatefulWidget {
-  const SimpleLanguageDemoScreen({Key? key}) : super(key: key);
+  const SimpleLanguageDemoScreen({super.key});
 
   @override
   State<SimpleLanguageDemoScreen> createState() => _SimpleLanguageDemoScreenState();

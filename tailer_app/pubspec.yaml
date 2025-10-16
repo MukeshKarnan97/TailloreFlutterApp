@@ -60,7 +60,11 @@ dependencies:
   permission_handler: ^11.3.1
   image_picker: ^1.0.7
   flutter_secure_storage: ^9.2.2
-
+  
+  # HTTP & API
+  dio: ^5.7.0
+  equatable: ^2.0.7
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

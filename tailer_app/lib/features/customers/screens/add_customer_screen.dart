@@ -14,7 +14,7 @@ import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class AddCustomerScreen extends StatefulWidget {
-  const AddCustomerScreen({Key? key}) : super(key: key);
+  const AddCustomerScreen({super.key});
 
   @override
   State<AddCustomerScreen> createState() => _AddCustomerScreenState();
@@ -237,7 +237,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> with NavigationMi
         ],
       ),
       child: DropdownButtonFormField<String>(
-        value: _selectedGender,
+        initialValue: _selectedGender,
         onChanged: (String? newValue) {
           setState(() {
             _selectedGender = newValue!;

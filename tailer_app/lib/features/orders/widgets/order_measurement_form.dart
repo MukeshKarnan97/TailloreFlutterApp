@@ -28,7 +28,7 @@ class OrderMeasurementForm extends StatefulWidget {
 class _OrderMeasurementFormState extends State<OrderMeasurementForm> {
   final Map<String, TextEditingController> _controllers = {};
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  Map<String, double> _measurements = {};
+  final Map<String, double> _measurements = {};
   bool _isLoading = false;
   bool _measurementsLoaded = false;
   String _currentUnit = 'inches';

@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum ThemeMode { dark, system }
 
 class ThemeSelectionScreen extends StatefulWidget {
-  const ThemeSelectionScreen({Key? key}) : super(key: key);
+  const ThemeSelectionScreen({super.key});
 
   @override
   State<ThemeSelectionScreen> createState() => _ThemeSelectionScreenState();

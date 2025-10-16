@@ -22,7 +22,7 @@ import 'ready_orders_screen.dart';
 // Import for Order extension methods if needed
 
 class OrdersMainScreen extends StatefulWidget {
-  const OrdersMainScreen({Key? key}) : super(key: key);
+  const OrdersMainScreen({super.key});
 
   @override
   State<OrdersMainScreen> createState() => _OrdersMainScreenState();
@@ -1096,7 +1096,7 @@ class _OrdersMainScreenState extends State<OrdersMainScreen> with NavigationMixi
                     ),
                   ],
                 )
-              : Container(
+              : SizedBox(
                   width: double.maxFinite,
                   height: 400,
                   child: ListView.builder(

@@ -27,7 +27,7 @@ class _PaymentReportsScreenState extends State<PaymentReportsScreen> with Naviga
   List<Map<String, dynamic>> _ordersWithPayments = [];
   bool _isLoading = true;
   String _selectedPeriod = 'week';
-  DateTime _selectedDate = DateTime.now();
+  final DateTime _selectedDate = DateTime.now();
   bool _showOrdersList = false;
 
   @override

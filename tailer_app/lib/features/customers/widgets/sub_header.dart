@@ -15,7 +15,7 @@ class SubHeader extends StatelessWidget {
   final EdgeInsets? padding;
 
   const SubHeader({
-    Key? key,
+    super.key,
     required this.title,
     this.subtitle,
     this.icon,
@@ -23,7 +23,7 @@ class SubHeader extends StatelessWidget {
     this.backgroundColor,
     this.textColor,
     this.padding,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

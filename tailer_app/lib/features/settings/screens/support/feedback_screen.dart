@@ -10,7 +10,7 @@ import 'package:tailer_app/widgets/custom_bottom_navigation.dart';
 import 'package:tailer_app/core/services/navigation_service.dart';
 
 class FeedbackScreen extends StatefulWidget {
-  const FeedbackScreen({Key? key}) : super(key: key);
+  const FeedbackScreen({super.key});
 
   @override
   State<FeedbackScreen> createState() => _FeedbackScreenState();
@@ -497,7 +497,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> with NavigationMixin {
           ),
           SizedBox(height: isSmallScreen ? 16 : 20),
           DropdownButtonFormField<String>(
-            value: _selectedCategory,
+            initialValue: _selectedCategory,
             style: GoogleFonts.inter(
               fontSize: isSmallScreen ? 13 : 14,
               color: AppColors.textPrimary,

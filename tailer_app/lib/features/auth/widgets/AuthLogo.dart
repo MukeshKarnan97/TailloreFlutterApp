@@ -8,10 +8,10 @@ class LogoWidget extends StatelessWidget {
 
   // Constructor
   const LogoWidget({
-    Key? key,
+    super.key,
     required this.height_,
     required this.width_,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

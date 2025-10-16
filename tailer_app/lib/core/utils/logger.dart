@@ -115,6 +115,11 @@ class Logger {
     _instance._log(_errorLevel, 'ERROR', tag, message, color: _red, error: error, stackTrace: stackTrace);
   }
 
+  /// API level logging - for API requests and responses
+  static void api(String message) {
+    _instance._log(_infoLevel, 'API', 'API', message, color: _blue);
+  }
+
   // ==================== METHOD TRACING ====================
 
   /// Start method tracing - call at the beginning of a method
@@ -388,7 +393,7 @@ class Logger {
     String line = '=' * 60;
     if (title != null) {
       int padding = (60 - title.length - 2) ~/ 2;
-      line = '=' * padding + ' $title ' + '=' * padding;
+      line = '${'=' * padding} $title ${'=' * padding}';
     }
     _instance._log(_infoLevel, 'SEP', 'LOGGER', line, color: _blue);
   }

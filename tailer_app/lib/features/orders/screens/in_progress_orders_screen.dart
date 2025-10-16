@@ -16,14 +16,14 @@ import '../../../core/utils/logger.dart';
 import 'order_detail_screen.dart';
 
 class InProgressOrdersScreen extends StatefulWidget {
-  const InProgressOrdersScreen({Key? key}) : super(key: key);
+  const InProgressOrdersScreen({super.key});
 
   @override
   State<InProgressOrdersScreen> createState() => _InProgressOrdersScreenState();
 }
 
 class _InProgressOrdersScreenState extends State<InProgressOrdersScreen> with NavigationMixin {
-  int _currentNavIndex = 2; // Orders is index 2
+  final int _currentNavIndex = 2; // Orders is index 2
   late SimpleLocaleProvider _localeProvider;
   final LocalDatabaseService _dbService = LocalDatabaseService();
   final AuthService _authService = AuthService();

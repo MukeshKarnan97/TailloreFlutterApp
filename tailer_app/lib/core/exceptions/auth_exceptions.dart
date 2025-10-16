@@ -2,6 +2,7 @@
 /// 
 /// Provides specific exception types for different authentication scenarios,
 /// enabling better error handling and user feedback.
+library;
 
 abstract class AuthException implements Exception {
   final String message;
@@ -24,22 +25,20 @@ abstract class AuthException implements Exception {
 class UserNotFoundException extends AuthException {
   UserNotFoundException({
     String? email,
-    String? details,
+    super.details,
   }) : super(
     message: email != null ? 'User not found for email: $email' : 'User not found',
     userMessage: 'User not found. Please check your email address or sign up for a new account.',
-    details: details,
   );
 }
 
 /// Exception thrown when credentials are invalid
 class InvalidCredentialsException extends AuthException {
   InvalidCredentialsException({
-    String? details,
+    super.details,
   }) : super(
     message: 'Invalid email or password provided',
     userMessage: 'Invalid email or password. Please check your credentials and try again.',
-    details: details,
   );
 }
 
@@ -51,11 +50,10 @@ class AccountLockedException extends AuthException {
   AccountLockedException({
     this.unlockTime,
     this.failedAttempts = 0,
-    String? details,
+    super.details,
   }) : super(
     message: 'Account temporarily locked due to multiple failed login attempts',
     userMessage: 'Account temporarily locked due to multiple failed attempts. Try again later.',
-    details: details,
   );
 }
 
@@ -65,11 +63,10 @@ class EmailNotVerifiedException extends AuthException {
 
   EmailNotVerifiedException({
     required this.email,
-    String? details,
+    super.details,
   }) : super(
     message: 'Email verification required for $email',
     userMessage: 'Please verify your email before signing in. Check your inbox for the verification link.',
-    details: details,
   );
 }
 
@@ -79,22 +76,20 @@ class AccountDisabledException extends AuthException {
 
   AccountDisabledException({
     required this.reason,
-    String? details,
+    super.details,
   }) : super(
     message: 'Account has been disabled: $reason',
     userMessage: 'Your account has been disabled. Please contact support for assistance.',
-    details: details,
   );
 }
 
 /// Exception thrown when password has expired
 class PasswordExpiredException extends AuthException {
   PasswordExpiredException({
-    String? details,
+    super.details,
   }) : super(
     message: 'Password has expired and must be changed',
     userMessage: 'Your password has expired. Please reset your password to continue.',
-    details: details,
   );
 }
 
@@ -104,22 +99,20 @@ class TooManyRequestsException extends AuthException {
 
   TooManyRequestsException({
     required this.retryAfter,
-    String? details,
+    super.details,
   }) : super(
     message: 'Too many requests. Retry after ${retryAfter.inSeconds} seconds',
     userMessage: 'Too many requests. Please wait a moment before trying again.',
-    details: details,
   );
 }
 
 /// Exception thrown when there's a network connectivity issue
 class NetworkException extends AuthException {
   NetworkException({
-    String? details,
+    super.details,
   }) : super(
     message: 'Network connectivity error',
     userMessage: 'Network error. Please check your connection and try again.',
-    details: details,
   );
 }
 
@@ -129,11 +122,10 @@ class ServerException extends AuthException {
 
   ServerException({
     this.statusCode,
-    String? details,
+    super.details,
   }) : super(
     message: statusCode != null ? 'Server error (Code: $statusCode)' : 'Server error',
     userMessage: 'Server error. Please try again later.',
-    details: details,
   );
 }
 
@@ -143,11 +135,10 @@ class UserAlreadyExistsException extends AuthException {
 
   UserAlreadyExistsException({
     required this.email,
-    String? details,
+    super.details,
   }) : super(
     message: 'User already exists with email: $email',
     userMessage: 'An account with this email already exists. Try signing in instead.',
-    details: details,
   );
 }
 
@@ -159,44 +150,40 @@ class OtpVerificationException extends AuthException {
   OtpVerificationException({
     this.otpType,
     this.attemptsRemaining,
-    String? details,
+    super.details,
   }) : super(
     message: otpType != null ? 'OTP verification failed for $otpType' : 'OTP verification failed',
     userMessage: 'Invalid OTP. Please check the code and try again.',
-    details: details,
   );
 }
 
 /// Exception thrown when OTP has expired
 class OtpExpiredException extends AuthException {
   OtpExpiredException({
-    String? details,
+    super.details,
   }) : super(
     message: 'OTP has expired',
     userMessage: 'OTP has expired. Please request a new code.',
-    details: details,
   );
 }
 
 /// Exception thrown when OTP sending fails
 class OtpSendException extends AuthException {
   OtpSendException({
-    String? details,
+    super.details,
   }) : super(
     message: 'Failed to send OTP',
     userMessage: 'Failed to send OTP. Please try again.',
-    details: details,
   );
 }
 
 /// Exception thrown when password reset token is invalid
 class InvalidTokenException extends AuthException {
   InvalidTokenException({
-    String? details,
+    super.details,
   }) : super(
     message: 'Invalid or expired reset token',
     userMessage: 'Invalid or expired reset link. Please request a new password reset.',
-    details: details,
   );
 }
 
@@ -206,11 +193,10 @@ class ValidationException extends AuthException {
 
   ValidationException({
     required this.fieldErrors,
-    String? details,
+    super.details,
   }) : super(
     message: 'Validation failed: ${fieldErrors.keys.join(', ')}',
     userMessage: 'Please check your input and try again.',
-    details: details,
   );
 }
 
@@ -218,11 +204,10 @@ class ValidationException extends AuthException {
 class DatabaseException extends AuthException {
   DatabaseException({
     String? operation,
-    String? details,
+    super.details,
   }) : super(
     message: operation != null ? 'Database error during $operation' : 'Database error',
     userMessage: 'A technical error occurred. Please try again later.',
-    details: details,
   );
 }
 
@@ -230,11 +215,10 @@ class DatabaseException extends AuthException {
 class UnknownAuthException extends AuthException {
   UnknownAuthException({
     String? originalError,
-    String? details,
+    super.details,
   }) : super(
     message: originalError != null ? 'Unknown authentication error: $originalError' : 'Unknown authentication error',
     userMessage: 'An unexpected error occurred. Please try again.',
-    details: details,
   );
 }
 

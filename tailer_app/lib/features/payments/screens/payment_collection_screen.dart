@@ -17,7 +17,7 @@ import '../../orders/widgets/sub_header.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 
 class PaymentCollectionScreen extends StatefulWidget {
-  const PaymentCollectionScreen({Key? key}) : super(key: key);
+  const PaymentCollectionScreen({super.key});
 
   @override
   State<PaymentCollectionScreen> createState() => _PaymentCollectionScreenState();
@@ -118,10 +118,13 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> with 
         if (orderStatus.toLowerCase() == 'pending') pendingStatusCount++;
         if (orderStatus.toLowerCase() == 'in_progress' || 
             orderStatus.toLowerCase() == 'cutting' || 
-            orderStatus.toLowerCase() == 'stitching') inProgressStatusCount++;
+            orderStatus.toLowerCase() == 'stitching') {
+          inProgressStatusCount++;
+        }
         
-        if (totalAmount <= advancePaid) fullyPaidCount++;
-        else if (advancePaid > 0) partialPaidCount++;
+        if (totalAmount <= advancePaid) {
+          fullyPaidCount++;
+        } else if (advancePaid > 0) partialPaidCount++;
         else noPaidCount++;
         
         // Show orders based on toggle setting
@@ -137,10 +140,10 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> with 
         // Debug: Log each order's payment status
         if (!isDeleted && totalAmount > 0) {
           Logger.debug('PaymentCollectionScreen', 
-            'Order ${orderMap['unique_id']}: Status=${orderStatus}, '
+            'Order ${orderMap['unique_id']}: Status=$orderStatus, '
             'Total=₹${totalAmount.toStringAsFixed(0)}, '
             'Paid=₹${advancePaid.toStringAsFixed(0)}, '
-            'ShouldShow=${shouldShow}');
+            'ShouldShow=$shouldShow');
         }
         
         return shouldShow;
@@ -148,9 +151,9 @@ class _PaymentCollectionScreenState extends State<PaymentCollectionScreen> with 
       
       // Debug: Log summary
       Logger.info('PaymentCollectionScreen', 
-        'Order Status Summary: Pending=${pendingStatusCount}, InProgress=${inProgressStatusCount}');
+        'Order Status Summary: Pending=$pendingStatusCount, InProgress=$inProgressStatusCount');
       Logger.info('PaymentCollectionScreen', 
-        'Payment Summary: FullyPaid=${fullyPaidCount}, PartialPaid=${partialPaidCount}, NoPaid=${noPaidCount}');
+        'Payment Summary: FullyPaid=$fullyPaidCount, PartialPaid=$partialPaidCount, NoPaid=$noPaidCount');
       Logger.info('PaymentCollectionScreen', 
         'Orders shown in Payment Collection: ${_allOrders.length}');
 

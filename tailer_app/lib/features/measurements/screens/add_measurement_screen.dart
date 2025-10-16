@@ -21,10 +21,10 @@ class AddMeasurementScreen extends StatefulWidget {
   final String? dressType;
   
   const AddMeasurementScreen({
-    Key? key,
+    super.key,
     required this.customerId,
     this.dressType,
-  }) : super(key: key);
+  });
 
   @override
   State<AddMeasurementScreen> createState() => _AddMeasurementScreenState();

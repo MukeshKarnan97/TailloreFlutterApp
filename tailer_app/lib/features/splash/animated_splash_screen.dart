@@ -20,10 +20,10 @@ class AnimatedSplashScreen extends StatefulWidget {
   final Duration splashDuration;
   
   const AnimatedSplashScreen({
-    Key? key,
+    super.key,
     this.onAnimationComplete,
     this.splashDuration = const Duration(seconds: 3),
-  }) : super(key: key);
+  });
 
   @override
   State<AnimatedSplashScreen> createState() => _AnimatedSplashScreenState();

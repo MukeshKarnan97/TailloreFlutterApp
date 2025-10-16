@@ -15,7 +15,7 @@ import '../../../widgets/custom_header.dart';
 class OrderDetailScreen extends StatefulWidget {
   final Order order;
 
-  const OrderDetailScreen({Key? key, required this.order}) : super(key: key);
+  const OrderDetailScreen({super.key, required this.order});
 
   @override
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();
@@ -687,7 +687,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         ),
                       ),
                       Text(
-                        '${entry.value}\"',
+                        '${entry.value}"',
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -707,7 +707,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Widget _buildGarmentImages() {
     // Helper function to check if file exists
-    bool _imageExists(String? path) {
+    bool imageExists(String? path) {
       if (path == null || path.isEmpty) return false;
       try {
         return File(path).existsSync();
@@ -720,8 +720,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     Logger.info('OrderDetailScreen', 'Image Path 1: ${_currentOrder.imagePath1}');
     Logger.info('OrderDetailScreen', 'Image Path 2: ${_currentOrder.imagePath2}');
 
-    final hasImage1 = _imageExists(_currentOrder.imagePath1);
-    final hasImage2 = _imageExists(_currentOrder.imagePath2);
+    final hasImage1 = imageExists(_currentOrder.imagePath1);
+    final hasImage2 = imageExists(_currentOrder.imagePath2);
 
     Logger.info('OrderDetailScreen', 'Has Image 1: $hasImage1');
     Logger.info('OrderDetailScreen', 'Has Image 2: $hasImage2');

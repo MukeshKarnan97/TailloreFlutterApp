@@ -14,7 +14,7 @@ import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 
 class ViewCustomersScreen extends StatefulWidget {
-  const ViewCustomersScreen({Key? key}) : super(key: key);
+  const ViewCustomersScreen({super.key});
 
   @override
   State<ViewCustomersScreen> createState() => _ViewCustomersScreenState();

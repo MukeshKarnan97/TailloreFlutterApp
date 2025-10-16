@@ -349,7 +349,7 @@ class _RefundManagementScreenState extends State<RefundManagementScreen> with Na
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: selectedMethod,
+              initialValue: selectedMethod,
               decoration: const InputDecoration(labelText: 'Refund Method'),
               items: const [
                 DropdownMenuItem(value: 'cash', child: Text('Cash')),

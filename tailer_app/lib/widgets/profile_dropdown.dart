@@ -23,7 +23,7 @@ class ProfileDropdown extends StatefulWidget {
   final VoidCallback? onLogoutTap;
 
   const ProfileDropdown({
-    Key? key,
+    super.key,
     this.userAvatarUrl,
     this.userName,
     this.userEmail,
@@ -34,7 +34,7 @@ class ProfileDropdown extends StatefulWidget {
     this.onHelpTap,
     this.onAboutTap,
     this.onLogoutTap,
-  }) : super(key: key);
+  });
 
   @override
   State<ProfileDropdown> createState() => _ProfileDropdownState();
@@ -356,7 +356,7 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
                   Navigator.pop(context);
                   _toggleTheme();
                 },
-                activeColor: const Color(AppConstants.primaryTeal),
+                activeThumbColor: const Color(AppConstants.primaryTeal),
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ],

@@ -18,7 +18,7 @@ import '../../core/constants/app_colors.dart';
 /// This is a temporary home screen that demonstrates the app structure
 /// and shows that the splash screen transition is working correctly.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();

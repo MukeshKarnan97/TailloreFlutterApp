@@ -12,12 +12,12 @@ class UnitSelector extends StatelessWidget {
   final bool compact;
 
   const UnitSelector({
-    Key? key,
+    super.key,
     required this.currentUnit,
     required this.onUnitChanged,
     this.showLabel = true,
     this.compact = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -142,11 +142,11 @@ class UnitToggleSwitch extends StatelessWidget {
   final bool showLabels;
 
   const UnitToggleSwitch({
-    Key? key,
+    super.key,
     required this.currentUnit,
     required this.onUnitChanged,
     this.showLabels = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -198,10 +198,10 @@ class UnitSwitchFAB extends StatelessWidget {
   final String currentUnit;
 
   const UnitSwitchFAB({
-    Key? key,
+    super.key,
     required this.onPressed,
     required this.currentUnit,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
