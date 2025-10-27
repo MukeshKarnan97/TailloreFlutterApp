@@ -113,7 +113,7 @@ class _SignUpState extends State<SignUp> {
 
     try {
       // Call backend API to register user
-      final response = await _authService.registerWithBackend(
+      await _authService.registerWithBackend(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         passwordConfirm: _passwordController.text, // Same as password
@@ -129,8 +129,7 @@ class _SignUpState extends State<SignUp> {
         // Show success message
         UserFeedbackService.showSuccess(
           context,
-          locale.translate('registrationSuccessful') ?? 
-          'Welcome ${_usernameController.text.trim()}! Check your email for OTP.',
+          locale.translate('registrationSuccessful'),
         );
 
         // Navigate to OTP screen for email verification
@@ -139,17 +138,15 @@ class _SignUpState extends State<SignUp> {
     } catch (e) {
       // API call failed - DO NOT navigate to OTP screen
       if (mounted) {
-        String errorMessage = locale.translate('registrationFailed') ?? 'Registration failed';
+        String errorMessage = locale.translate('registrationFailed');
         
         // Extract user-friendly error message
         if (e is AuthException) {
           errorMessage = e.userMessage;
         } else if (e.toString().contains('email')) {
-          errorMessage = locale.translate('emailAlreadyExists') ?? 
-                        'Email already exists. Please use a different email.';
+          errorMessage = locale.translate('emailAlreadyExists');
         } else if (e.toString().contains('network') || e.toString().contains('connect')) {
-          errorMessage = locale.translate('networkError') ?? 
-                        'Network error. Please check your connection and try again.';
+          errorMessage = locale.translate('networkError');
         } else {
           errorMessage = '$errorMessage: ${e.toString()}';
         }
@@ -255,31 +252,103 @@ class _SignUpState extends State<SignUp> {
 
   /// Handle successful social authentication
   void _handleSocialAuthSuccess(SocialAuthResult result) async {
+    print('');
+    print('🎯 ========================================');
+    print('🎯 SOCIAL AUTH SUCCESS CALLBACK (SignUp Screen)');
+    print('🎯 Provider: ${result.provider ?? "unknown"}');
+    print('🎯 Email: ${result.email ?? "none"}');
+    print('🎯 Name: ${result.name ?? "none"}');
+    print('🎯 ========================================');
+    print('');
+    
     try {
-      UserFeedbackService.showSuccess(
-        context, 
-        'Welcome ${result.name}! Signed up with ${result.provider} successfully.'
-      );
+      // Validate provider
+      final provider = result.provider;
+      if (provider == null) {
+        throw Exception('Authentication provider is null');
+      }
       
-      // Navigate to dashboard after successful social auth signup
-      Future.delayed(const Duration(milliseconds: 500), () {
+      // Validate userData
+      final userData = result.userData;
+      if (userData == null) {
+        throw Exception('User data is null from $provider authentication');
+      }
+      
+      // Check if we have the required token data
+      if (userData['idToken'] == null && provider == 'google') {
+        throw Exception('Missing idToken from Google authentication');
+      }
+      
+      if (userData['accessToken'] == null && provider == 'facebook') {
+        throw Exception('Missing accessToken from Facebook authentication');
+      }
+      
+      print('🔵 Step 1: Sending $provider credentials to backend...');
+      
+      // Send to backend and sync to local DB
+      late dynamic user;
+      
+      if (provider == 'google') {
+        user = await _authService.signInWithGoogle(
+          idToken: userData['idToken']!,
+          accessToken: userData['accessToken'],
+          serverAuthCode: userData['serverAuthCode'],
+        );
+      } else if (provider == 'facebook') {
+        user = await _authService.signInWithFacebook(
+          accessToken: userData['accessToken']!,
+          userId: userData['userId']!,
+        );
+      } else {
+        throw Exception('Unsupported authentication provider: $provider');
+      }
+      
+      print('✅ Step 2: Backend authentication successful');
+      print('   - User ID: ${user.id}');
+      print('   - User Name: ${user.name}');
+      print('   - User Email: ${user.email}');
+      
+      if (mounted) {
+        // Show success message
+        UserFeedbackService.showSuccess(
+          context, 
+          'Welcome ${user.name}! Signed up with $provider successfully.'
+        );
+        
+        print('🔵 Step 3: Navigating to dashboard...');
+        
+        // Navigate to dashboard after successful social auth signup
+        await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
           context.goNamed(RouteNames.dashboard);
+          print('✅ Step 3 Complete: Navigation successful');
+          print('🎉 ${provider.toUpperCase()} SIGN-UP COMPLETE!');
         }
-      });
-    } catch (e) {
-      print('Error after social auth signup: $e');
-      // Still show success and navigate, but log the error
-      UserFeedbackService.showSuccess(
-        context, 
-        'Welcome ${result.name}! Signed up with ${result.provider} successfully.'
-      );
+      }
+    } catch (e, stackTrace) {
+      print('');
+      print('🔴 ==========================================');
+      print('🔴 SOCIAL AUTH BACKEND INTEGRATION ERROR');
+      print('🔴 Provider: ${result.provider ?? "unknown"}');
+      print('🔴 Error Type: ${e.runtimeType}');
+      print('🔴 Error Message: $e');
+      print('🔴 Stack Trace:');
+      print('$stackTrace');
+      print('🔴 ==========================================');
+      print('');
       
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          context.goNamed(RouteNames.dashboard);
+      if (mounted) {
+        // Show error to user
+        String errorMessage = 'Failed to complete ${result.provider ?? "social"} sign up. Please try again.';
+        
+        if (e is AuthException) {
+          errorMessage = e.message;
+        } else if (e.toString().contains('network') || e.toString().contains('connection')) {
+          errorMessage = 'Network error. Please check your internet connection.';
         }
-      });
+        
+        UserFeedbackService.showError(context, errorMessage);
+      }
     }
   }
 

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "31988711347",
+    "project_id": "demoauth-e4cb1",
+    "storage_bucket": "demoauth-e4cb1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:31988711347:android:23b4c5c9f9679b898415c6",
+        "android_client_info": {
+          "package_name": "com.example.tailer_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "31988711347-seng41evkvpk2qra92clpmai12bu9ba2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tailer_app",
+            "certificate_hash": "873bcb51b62349a65e49d79d32b01a3e7263a47b"
+          }
+        },
+        {
+          "client_id": "31988711347-4stuj6ohfel1s5tegnv4mf00ld9vhvcr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDy3cVmHNeghqk8heA0-TSuEuzkYjfjb50"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "31988711347-4stuj6ohfel1s5tegnv4mf00ld9vhvcr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

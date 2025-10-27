@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">Tailor App</string>
+    
+    <!-- Facebook Configuration -->
+    <!-- TODO: Replace these with your actual Facebook App credentials -->
+    <!-- Get these from: https://developers.facebook.com/apps -->
+    
+    <string name="facebook_app_id">833629715792604</string>
+    <string name="facebook_client_token">332462e1ed709517d9bc20fcf3340192</string>
+    <string name="fb_login_protocol_scheme">fb833629715792604</string>
+    
+    <!-- 
+        IMPORTANT: After getting your Facebook App ID, update:
+        1. facebook_app_id: Your Facebook App ID (e.g., "1234567890123456")
+        2. facebook_client_token: Your Facebook Client Token from App Settings
+        3. fb_login_protocol_scheme: "fb" + your App ID (e.g., "fb1234567890123456")
+        
+        Example:
+        <string name="facebook_app_id">1234567890123456</string>
+        <string name="facebook_client_token">abcdef1234567890abcdef1234567890</string>
+        <string name="fb_login_protocol_scheme">fb1234567890123456</string>
+    -->
+</resources>

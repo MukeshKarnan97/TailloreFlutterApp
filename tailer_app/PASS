@@ -1,0 +1,14 @@
+Certificate fingerprints:
+         SHA1: 7A:76:F3:DB:B8:17:4A:0C:F0:75:44:A1:B9:85:F1:F7:06:45:40:16
+         SHA256: 54:8F:48:F9:22:EE:61:23:49:2A:A8:05:6E:75:BC:69:6F:78:3F:46:78:D8:B2:7B:AF:4E:A2:5B:EC:F3:B0:38
+
+
+Valid from: Sun Oct 19 13:58:55 IST 2025 until: Thu Mar 06 13:58:55 IST 2053
+Certificate fingerprints:
+         SHA1: 6E:81:7A:E0:B8:8D:70:4A:10:CF:F9:06:9B:27:C0:CB:97:DA:7A:27
+         SHA256: 96:8C:A9:E2:E8:E8:36:99:17:DA:A7:9A:46:B8:87:39:1B:DF:C3:7D:2D:E7:20:75:3A:C7:81:FE:EF:60:35:18
+Signature algorithm name: SHA384withRSA
+Subject Public Key Algorithm: 2048-bit RSA key
+Version: 3
+
+Extensions:

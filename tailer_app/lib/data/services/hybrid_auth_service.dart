@@ -336,6 +336,122 @@ class HybridAuthService {
     return loginWithLocal(email: email, password: password);
   }
 
+  // ==================== SOCIAL AUTHENTICATION ====================
+
+  /// Sign in with Google
+  Future<Tailor> signInWithGoogle({
+    required String idToken,
+    String? accessToken,
+    String? serverAuthCode,
+  }) async {
+    try {
+      Logger.info('HybridAuth', '🔵 Starting Google sign in');
+
+      // Call Django backend Google auth endpoint
+      final request = GoogleAuthRequest(
+        idToken: idToken,
+        accessToken: accessToken,
+        serverAuthCode: serverAuthCode,
+      );
+
+      final response = await _apiService.googleAuth(request);
+      
+      Logger.info(
+        'HybridAuth',
+        response.isNewUser
+            ? '✅ New user registered via Google: ${response.user.email}'
+            : '✅ User signed in via Google: ${response.user.email}',
+      );
+
+      // ✅ CRITICAL FIX: Save JWT tokens from backend
+      await _tokenStorage.saveTokens(
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      );
+      
+      // Save user info to secure storage
+      await _tokenStorage.saveUserId(response.user.id);
+      await _tokenStorage.saveUserEmail(response.user.email);
+      await _tokenStorage.saveUserType('tailor');
+      await _tokenStorage.saveLoginState(true);
+      await _tokenStorage.saveLastLoginDate();
+      
+      Logger.info('HybridAuth', '🔐 JWT tokens saved to secure storage');
+
+      // Sync user to local DB
+      // For Google auth, we don't have a password, so use a special marker
+      await _syncSocialAuthUserToLocalDB(
+        response.user,
+        authProvider: 'google',
+      );
+      
+      // Set current user
+      _currentTailor = response.user;
+      
+      Logger.info('HybridAuth', '✅ Google sign in complete - tokens saved & synced to local DB');
+      return response.user;
+    } catch (e) {
+      Logger.error('HybridAuth', 'Google sign in failed', error: e);
+      rethrow;
+    }
+  }
+
+  /// Sign in with Facebook
+  Future<Tailor> signInWithFacebook({
+    required String accessToken,
+    required String userId,
+  }) async {
+    try {
+      Logger.info('HybridAuth', '💙 Starting Facebook sign in');
+
+      // Call Django backend Facebook auth endpoint
+      final request = FacebookAuthRequest(
+        accessToken: accessToken,
+        userId: userId,
+      );
+
+      final response = await _apiService.facebookAuth(request);
+      
+      Logger.info(
+        'HybridAuth',
+        response.isNewUser
+            ? '✅ New user registered via Facebook: ${response.user.email}'
+            : '✅ User signed in via Facebook: ${response.user.email}',
+      );
+
+      // ✅ CRITICAL FIX: Save JWT tokens from backend
+      await _tokenStorage.saveTokens(
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      );
+      
+      // Save user info to secure storage
+      await _tokenStorage.saveUserId(response.user.id);
+      await _tokenStorage.saveUserEmail(response.user.email);
+      await _tokenStorage.saveUserType('tailor');
+      await _tokenStorage.saveLoginState(true);
+      await _tokenStorage.saveLastLoginDate();
+      
+      Logger.info('HybridAuth', '🔐 JWT tokens saved to secure storage');
+
+      // Sync user to local DB
+      // For Facebook auth, we don't have a password, so use a special marker
+      await _syncSocialAuthUserToLocalDB(
+        response.user,
+        authProvider: 'facebook',
+      );
+      
+      // Set current user
+      _currentTailor = response.user;
+      
+      Logger.info('HybridAuth', '✅ Facebook sign in complete - tokens saved & synced to local DB');
+      return response.user;
+    } catch (e) {
+      Logger.error('HybridAuth', 'Facebook sign in failed', error: e);
+      rethrow;
+    }
+  }
+
   // ==================== LOGOUT ====================
 
   /// Logout and clear tokens (keeps local DB data)
@@ -670,5 +786,66 @@ class HybridAuthService {
     final bytes = utf8.encode(password);
     final digest = sha256.convert(bytes);
     return digest.toString();
+  }
+
+  /// Sync social auth user to local database
+  /// For social auth users, we use a special password hash marker
+  Future<void> _syncSocialAuthUserToLocalDB(
+    Tailor tailor, {
+    required String authProvider,
+  }) async {
+    try {
+      Logger.info('HybridAuth', 'Syncing $authProvider user to local DB: ${tailor.email}');
+
+      // Check if tailor already exists in local DB
+      final existing = await _dbService.select(
+        'tailor',
+        where: 'id = ?',
+        whereArgs: [tailor.id],
+      );
+
+      // For social auth, use a special password hash that can't be matched by normal login
+      // This prevents password-based login for social auth accounts
+      final socialAuthHash = _hashPassword('SOCIAL_AUTH_${authProvider.toUpperCase()}_${tailor.id}');
+      
+      // Create map with all required fields properly set
+      final tailorMap = <String, dynamic>{
+        'id': tailor.id.toString(),
+        'unique_id': tailor.uniqueId.isNotEmpty ? tailor.uniqueId : tailor.id.toString(),
+        'name': tailor.name.isNotEmpty ? tailor.name : 'User',
+        'shop_name': tailor.shopName.isNotEmpty ? tailor.shopName : 'My Shop',
+        'email': tailor.email,
+        'phone': tailor.phone.isNotEmpty ? tailor.phone : '',
+        'password_hash': socialAuthHash, // Override with social auth hash
+        'auth_provider': authProvider,
+        'address': tailor.address.isNotEmpty ? tailor.address : '',
+        'profile_image_path': tailor.profileImagePath,
+        'is_active': tailor.isActive ? 1 : 0,
+        'is_deleted': tailor.isDeleted ? 1 : 0,
+        'created_at': tailor.createdAt.toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(), // Use current time for sync
+      };
+
+      if (existing.isNotEmpty) {
+        // Update existing record
+        await _dbService.update(
+          'tailor',
+          tailorMap,
+          where: 'id = ?',
+          whereArgs: [tailor.id],
+        );
+        Logger.info('HybridAuth', 'Updated existing $authProvider user in local DB');
+      } else {
+        // Insert new record
+        await _dbService.insert('tailor', tailorMap);
+        Logger.info('HybridAuth', 'Inserted new $authProvider user into local DB');
+      }
+      
+      Logger.debug('HybridAuth', 'Social auth user synced with provider: $authProvider');
+    } catch (e, stackTrace) {
+      Logger.error('HybridAuth', 'Error syncing $authProvider user to local DB', error: e);
+      Logger.debug('HybridAuth', 'Stack trace: $stackTrace');
+      // Don't rethrow - local DB sync failure shouldn't break authentication
+    }
   }
 }

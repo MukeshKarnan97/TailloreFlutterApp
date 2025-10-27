@@ -10,7 +10,7 @@ class ApiConfig {
   );
 
   // Base URLs
-  static const String developmentBaseUrl = 'http://192.168.0.7:8000';
+  static const String developmentBaseUrl = 'http://192.168.0.11:8000';
   static const String productionBaseUrl = 'https://api.yourdomain.com';
 
   /// Get the current base URL based on environment
@@ -77,6 +77,10 @@ class ApiEndpoints {
   static const String changePassword = '/auth/change-password/';
   static const String forgotPassword = '/auth/forgot-password/';
   static const String resetPassword = '/auth/reset-password/';
+  
+  // Social authentication
+  static const String googleAuth = '/auth/google/';
+  static const String facebookAuth = '/auth/facebook/';
   
   // User management
   static const String currentUser = '/auth/users/me/';

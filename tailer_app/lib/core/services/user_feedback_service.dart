@@ -325,11 +325,11 @@ class UserFeedbackService {
         ),
         backgroundColor: colors.backgroundColor,
         duration: duration,
-        behavior: SnackBarBehavior.floating,
+        behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        margin: const EdgeInsets.all(16),
+        // No margin for fixed behavior (margin only works with floating)
         action: type == FeedbackType.error || type == FeedbackType.warning
             ? SnackBarAction(
                 label: 'Dismiss',

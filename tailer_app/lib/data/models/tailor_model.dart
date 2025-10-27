@@ -78,8 +78,8 @@ class Tailor {
     return Tailor(
       id: map['id'].toString(), // Handle both int and String IDs from API
       uniqueId: map['unique_id']?.toString() ?? map['id'].toString(),
-      name: map['name'] as String,
-      shopName: map['shop_name'] as String,
+      name: (map['name'] as String?) ?? 'User', // Handle nullable name
+      shopName: (map['shop_name'] as String?) ?? 'My Shop', // Handle nullable shop_name
       email: map['email'] as String,
       phone: (map['phone'] as String?) ?? '', // Handle nullable phone from API
       passwordHash: (map['password_hash'] as String?) ?? '', // May not be returned from API
@@ -88,7 +88,7 @@ class Tailor {
       // Handle both local path and API URL for profile image
       profileImagePath: map['profile_image_path'] as String? ?? 
                        map['profile_image_url'] as String?,
-      isActive: (map['is_active'] as int? ?? 0) == 1,
+      isActive: map['email_verified'] == true || (map['is_active'] as int? ?? 0) == 1,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
       isDeleted: (map['is_deleted'] as int? ?? 0) == 1,

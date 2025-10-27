@@ -47,7 +47,7 @@ dependencies:
   animate_do: ^4.2.0
   shared_preferences: ^2.5.3
   crypto: ^3.0.5
-  google_sign_in: ^7.2.0
+  google_sign_in: ^6.1.5  # Downgraded from 7.2.0 for stable API
   flutter_facebook_auth: ^7.1.2
   pdf: ^3.10.7
   printing: ^5.12.0

@@ -582,6 +582,110 @@ class AccountsApiService {
     }
   }
 
+  // ==================== SOCIAL AUTHENTICATION ====================
+
+  /// Google Sign In
+  ///
+  /// POST /api/v1/accounts/auth/google/
+  ///
+  /// Returns [SocialAuthResponse] with user data and tokens
+  Future<SocialAuthResponse> googleAuth(GoogleAuthRequest request) async {
+    try {
+      Logger.api('🔵 Authenticating with Google');
+
+      final response = await _apiClient.post(
+        ApiEndpoints.googleAuth,
+        data: request.toJson(),
+      );
+
+      if (response.statusCode == HttpStatusCode.ok ||
+          response.statusCode == HttpStatusCode.created) {
+        final authResponse = SocialAuthResponse.fromJson(response.data);
+
+        // Save tokens
+        await _tokenStorage.saveTokens(
+          accessToken: authResponse.accessToken,
+          refreshToken: authResponse.refreshToken,
+        );
+
+        // Save user data
+        await _tokenStorage.saveUserId(authResponse.user.id);
+        await _tokenStorage.saveUserEmail(authResponse.user.email);
+        await _tokenStorage.saveUserType('tailor');
+        await _tokenStorage.saveLoginState(true);
+        await _tokenStorage.saveLastLoginDate();
+
+        Logger.info(
+          'AccountsApi',
+          authResponse.isNewUser
+              ? '✅ New user registered via Google: ${authResponse.user.email}'
+              : '✅ User signed in via Google: ${authResponse.user.email}',
+        );
+        return authResponse;
+      } else {
+        throw ApiException(
+          message: 'Google authentication failed',
+          statusCode: response.statusCode,
+          data: response.data,
+        );
+      }
+    } catch (e) {
+      Logger.error('AccountsApi', 'Google authentication failed', error: e);
+      rethrow;
+    }
+  }
+
+  /// Facebook Sign In
+  ///
+  /// POST /api/v1/accounts/auth/facebook/
+  ///
+  /// Returns [SocialAuthResponse] with user data and tokens
+  Future<SocialAuthResponse> facebookAuth(FacebookAuthRequest request) async {
+    try {
+      Logger.api('💙 Authenticating with Facebook');
+
+      final response = await _apiClient.post(
+        ApiEndpoints.facebookAuth,
+        data: request.toJson(),
+      );
+
+      if (response.statusCode == HttpStatusCode.ok ||
+          response.statusCode == HttpStatusCode.created) {
+        final authResponse = SocialAuthResponse.fromJson(response.data);
+
+        // Save tokens
+        await _tokenStorage.saveTokens(
+          accessToken: authResponse.accessToken,
+          refreshToken: authResponse.refreshToken,
+        );
+
+        // Save user data
+        await _tokenStorage.saveUserId(authResponse.user.id);
+        await _tokenStorage.saveUserEmail(authResponse.user.email);
+        await _tokenStorage.saveUserType('tailor');
+        await _tokenStorage.saveLoginState(true);
+        await _tokenStorage.saveLastLoginDate();
+
+        Logger.info(
+          'AccountsApi',
+          authResponse.isNewUser
+              ? '✅ New user registered via Facebook: ${authResponse.user.email}'
+              : '✅ User signed in via Facebook: ${authResponse.user.email}',
+        );
+        return authResponse;
+      } else {
+        throw ApiException(
+          message: 'Facebook authentication failed',
+          statusCode: response.statusCode,
+          data: response.data,
+        );
+      }
+    } catch (e) {
+      Logger.error('AccountsApi', 'Facebook authentication failed', error: e);
+      rethrow;
+    }
+  }
+
 
 
   // ==================== UTILITY ====================

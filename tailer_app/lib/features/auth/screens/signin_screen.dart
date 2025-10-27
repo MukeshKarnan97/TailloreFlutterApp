@@ -16,6 +16,9 @@ import 'package:tailer_app/data/services/social_auth_service.dart';
 import 'package:tailer_app/core/translations/app_localizations.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
 import 'package:tailer_app/features/debug/database_viewer_screen.dart';
+import 'package:tailer_app/data/services/hybrid_auth_service.dart';
+import 'package:tailer_app/data/models/tailor_model.dart';
+import 'package:tailer_app/core/services/token_storage_service.dart';
 
 
 class SignIn extends StatefulWidget {
@@ -35,6 +38,8 @@ class _SignInState extends State<SignIn> {
   bool _isLoading = false;
   bool _keepSignedIn = false;
   final AuthService _authService = AuthService();
+  final HybridAuthService _hybridAuthService = HybridAuthService(); // For social auth
+  final TokenStorageService _tokenStorage = TokenStorageService(); // For verification
   late SimpleLocaleProvider _localeProvider;
 
   bool _isEmailValid(String email) {
@@ -147,6 +152,10 @@ class _SignInState extends State<SignIn> {
     }
   }
 
+  // ==================== SOCIAL AUTHENTICATION ====================
+  // Social auth now handled by SignUpGoogleFacebookButton widget with callbacks
+  // Old methods removed - callbacks are _handleSocialAuthSuccess and _handleSocialAuthError
+
   @override
   void initState() {
     super.initState();
@@ -156,34 +165,158 @@ class _SignInState extends State<SignIn> {
 
   /// Handle successful social authentication
   void _handleSocialAuthSuccess(SocialAuthResult result) async {
+    print('');
+    print('🎯 ========================================');
+    print('🎯 SOCIAL AUTH SUCCESS CALLBACK (SignIn Screen)');
+    print('🎯 Timestamp: ${DateTime.now().toIso8601String()}');
+    print('🎯 Provider: ${result.provider ?? "unknown"}');
+    print('🎯 Email: ${result.email ?? "none"}');
+    print('🎯 Name: ${result.name ?? "none"}');
+    print('🎯 Has userData: ${result.userData != null}');
+    if (result.userData != null) {
+      print('🎯 UserData keys: ${result.userData!.keys.toList()}');
+    }
+    print('🎯 ========================================');
+    print('');
+
     try {
+      // Extract provider
+      final provider = result.provider?.toLowerCase() ?? '';
+      final userData = result.userData ?? {};
+      
+      print('🔵 Step 1: Validating ${provider} authentication data...');
+      
+      // Validate we have an email
+      final email = result.email;
+      if (email == null || email.isEmpty) {
+        throw Exception('No email provided by $provider authentication');
+      }
+      
+      print('✅ Email validated: $email');
+      print('');
+      
+      Tailor? tailor;
+      
+      // Call HybridAuthService based on provider
+      // Backend will automatically:
+      // - Check if user exists (returns isNewUser = false)
+      // - Create new user if needed (returns isNewUser = true)
+      // - Return JWT tokens in both cases
+      if (provider == 'google') {
+        print('🔵 Step 2: Calling HybridAuthService.signInWithGoogle()...');
+        print('   - This will check if user exists in backend');
+        print('   - If exists: Direct login');
+        print('   - If not: Auto sign-up + login');
+        print('');
+        
+        tailor = await _hybridAuthService.signInWithGoogle(
+          idToken: userData['idToken']!,
+          accessToken: userData['accessToken'],
+          serverAuthCode: userData['serverAuthCode'],
+        );
+        
+        print('');
+        print('✅ Google authentication completed!');
+        print('   - User ID: ${tailor.id}');
+        print('   - Email: ${tailor.email}');
+        print('   - Name: ${tailor.name}');
+        print('   - Shop: ${tailor.shopName}');
+        print('');
+        
+      } else if (provider == 'facebook') {
+        print('🔵 Step 2: Calling HybridAuthService.signInWithFacebook()...');
+        print('   - This will check if user exists in backend');
+        print('   - If exists: Direct login');
+        print('   - If not: Auto sign-up + login');
+        print('');
+        
+        tailor = await _hybridAuthService.signInWithFacebook(
+          accessToken: userData['accessToken']!,
+          userId: userData['userId'] ?? '',
+        );
+        
+        print('');
+        print('✅ Facebook authentication completed!');
+        print('   - User ID: ${tailor.id}');
+        print('   - Email: ${tailor.email}');
+        print('   - Name: ${tailor.name}');
+        print('   - Shop: ${tailor.shopName}');
+        print('');
+        
+      } else {
+        throw Exception('Unknown provider: $provider');
+      }
+      
+      print('🔵 Step 3: Verifying authentication state...');
+      
+      // Verify tokens were saved
+      final accessToken = await _tokenStorage.getAccessToken();
+      final savedEmail = await _tokenStorage.getUserEmail();
+      
+      print('   - Has access token: ${accessToken != null && accessToken.isNotEmpty}');
+      print('   - Saved email: ${savedEmail ?? "none"}');
+      print('');
+      
+      if (accessToken == null || accessToken.isEmpty) {
+        print('⚠️  WARNING: Access token not saved properly!');
+      }
+      
+      print('🔵 Step 4: Setting user preferences...');
+      
       // Set "keep me logged in" based on user's current preference in the checkbox
       await _authService.setKeepLoggedIn(_keepSignedIn);
       
+      print('   - Keep me logged in: $_keepSignedIn');
+      print('');
+      
+      print('🔵 Step 5: Showing success feedback...');
+      
       UserFeedbackService.showSuccess(
         context, 
         'Welcome ${result.name}! Signed in with ${result.provider} successfully.'
       );
+      
+      print('✅ Success message displayed');
+      print('');
       
       // Navigate to dashboard after successful social auth
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          context.goNamed(RouteNames.dashboard);
-        }
-      });
-    } catch (e) {
-      print('Error setting keep logged in preference: $e');
-      // Still show success and navigate, but log the error
-      UserFeedbackService.showSuccess(
-        context, 
-        'Welcome ${result.name}! Signed in with ${result.provider} successfully.'
-      );
+      print('🔵 Step 6: Navigating to dashboard...');
+      
+      final authenticatedEmail = tailor.email; // Capture email for closure
       
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           context.goNamed(RouteNames.dashboard);
+          print('✅ Navigation to dashboard initiated');
+          print('');
+          print('🎉 ========================================');
+          print('🎉 SOCIAL AUTH SIGN-IN COMPLETE!');
+          print('🎉 User: $authenticatedEmail');
+          print('🎉 Timestamp: ${DateTime.now().toIso8601String()}');
+          print('🎉 ========================================');
+          print('');
+        } else {
+          print('⚠️  WARNING: Widget not mounted, navigation skipped');
         }
       });
+      
+    } catch (e, stackTrace) {
+      print('');
+      print('🔴 ==========================================');
+      print('🔴 SOCIAL AUTH ERROR (SignIn Screen)');
+      print('🔴 Timestamp: ${DateTime.now().toIso8601String()}');
+      print('🔴 Error Type: ${e.runtimeType}');
+      print('🔴 Error Message: $e');
+      print('🔴 ==========================================');
+      print('🔴 Stack Trace:');
+      print('$stackTrace');
+      print('🔴 ==========================================');
+      print('');
+      
+      UserFeedbackService.showError(
+        context, 
+        'Authentication failed: ${e.toString()}'
+      );
     }
   }
 
@@ -456,6 +589,38 @@ class _SignInState extends State<SignIn> {
                         onTap: _validateAndSubmit,
                       ),
                 const SizedBox(height: 24),
+
+                // OR Divider
+                // Row(
+                //   children: [
+                //     Expanded(child: Divider(color: Colors.grey[400], thickness: 1)),
+                //     Padding(
+                //       padding: const EdgeInsets.symmetric(horizontal: 16),
+                //       child: Text(
+                //         'OR',
+                //         style: GoogleFonts.poppins(
+                //           color: Colors.grey[600],
+                //           fontSize: 14,
+                //           fontWeight: FontWeight.w500,
+                //         ),
+                //       ),
+                //     ),
+                //     Expanded(child: Divider(color: Colors.grey[400], thickness: 1)),
+                //   ],
+                // ),
+                // const SizedBox(height: 24),
+
+                // Google Sign In Button
+                // _isGoogleLoading
+                //     ? const Center(child: CircularProgressIndicator())
+                //     : _buildGoogleButton(),
+                // const SizedBox(height: 16),
+
+                // // Facebook Sign In Button
+                // _isFacebookLoading
+                //     ? const Center(child: CircularProgressIndicator())
+                //     : _buildFacebookButton(),
+                // const SizedBox(height: 24),
 
                 // Footer
                 // buildFooter(context),

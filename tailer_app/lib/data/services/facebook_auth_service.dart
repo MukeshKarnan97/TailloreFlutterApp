@@ -31,8 +31,10 @@ class FacebookAuthService {
       print('🔵 Starting Facebook Sign In');
       
       // Trigger the sign-in flow
+      // Note: Only requesting public_profile for now
+      // To request email, you need to submit your app for Facebook review
       final LoginResult result = await FacebookAuth.instance.login(
-        permissions: ['email', 'public_profile'],
+        permissions: ['public_profile'],
       );
 
       print('🔵 Facebook Login Result Status: ${result.status}');

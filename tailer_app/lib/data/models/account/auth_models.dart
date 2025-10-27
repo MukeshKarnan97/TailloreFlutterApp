@@ -372,3 +372,94 @@ class ApiResponse<T> {
     );
   }
 }
+
+// ==================== SOCIAL AUTHENTICATION ====================
+
+class GoogleAuthRequest {
+  final String idToken;
+  final String? accessToken;
+  final String? serverAuthCode;
+
+  const GoogleAuthRequest({
+    required this.idToken,
+    this.accessToken,
+    this.serverAuthCode,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id_token': idToken,
+      'access_token': accessToken,
+      'server_auth_code': serverAuthCode,
+    };
+  }
+}
+
+class FacebookAuthRequest {
+  final String accessToken;
+  final String userId;
+
+  const FacebookAuthRequest({
+    required this.accessToken,
+    required this.userId,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'access_token': accessToken,
+      'user_id': userId,
+    };
+  }
+}
+
+class SocialAuthResponse {
+  final Tailor user;
+  final String accessToken;
+  final String refreshToken;
+  final bool isNewUser;
+  final String? message;
+
+  const SocialAuthResponse({
+    required this.user,
+    required this.accessToken,
+    required this.refreshToken,
+    this.isNewUser = false,
+    this.message,
+  });
+
+  factory SocialAuthResponse.fromJson(Map<String, dynamic> json) {
+    // Handle both response formats:
+    // 1. Direct format: {"user": {...}, "tokens": {...}}
+    // 2. Wrapped format: {"success": true, "data": {"tailor": {...}, "tokens": {...}}}
+    
+    final Map<String, dynamic> userData;
+    final Map<String, dynamic> tokensData;
+    final bool newUser;
+    final String? msg;
+    
+    if (json.containsKey('data')) {
+      // Wrapped format from Django
+      final data = json['data'] as Map<String, dynamic>;
+      userData = data['tailor'] as Map<String, dynamic>? ?? 
+                 data['user'] as Map<String, dynamic>;
+      tokensData = data['tokens'] as Map<String, dynamic>;
+      newUser = data['is_new_user'] ?? false;
+      msg = json['message'] as String?;
+    } else {
+      // Direct format
+      userData = json['user'] as Map<String, dynamic>? ?? 
+                 json['tailor'] as Map<String, dynamic>;
+      tokensData = json['tokens'] as Map<String, dynamic>;
+      newUser = json['is_new_user'] ?? false;
+      msg = json['message'] as String?;
+    }
+    
+    return SocialAuthResponse(
+      user: Tailor.fromMap(userData),
+      accessToken: tokensData['access'] as String,
+      refreshToken: tokensData['refresh'] as String,
+      isNewUser: newUser,
+      message: msg,
+    );
+  }
+}

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tailer_app/core/constants/app_constants.dart';
 import 'package:tailer_app/core/constants/app_colors.dart';
 import 'package:tailer_app/data/services/auth_service.dart';
+import 'package:tailer_app/data/services/social_auth_service.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/routes/route_names.dart';
 import 'package:tailer_app/core/providers/simple_locale_provider.dart';
@@ -43,6 +44,7 @@ class ProfileDropdown extends StatefulWidget {
 class _ProfileDropdownState extends State<ProfileDropdown> {
   bool _isDarkMode = false;
   final AuthService _authService = AuthService();
+  final SocialAuthService _socialAuthService = SocialAuthService();
   final SimpleLocaleProvider _localeProvider = SimpleLocaleProvider();
 
   @override
@@ -491,20 +493,98 @@ class _ProfileDropdownState extends State<ProfileDropdown> {
       // Show logout confirmation
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: Text(locale.translate('logout')),
           content: Text(locale.translate('logoutConfirmation')),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(locale.translate('cancel')),
             ),
             TextButton(
               onPressed: () async {
-                Navigator.pop(context);
-                await _authService.signOut();
+                // Close dialog first
+                Navigator.pop(dialogContext);
+                
+                print('');
+                print('🚪 ========================================');
+                print('🚪 LOGOUT INITIATED');
+                print('🚪 Timestamp: ${DateTime.now().toIso8601String()}');
+                print('🚪 ========================================');
+                print('');
+                
+                // Show loading indicator
                 if (context.mounted) {
-                  context.goNamed(RouteNames.signIn);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(locale.translate('loggingOut')),
+                        ],
+                      ),
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+                
+                try {
+                  // Step 1: Sign out from social auth providers (Google & Facebook)
+                  print('🔵 Step 1: Clearing Google & Facebook auth caches...');
+                  try {
+                    await _socialAuthService.signOutFromAll();
+                    print('✅ Social auth caches cleared (Google & Facebook signed out)');
+                  } catch (e) {
+                    print('⚠️  Warning: Error clearing social auth caches: $e');
+                    // Continue with logout even if social sign-out fails
+                  }
+                  
+                  // Step 2: Clear all local tokens and user data
+                  print('🔵 Step 2: Clearing local tokens and user data...');
+                  await _authService.signOut();
+                  print('✅ Local tokens and user data cleared');
+                  
+                  print('');
+                  print('🎉 ========================================');
+                  print('🎉 LOGOUT COMPLETE');
+                  print('🎉 All auth data cleared successfully');
+                  print('🎉 Timestamp: ${DateTime.now().toIso8601String()}');
+                  print('🎉 ========================================');
+                  print('');
+                  
+                  // Navigate to sign-in
+                  if (context.mounted) {
+                    print('🔵 Navigating to sign-in screen...');
+                    context.goNamed(RouteNames.signIn);
+                    print('✅ Navigation complete');
+                  }
+                } catch (e, stackTrace) {
+                  print('');
+                  print('🔴 ==========================================');
+                  print('🔴 LOGOUT ERROR');
+                  print('🔴 Error: $e');
+                  print('🔴 Stack Trace:');
+                  print('$stackTrace');
+                  print('🔴 ==========================================');
+                  print('');
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Logout failed: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
                 }
               },
               child: Text(

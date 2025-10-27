@@ -33,10 +33,18 @@ class SocialAuthService {
 
   /// Sign in with Google
   Future<SocialAuthResult> signInWithGoogle() async {
+    print('🔵 SocialAuthService.signInWithGoogle() called');
+    
     try {
+      print('🔵 Delegating to GoogleAuthService...');
       final result = await _googleAuth.signInWithGoogle();
       
-      if (result != null && result.isSuccess) {
+      print('🔵 GoogleAuthService returned:');
+      print('   - Success: ${result.isSuccess}');
+      print('   - Error: ${result.error ?? "None"}');
+      
+      if (result.isSuccess) {
+        print('✅ Converting to SocialAuthResult (success)');
         return SocialAuthResult(
           id: result.id,
           name: result.name,
@@ -49,12 +57,15 @@ class SocialAuthService {
           },
         );
       } else {
+        print('⚠️ Converting to SocialAuthResult (error)');
         return SocialAuthResult(
-          error: result?.error ?? 'Google sign in cancelled',
+          error: result.error ?? 'Google sign in cancelled',
           provider: 'google',
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('🔴 SocialAuthService.signInWithGoogle() exception: $e');
+      print('🔴 Stack trace: $stackTrace');
       return SocialAuthResult(
         error: 'Google sign in failed: $e',
         provider: 'google',
@@ -64,10 +75,23 @@ class SocialAuthService {
 
   /// Sign in with Facebook
   Future<SocialAuthResult> signInWithFacebook() async {
+    print('🔵 SocialAuthService.signInWithFacebook() called');
+    
     try {
+      print('🔵 Delegating to FacebookAuthService...');
       final result = await _facebookAuth.signInWithFacebook();
       
+      print('🔵 FacebookAuthService returned result:');
+      print('   - Success: ${result.isSuccess}');
+      print('   - Error: ${result.error ?? "None"}');
+      
       if (result.isSuccess) {
+        print('✅ Converting to SocialAuthResult (success)');
+        print('   - ID: ${result.id}');
+        print('   - Name: ${result.name}');
+        print('   - Email: ${result.email}');
+        print('   - Picture: ${result.picture}');
+        
         return SocialAuthResult(
           id: result.id,
           name: result.name,
@@ -77,12 +101,15 @@ class SocialAuthService {
           userData: result.userData,
         );
       } else {
+        print('⚠️ Converting to SocialAuthResult (error)');
         return SocialAuthResult(
           error: result.error ?? 'Facebook sign in failed',
           provider: 'facebook',
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('🔴 SocialAuthService.signInWithFacebook() exception: $e');
+      print('🔴 Stack trace: $stackTrace');
       return SocialAuthResult(
         error: 'Facebook sign in failed: $e',
         provider: 'facebook',
@@ -110,14 +137,14 @@ class SocialAuthService {
 
   /// Check if user is signed in with any social provider
   Future<bool> isSignedIn() async {
-    final googleSignedIn = _googleAuth.isSignedIn();
+    final googleSignedIn = await _googleAuth.isSignedIn();
     final facebookSignedIn = await _facebookAuth.isLoggedIn();
     return googleSignedIn || facebookSignedIn;
   }
 
   /// Get current social provider
   Future<String?> getCurrentProvider() async {
-    if (_googleAuth.isSignedIn()) {
+    if (await _googleAuth.isSignedIn()) {
       return 'google';
     } else if (await _facebookAuth.isLoggedIn()) {
       return 'facebook';

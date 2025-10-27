@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tailer_app/routes/app_routes.dart';
 import 'package:tailer_app/data/services/social_auth_service.dart';
+import 'package:tailer_app/data/services/facebook_auth_service.dart';
 import 'package:tailer_app/core/services/user_feedback_service.dart';
 
 class SignUpGoogleFacebookButton extends StatelessWidget {
@@ -46,34 +47,132 @@ class SignUpGoogleFacebookButton extends StatelessWidget {
 
   /// Handle Google Sign In
   Future<void> _handleGoogleSignIn(BuildContext context) async {
+    print('');
+    print('🚀 ========================================');
+    print('🚀 GOOGLE SIGN-IN BUTTON CLICKED');
+    print('🚀 Screen: SignUp Screen (AuthGoogleButton Widget)');
+    print('🚀 Time: ${DateTime.now()}');
+    print('🚀 ========================================');
+    print('');
+    
     try {
+      print('🔵 Step 1: Creating SocialAuthService instance...');
       final socialAuth = SocialAuthService();
+      
+      print('🔵 Step 2: Calling SocialAuthService.signInWithGoogle()...');
       final result = await socialAuth.signInWithGoogle();
       
+      print('🔵 Step 3: SocialAuthService returned result');
+      print('   - Success: ${result.isSuccess}');
+      print('   - Error: ${result.error ?? "None"}');
+      print('   - Email: ${result.email ?? "None"}');
+      print('   - Name: ${result.name ?? "None"}');
+      
       if (result.isSuccess) {
+        print('✅ Google sign-in successful! Calling success handler...');
         onSocialAuthSuccess?.call(result) ?? _defaultSuccessHandler(context, result);
+        print('✅ Success handler completed');
       } else {
+        print('❌ Google sign-in failed with error: ${result.error}');
         onSocialAuthError?.call(result.error ?? 'Google sign in failed') ?? 
             _defaultErrorHandler(context, result.error ?? 'Google sign in failed');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('');
+      print('🔴 ==========================================');
+      print('🔴 GOOGLE SIGN-IN EXCEPTION (AuthGoogleButton)');
+      print('🔴 Error Type: ${e.runtimeType}');
+      print('🔴 Error Message: $e');
+      print('🔴 Stack Trace:');
+      print('$stackTrace');
+      print('🔴 ==========================================');
+      print('');
+      
       onSocialAuthError?.call(e.toString()) ?? _defaultErrorHandler(context, e.toString());
     }
   }
 
   /// Handle Facebook Sign In
   Future<void> _handleFacebookSignIn(BuildContext context) async {
+    print('');
+    print('🚀 ========================================');
+    print('🚀 FACEBOOK SIGN-IN BUTTON CLICKED');
+    print('🚀 Screen: ${context.widget.runtimeType}');
+    print('🚀 Time: ${DateTime.now()}');
+    print('🚀 ========================================');
+    print('');
+    
     try {
+      print('🔵 Step 1: Creating SocialAuthService instance...');
       final socialAuth = SocialAuthService();
+      
+      print('🔵 Step 2: Calling SocialAuthService.signInWithFacebook()...');
       final result = await socialAuth.signInWithFacebook();
       
+      print('🔵 Step 3: SocialAuthService returned result');
+      print('   - Success: ${result.isSuccess}');
+      print('   - Error: ${result.error ?? "None"}');
+      print('   - Email: ${result.email ?? "None"}');
+      print('   - Name: ${result.name ?? "None"}');
+      print('   - ID: ${result.id ?? "None"}');
+      
       if (result.isSuccess) {
-        onSocialAuthSuccess?.call(result) ?? _defaultSuccessHandler(context, result);
+        print('✅ Facebook sign-in successful! Calling success handler...');
+        
+        // Prepare userData with access token for HybridAuthService
+        Map<String, dynamic> userData = result.userData != null 
+            ? Map<String, dynamic>.from(result.userData!) 
+            : <String, dynamic>{};
+        
+        print('   - Original UserData keys: ${userData.keys.toList()}');
+        
+        // Add userId to userData for HybridAuthService
+        userData['userId'] = result.id ?? '';
+        
+        // Try to get Facebook access token
+        try {
+          final FacebookAuthService fbService = FacebookAuthService();
+          final accessToken = await fbService.getAccessToken();
+          if (accessToken != null) {
+            userData['accessToken'] = accessToken.tokenString;
+            print('   - Access token added: ${accessToken.tokenString.substring(0, 20)}...');
+          } else {
+            print('⚠️  Warning: Could not retrieve Facebook access token');
+          }
+        } catch (e) {
+          print('⚠️  Warning: Error getting Facebook access token: $e');
+        }
+        
+        print('   - Final UserData keys: ${userData.keys.toList()}');
+        
+        // Create new result with updated userData
+        final updatedResult = SocialAuthResult(
+          id: result.id,
+          name: result.name,
+          email: result.email,
+          photoUrl: result.photoUrl,
+          provider: result.provider,
+          userData: userData,
+        );
+        
+        onSocialAuthSuccess?.call(updatedResult) ?? _defaultSuccessHandler(context, updatedResult);
+        print('✅ Success handler completed');
       } else {
+        print('❌ Facebook sign-in failed with error: ${result.error}');
         onSocialAuthError?.call(result.error ?? 'Facebook sign in failed') ?? 
             _defaultErrorHandler(context, result.error ?? 'Facebook sign in failed');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('');
+      print('🔴 ==========================================');
+      print('🔴 FACEBOOK SIGN-IN EXCEPTION (AuthGoogleButton)');
+      print('🔴 Error Type: ${e.runtimeType}');
+      print('🔴 Error Message: $e');
+      print('🔴 Stack Trace:');
+      print('$stackTrace');
+      print('🔴 ==========================================');
+      print('');
+      
       onSocialAuthError?.call(e.toString()) ?? _defaultErrorHandler(context, e.toString());
     }
   }
